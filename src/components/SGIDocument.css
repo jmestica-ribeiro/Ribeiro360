@@ -1,0 +1,252 @@
+/* ── SGI Document Page specific styles ────────────────────────────────────────── */
+.sgi-doc-page {
+  padding: 32px 48px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.sgi-doc-header-nav {
+  margin-bottom: 24px;
+}
+
+.sgi-doc-content-wrapper {
+  background: white;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.sgi-doc-hero {
+  padding: 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 32px;
+  border-bottom: 1px solid var(--border-color);
+  background: linear-gradient(to bottom, #fcfcfc, #ffffff);
+  border-top: 4px solid; /* color set inline */
+}
+
+.sgi-doc-hero-left {
+  flex: 1;
+}
+
+.sgi-doc-badge-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.sgi-doc-code-badge {
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 13px;
+  color: #4b5563;
+  background: #f3f4f6;
+  padding: 4px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+}
+
+.sgi-doc-cat-badge {
+  font-weight: 700;
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sgi-doc-hero-title {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0 0 12px;
+  line-height: 1.2;
+}
+
+.sgi-doc-hero-desc {
+  font-size: 15px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: 0;
+  max-width: 600px;
+}
+
+.sgi-doc-hero-right {
+  flex-shrink: 0;
+}
+
+.sgi-download-box {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--primary-color);
+  color: #141414;
+  padding: 16px 24px;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.sgi-download-box:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+}
+
+.sgi-dl-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.sgi-dl-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.sgi-dl-action {
+  font-size: 15px;
+  font-weight: 800;
+  margin-bottom: 2px;
+}
+
+.sgi-dl-meta {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+
+.sgi-no-file-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f9fafb;
+  border: 1px dashed #d1d5db;
+  color: #9ca3af;
+  padding: 16px 24px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.sgi-tables-expanded {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* Enhancing the tables specifically for this page */
+.sgi-tables-expanded .sgi-info-table {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+
+.sgi-tables-expanded .sgi-table-title {
+  padding: 12px 20px;
+  font-size: 13px;
+  background: #f8fafc;
+  color: #475569;
+}
+
+.sgi-tables-expanded table {
+  width: 100%;
+}
+
+.sgi-tables-expanded td, 
+.sgi-tables-expanded th {
+  padding: 14px 20px;
+  font-size: 14px;
+}
+
+.sgi-td-label {
+  width: 200px;
+  font-weight: 600;
+  color: #64748b;
+  background: #fafafa;
+  border-right: 1px solid var(--border-color);
+}
+
+.sgi-download-btn-small {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-color);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px;
+  transition: all 0.2s;
+}
+
+.sgi-download-btn-small:hover {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #141414;
+}
+
+@media (max-width: 768px) {
+  .sgi-doc-page {
+    padding: 16px;
+  }
+  
+  .sgi-doc-hero {
+    flex-direction: column;
+    padding: 24px 20px;
+    gap: 20px;
+  }
+  
+  .sgi-doc-hero-title {
+    font-size: 22px;
+  }
+
+  .sgi-doc-hero-desc {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .sgi-doc-hero-right {
+    width: 100%;
+  }
+
+  .sgi-download-box {
+    width: 100%;
+    justify-content: center;
+    padding: 14px 20px;
+    gap: 12px;
+  }
+  
+  .sgi-tables-expanded {
+    padding: 20px;
+    gap: 24px;
+  }
+
+  .sgi-tables-expanded .sgi-info-table {
+    border-radius: 8px;
+  }
+  
+  .sgi-td-label {
+    width: 110px;
+    font-size: 13px !important;
+  }
+
+  .sgi-tables-expanded td, 
+  .sgi-tables-expanded th {
+    padding: 10px 14px;
+    font-size: 13px;
+    word-break: break-word;
+  }
+
+  .sgi-notas-cell {
+    white-space: normal;
+    min-width: 150px;
+  }
+}

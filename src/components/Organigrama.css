@@ -1,0 +1,291 @@
+.organigrama-container {
+  padding: 24px 40px;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Header */
+.org-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.org-header h2 {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+.org-header p {
+  color: var(--text-muted);
+  font-size: 15px;
+  margin-top: 4px;
+}
+
+/* Zoom controls */
+.org-zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 6px 12px;
+}
+
+.org-zoom-controls button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 6px;
+  transition: var(--transition);
+}
+
+.org-zoom-controls button:hover {
+  background: var(--bg-secondary);
+  color: var(--text-main);
+}
+
+.org-zoom-controls span {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  min-width: 38px;
+  text-align: center;
+}
+
+/* Viewport */
+.org-viewport {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: 48px 40px;
+  overflow-x: auto;
+  overflow-y: auto;
+  min-height: 400px;
+}
+
+/* Tree wrapper */
+.org-tree-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  min-width: max-content;
+  margin: 0 auto;
+}
+
+/* Each node in the tree */
+.org-tree-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Vertical line from card down to children */
+.org-vline {
+  width: 2px;
+  height: 28px;
+  background: var(--border-color);
+  flex-shrink: 0;
+}
+
+/* Row of children */
+.org-children {
+  display: flex;
+  align-items: flex-start;
+  position: relative;
+}
+
+/* Wrapper for each child — draws connectors */
+.org-child-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 20px;
+  position: relative;
+}
+
+/* Horizontal segment at top of each child-wrap */
+.org-child-wrap::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--border-color);
+}
+
+.org-child-wrap:first-child::before {
+  left: 50%;
+}
+
+.org-child-wrap:last-child::before {
+  right: 50%;
+}
+
+.org-child-wrap:only-child::before {
+  display: none;
+}
+
+/* Vertical drop from horizontal line to card */
+.org-child-wrap::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 2px;
+  height: 28px;
+  background: var(--border-color);
+  transform: translateX(-50%);
+}
+
+.org-child-wrap:only-child::after {
+  display: none;
+}
+
+/* Card */
+.org-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  background: white;
+  border: 1.5px solid var(--border-color);
+  border-radius: 14px;
+  padding: 16px 20px;
+  min-width: 160px;
+  max-width: 200px;
+  text-align: center;
+  cursor: default;
+  transition: var(--transition);
+  margin-top: 28px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.org-child-wrap:only-child .org-card {
+  margin-top: 0;
+}
+
+.org-card:hover {
+  border-color: var(--primary-color);
+}
+
+/* Avatar */
+.org-card-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 2.5px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+.org-card-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Card text */
+.org-card-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.org-card-name {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-main);
+  line-height: 1.3;
+}
+
+.org-card-role {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.org-card-area {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 20px;
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* Root card: slightly bigger */
+.org-tree-wrapper > .org-tree-node > .org-card {
+  min-width: 200px;
+  padding: 20px 24px;
+  border-width: 2px;
+}
+
+.org-tree-wrapper > .org-tree-node > .org-card .org-card-avatar {
+  width: 64px;
+  height: 64px;
+}
+
+.org-tree-wrapper > .org-tree-node > .org-card .org-card-name {
+  font-size: 15px;
+}
+
+.org-tree-wrapper > .org-tree-node > .org-card .org-card-role {
+  font-size: 12px;
+}
+
+/* Loading / empty */
+.org-loading {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.org-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-muted);
+  padding: 60px 0;
+}
+
+.org-empty p {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.org-empty span {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+@media (max-width: 768px) {
+  .organigrama-container {
+    padding: 20px;
+  }
+
+  .org-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+}
