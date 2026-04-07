@@ -55,7 +55,7 @@ const Sidebar = ({ isOpen, onToggle, isCollapsed, onToggleCollapse }) => {
         {isCollapsed && <div className="nav-label-dot mt-4" />}
         <NavLink to="/directorio" className={linkClass} title="Directorio">
           <Users size={20} />
-          {!isCollapsed && <span>Directorio</span>}
+          {!isCollapsed && <span>Agenda</span>}
         </NavLink>
         <NavLink to="/eventos" className={linkClass} title="Eventos">
           <Calendar size={20} />

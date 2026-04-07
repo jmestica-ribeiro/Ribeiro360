@@ -2,17 +2,22 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Bell, Menu, LogOut, User, Sun, Moon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotificaciones } from '../hooks/useNotificaciones';
+import NotificacionesModal from './NotificacionesModal';
 import './Header.css';
 
 const Header = ({ onToggleMenu }) => {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
   const menuRef = useRef(null);
 
   const firstName = profile?.full_name?.split(' ')[0] || 'Usuario';
   const jobTitle = profile?.job_title || '';
   const avatarUrl = profile?.avatar_url || user?.user_metadata?.avatar_url;
+
+  const { notificaciones, count, isLoading, markAsRead } = useNotificaciones(profile);
 
   const [isDarkMode, setIsDarkMode] = useState(() => document.body.classList.contains('dark-theme'));
 
@@ -41,6 +46,13 @@ const Header = ({ onToggleMenu }) => {
     }
   };
 
+  const handleBellClick = () => setNotifOpen(o => !o);
+
+  const handleCloseNotif = () => {
+    markAsRead();
+    setNotifOpen(false);
+  };
+
   return (
     <header className="header">
       <div className="header-left">
@@ -50,14 +62,24 @@ const Header = ({ onToggleMenu }) => {
       </div>
 
       <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <button className="notification-btn" title="Activar modo oscuro" onClick={toggleTheme}>
+        <button className="notification-btn" title="Cambiar tema" onClick={toggleTheme}>
           {isDarkMode ? <Sun size={20} className="text-muted" /> : <Moon size={20} className="text-muted" />}
         </button>
 
-        <button className="notification-btn">
+        <button className="notification-btn" onClick={handleBellClick} title="Notificaciones">
           <Bell size={22} className="text-muted" />
-          <span className="badge">3</span>
+          {count > 0 && (
+            <span className="badge">{count > 9 ? '9+' : count}</span>
+          )}
         </button>
+
+        {notifOpen && (
+          <NotificacionesModal
+            notificaciones={notificaciones}
+            isLoading={isLoading}
+            onClose={handleCloseNotif}
+          />
+        )}
 
         <div className="user-profile" ref={menuRef} onClick={() => setMenuOpen(o => !o)}>
           <div className="user-info">
