@@ -975,6 +975,221 @@ body.dark-theme .ncd-fuente-item.checked {
   pointer-events: none;
 }
 
+/* ── Multi person picker button ─────────────────────────────────────────────── */
+.ncd-multi-person-btn {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  background: var(--bg-primary);
+  border: 1.5px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.ncd-multi-person-btn:hover {
+  border-color: var(--primary-color);
+  background: var(--bg-secondary);
+}
+
+.ncd-multi-person-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-muted);
+}
+
+.ncd-multi-person-placeholder svg {
+  flex-shrink: 0;
+}
+
+.ncd-multi-person-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.ncd-multi-person-tag {
+  background: var(--primary-color);
+  color: #141414;
+  border-radius: 5px;
+  padding: 2px 8px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* ── Picker multi-select extras ─────────────────────────────────────────────── */
+.ncd-picker-item--checked {
+  background: #fefce8;
+}
+
+.ncd-picker-item--checked:hover {
+  background: #fef9c3;
+}
+
+.ncd-picker-checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 2px solid #d1d5db;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.ncd-picker-checkbox.checked {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #141414;
+}
+
+.ncd-picker-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.ncd-picker-footer-count {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.ncd-picker-confirm {
+  background: var(--primary-color);
+  color: #141414;
+  border: none;
+  border-radius: 7px;
+  padding: 7px 18px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.ncd-picker-confirm:hover {
+  opacity: 0.85;
+}
+
+/* ── Step 5: locked banner ──────────────────────────────────────────────────── */
+.ncd-verif-locked {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: #fffbeb;
+  border: 1.5px solid #fcd34d;
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+
+.ncd-verif-locked-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #fde68a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #92400e;
+  flex-shrink: 0;
+}
+
+.ncd-verif-locked-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ncd-verif-locked-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #78350f;
+}
+
+.ncd-verif-locked-desc {
+  font-size: 0.8125rem;
+  color: #92400e;
+  line-height: 1.4;
+}
+
+/* ── Read-only banner (no canEdit) ─────────────────────────────────────────── */
+.ncd-readonly-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f0f9ff;
+  border-bottom: 1.5px solid #bae6fd;
+  padding: 12px 24px;
+  font-size: 0.8125rem;
+  color: #0369a1;
+}
+
+.ncd-readonly-banner-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e0f2fe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #0369a1;
+}
+
+/* ── Step 5: read-only verification result ──────────────────────────────────── */
+.ncd-step5-verif-readonly {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--bg-secondary);
+  border: 1.5px solid var(--border-color);
+  border-radius: 10px;
+  padding: 16px;
+  height: 100%;
+}
+
+.ncd-step5-verif-readonly--pending {
+  align-items: center;
+  justify-content: center;
+  opacity: 0.6;
+}
+
+.ncd-step5-verif-readonly-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.ncd-step5-verif-readonly-result {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.ncd-step5-verif-readonly-result.si {
+  color: #10B981;
+}
+
+.ncd-step5-verif-readonly-result.no {
+  color: #E71D36;
+}
+
+.ncd-step5-verif-readonly-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
 /* ── Step 2: Participantes ──────────────────────────────────────────────────── */
 .ncd-step2-participantes {
   display: flex;

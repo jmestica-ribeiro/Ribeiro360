@@ -98,7 +98,15 @@ function InformeContent({ data }) {
         <Field label="Cliente" value={cliente?.nombre} />
         <Field label="Auditor" value={auditor?.full_name} />
         <Field label="Emisor" value={emisor?.full_name} />
-        <Field label="Responsable del Proceso" value={hallazgo.responsable_proceso} />
+        <Field label="Responsable del Proceso" value={(() => {
+          const v = hallazgo.responsable_proceso;
+          if (!v) return null;
+          try {
+            const ids = JSON.parse(v);
+            if (Array.isArray(ids)) return ids.map(id => profiles.find(p => p.id === id)?.full_name).filter(Boolean).join(', ') || null;
+          } catch { return v; }
+          return v;
+        })()} />
       </div>
 
       {fuentesActivas.length > 0 && (

@@ -89,11 +89,30 @@ function PersonPickerBtn({ selectedId, profiles, onClick }) {
   );
 }
 
+/* ── Multi Person Picker Button ─────────────────────────────────────────────── */
+function MultiPersonPickerBtn({ selectedIds, profiles, onClick }) {
+  const selected = profiles.filter(p => selectedIds.includes(p.id));
+  return (
+    <button type="button" className="ncd-multi-person-btn" onClick={onClick}>
+      {selected.length === 0 ? (
+        <span className="ncd-multi-person-placeholder"><User size={14} /> — Seleccionar —</span>
+      ) : (
+        <div className="ncd-multi-person-tags">
+          {selected.map(p => (
+            <span key={p.id} className="ncd-multi-person-tag">{p.full_name}</span>
+          ))}
+        </div>
+      )}
+    </button>
+  );
+}
+
 /* ── Person Picker Modal ────────────────────────────────────────────────────── */
 const PAGE_SIZE = 5;
 
-function PersonPickerModal({ profiles, onSelect, onClose, title }) {
+function PersonPickerModal({ profiles, onSelect, onClose, title, multi = false, selectedIds = [] }) {
   const [query, setQuery] = useState('');
+  const [localSelected, setLocalSelected] = useState(selectedIds);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -123,12 +142,18 @@ function PersonPickerModal({ profiles, onSelect, onClose, title }) {
   const getInitials = (name) =>
     name?.split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?';
 
+  const toggleLocal = (id) => {
+    setLocalSelected(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
   return createPortal(
-    <div className="ncd-picker-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div className="ncd-picker-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) { if (multi) onSelect(localSelected); onClose(); } }}>
       <div className="ncd-picker-modal">
         <div className="ncd-picker-header">
           <h4>{title}</h4>
-          <button className="ncd-picker-close" onClick={onClose}><X size={16} /></button>
+          <button className="ncd-picker-close" onClick={() => { if (multi) onSelect(localSelected); onClose(); }}><X size={16} /></button>
         </div>
         <div className="ncd-picker-search">
           <Search size={15} className="ncd-picker-search-icon" />
@@ -144,25 +169,37 @@ function PersonPickerModal({ profiles, onSelect, onClose, title }) {
           {visible.length === 0 && (
             <li className="ncd-picker-empty">No se encontraron resultados</li>
           )}
-          {visible.map(p => (
-            <li key={p.id} className="ncd-picker-item" onClick={() => { onSelect(p); onClose(); }}>
-              <div className="ncd-picker-avatar">
-                {p.avatar_url
-                  ? <img src={p.avatar_url} alt={p.full_name} />
-                  : <span>{getInitials(p.full_name)}</span>
-                }
-              </div>
-              <div className="ncd-picker-info">
-                <span className="ncd-picker-name">{p.full_name}</span>
-                {p.job_title && <span className="ncd-picker-meta">{p.job_title}</span>}
-                {(p.department || p.office_location) && (
-                  <span className="ncd-picker-meta muted">
-                    {[p.department, p.office_location].filter(Boolean).join(' · ')}
-                  </span>
+          {visible.map(p => {
+            const isChecked = multi && localSelected.includes(p.id);
+            return (
+              <li
+                key={p.id}
+                className={`ncd-picker-item${isChecked ? ' ncd-picker-item--checked' : ''}`}
+                onClick={() => { if (multi) { toggleLocal(p.id); } else { onSelect(p); onClose(); } }}
+              >
+                {multi && (
+                  <div className={`ncd-picker-checkbox${isChecked ? ' checked' : ''}`}>
+                    {isChecked && <Check size={11} />}
+                  </div>
                 )}
-              </div>
-            </li>
-          ))}
+                <div className="ncd-picker-avatar">
+                  {p.avatar_url
+                    ? <img src={p.avatar_url} alt={p.full_name} />
+                    : <span>{getInitials(p.full_name)}</span>
+                  }
+                </div>
+                <div className="ncd-picker-info">
+                  <span className="ncd-picker-name">{p.full_name}</span>
+                  {p.job_title && <span className="ncd-picker-meta">{p.job_title}</span>}
+                  {(p.department || p.office_location) && (
+                    <span className="ncd-picker-meta muted">
+                      {[p.department, p.office_location].filter(Boolean).join(' · ')}
+                    </span>
+                  )}
+                </div>
+              </li>
+            );
+          })}
           {hidden > 0 && (
             <li className="ncd-picker-hint">
               <Search size={13} />
@@ -170,6 +207,12 @@ function PersonPickerModal({ profiles, onSelect, onClose, title }) {
             </li>
           )}
         </ul>
+        {multi && (
+          <div className="ncd-picker-footer">
+            <span className="ncd-picker-footer-count">{localSelected.length} seleccionado{localSelected.length !== 1 ? 's' : ''}</span>
+            <button className="ncd-picker-confirm" onClick={() => { onSelect(localSelected); onClose(); }}>Confirmar</button>
+          </div>
+        )}
       </div>
     </div>,
     document.getElementById('portal-root')
@@ -547,7 +590,8 @@ export default function NCDetalle() {
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
-  const [pickerTarget, setPickerTarget] = useState(null); // 'auditor' | 'emisor' | null
+  const [pickerTarget, setPickerTarget] = useState(null); // 'auditor' | 'emisor' | 'responsable' | 'verif' | null
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
 
   // Lookup data
   const [gerencias, setGerencias] = useState([]); // distinct strings from profiles.department
@@ -569,7 +613,8 @@ export default function NCDetalle() {
     cliente_id: '',
     auditor_id: '',
     emisor_id: '',
-    responsable_proceso: '',
+    responsable_proceso: [],
+    responsable_verif: [],
     descripcion: '',
     fuente_quejas: false,
     fuente_auditoria_interna: false,
@@ -693,7 +738,16 @@ export default function NCDetalle() {
             cliente_id: data.cliente_id || '',
             auditor_id: data.auditor_id || '',
             emisor_id: data.emisor_id || '',
-            responsable_proceso: data.responsable_proceso || '',
+            responsable_proceso: (() => {
+              const v = data.responsable_proceso;
+              if (!v) return [];
+              try { const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch { return []; }
+            })(),
+            responsable_verif: (() => {
+              const v = data.responsable_verif;
+              if (!v) return [];
+              try { const p = JSON.parse(v); return Array.isArray(p) ? p : []; } catch { return []; }
+            })(),
             descripcion: data.descripcion || '',
             fuente_quejas: !!data.fuente_quejas,
             fuente_auditoria_interna: !!data.fuente_auditoria_interna,
@@ -779,6 +833,17 @@ export default function NCDetalle() {
     if ((currentStep === 4 || currentStep === 5) && !isNew) fetchAcciones();
   }, [currentStep, fetchAcciones, isNew]);
 
+  const canVerif = form.responsable_verif.includes(user?.id);
+
+  // canEdit: admins with 'sgi' tab, or people directly involved in the hallazgo
+  const isSgiAdmin = isAdmin || (profile?.admin_tabs ?? []).includes('sgi');
+  const canEdit = isNew || isSgiAdmin
+    || form.emisor_id === user?.id
+    || form.auditor_id === user?.id
+    || form.responsable_proceso.includes(user?.id)
+    || step2.responsable_analisis_id === user?.id
+    || step2.participantes.includes(user?.id);
+
   /* ── Form helpers ── */
   const setField = (key, value) => setForm(f => ({ ...f, [key]: value }));
 
@@ -845,7 +910,8 @@ export default function NCDetalle() {
         cliente_id: form.cliente_id || null,
         auditor_id: form.auditor_id || null,
         emisor_id: form.emisor_id || null,
-        responsable_proceso: form.responsable_proceso || null,
+        responsable_proceso: form.responsable_proceso.length > 0 ? JSON.stringify(form.responsable_proceso) : null,
+        responsable_verif: form.responsable_verif.length > 0 ? JSON.stringify(form.responsable_verif) : null,
         descripcion: form.descripcion,
         fuente_quejas: form.fuente_quejas,
         fuente_auditoria_interna: form.fuente_auditoria_interna,
@@ -1074,13 +1140,11 @@ export default function NCDetalle() {
             />
           </div>
           <div className="ncd-form-group">
-            <label htmlFor="responsable">Responsable del Proceso</label>
-            <input
-              id="responsable"
-              type="text"
-              placeholder="Nombre del responsable"
-              value={form.responsable_proceso}
-              onChange={e => setField('responsable_proceso', e.target.value)}
+            <label>Responsable del Proceso</label>
+            <MultiPersonPickerBtn
+              selectedIds={form.responsable_proceso}
+              profiles={profiles}
+              onClick={() => setPickerTarget('responsable')}
             />
           </div>
           <div className="ncd-form-group full">
@@ -1477,6 +1541,20 @@ export default function NCDetalle() {
         </button>
       </div>
 
+      <div className="ncd-form-section">
+        <p className="ncd-section-title">Responsable de Verificar la Eficacia</p>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
+          Estas personas podrán editar y completar el Paso 5 de verificación.
+        </p>
+        <div className="ncd-form-group" style={{ maxWidth: 400 }}>
+          <MultiPersonPickerBtn
+            selectedIds={form.responsable_verif}
+            profiles={profiles}
+            onClick={() => setPickerTarget('verif')}
+          />
+        </div>
+      </div>
+
       {showAccionModal && (
         <AccionModalInner
           editingAccion={editingAccion}
@@ -1537,8 +1615,24 @@ export default function NCDetalle() {
         <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No hay acciones registradas en el Plan de Trabajo.</p>
       </div>
     );
+    const verifResponsables = profiles.filter(p => form.responsable_verif.includes(p.id));
     return (
       <div className="ncd-form-section" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {!canVerif && (
+          <div className="ncd-verif-locked">
+            <div className="ncd-verif-locked-icon">
+              <User size={20} />
+            </div>
+            <div className="ncd-verif-locked-body">
+              <span className="ncd-verif-locked-title">Verificación restringida</span>
+              <span className="ncd-verif-locked-desc">
+                {verifResponsables.length > 0
+                  ? <>La verificación de eficacia está a cargo de: <strong>{verifResponsables.map(p => p.full_name).join(', ')}</strong></>
+                  : 'No hay responsables de verificación asignados. Editá el Paso 4 para asignarlos.'}
+              </span>
+            </div>
+          </div>
+        )}
         {acciones.map(a => {
           const v = accionesVerif[a.id] || { eficaz: null, fecha: '', detalle: '', adjuntos: [], files: [], saving: false };
           const totalAdj = (v.adjuntos?.length || 0) + (v.files?.length || 0);
@@ -1580,7 +1674,21 @@ export default function NCDetalle() {
 
                 {/* Col der: verificación */}
                 <div className="ncd-step5-col-right">
-                  <div className="ncd-step5-verif-block">
+                  {!canVerif && v.eficaz !== null && v.eficaz !== undefined ? (
+                    <div className="ncd-step5-verif-readonly">
+                      <span className="ncd-step5-verif-readonly-label">Resultado</span>
+                      <span className={`ncd-step5-verif-readonly-result${v.eficaz ? ' si' : ' no'}`}>
+                        {v.eficaz ? '✓ Eficaz' : '✗ No eficaz'}
+                      </span>
+                      {v.fecha && <span className="ncd-step5-verif-readonly-meta">Fecha: {new Date(v.fecha).toLocaleDateString('es-AR')}</span>}
+                      {v.detalle && <span className="ncd-step5-verif-readonly-meta">{v.detalle}</span>}
+                    </div>
+                  ) : !canVerif ? (
+                    <div className="ncd-step5-verif-readonly ncd-step5-verif-readonly--pending">
+                      <span className="ncd-step5-verif-readonly-label">Pendiente de verificación</span>
+                    </div>
+                  ) : null}
+                  {canVerif && <div className="ncd-step5-verif-block">
                     <div className="ncd-step5-header">
                       <span className="ncd-step5-header-title">Verificación de Eficacia</span>
                     </div>
@@ -1588,11 +1696,11 @@ export default function NCDetalle() {
                     <div className="ncd-step5-eficaz-row">
                       <span className="ncd-step5-eficaz-label">¿Fué eficaz?</span>
                       <label className="ncd-step5-radio">
-                        <input type="radio" name={`eficaz-${a.id}`} checked={v.eficaz === true} onChange={() => setVerif(a.id, { eficaz: true })} />
+                        <input type="radio" name={`eficaz-${a.id}`} checked={v.eficaz === true} onChange={() => setVerif(a.id, { eficaz: true })} disabled={!canVerif} />
                         Sí
                       </label>
                       <label className="ncd-step5-radio">
-                        <input type="radio" name={`eficaz-${a.id}`} checked={v.eficaz === false} onChange={() => setVerif(a.id, { eficaz: false })} />
+                        <input type="radio" name={`eficaz-${a.id}`} checked={v.eficaz === false} onChange={() => setVerif(a.id, { eficaz: false })} disabled={!canVerif} />
                         No
                       </label>
                     </div>
@@ -1600,7 +1708,7 @@ export default function NCDetalle() {
                     <div className="ncd-step5-detalle">
                       <label className="ncd-step5-detalle-label">
                         Fecha de evaluación:
-                        <input type="date" className="ncd-step5-fecha" style={{ marginLeft: 8 }} value={v.fecha} onChange={e => setVerif(a.id, { fecha: e.target.value })} />
+                        <input type="date" className="ncd-step5-fecha" style={{ marginLeft: 8 }} value={v.fecha} onChange={e => setVerif(a.id, { fecha: e.target.value })} disabled={!canVerif} />
                       </label>
                       <label className="ncd-step5-detalle-label" style={{ marginTop: 10 }}>Detalle:</label>
                       <textarea
@@ -1608,6 +1716,7 @@ export default function NCDetalle() {
                         placeholder="Indique las causas que justifican la decisión..."
                         value={v.detalle}
                         onChange={e => setVerif(a.id, { detalle: e.target.value })}
+                        disabled={!canVerif}
                       />
                     </div>
 
@@ -1652,7 +1761,7 @@ export default function NCDetalle() {
                                 e.target.value = '';
                               }}
                             />
-                            <button className="ncd-adjunto-pick-btn" onClick={() => step5FileRefs.current[a.id]?.click()}>
+                            <button className="ncd-adjunto-pick-btn" onClick={() => step5FileRefs.current[a.id]?.click()} disabled={!canVerif}>
                               <Paperclip size={12} />
                               Adjuntar
                             </button>
@@ -1665,13 +1774,13 @@ export default function NCDetalle() {
                       <button
                         className="ncd-btn-primary"
                         onClick={() => handleSaveVerif(a.id)}
-                        disabled={v.saving || v.eficaz === null}
+                        disabled={v.saving || v.eficaz === null || !canVerif}
                       >
                         {v.saving ? <Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> : <Check size={13} />}
                         Guardar
                       </button>
                     </div>
-                  </div>
+                  </div>}
                 </div>
               </div>
             </div>
@@ -1793,6 +1902,13 @@ export default function NCDetalle() {
             </div>
           </div>
 
+          {!canEdit && (
+            <div className="ncd-readonly-banner">
+              <div className="ncd-readonly-banner-icon"><User size={18} /></div>
+              <span>Solo pueden editar este hallazgo: el emisor, auditor, responsables del proceso, equipo de análisis y administradores SGI.</span>
+            </div>
+          )}
+
           <div className="ncd-panel-body">
             {renderStepContent()}
           </div>
@@ -1814,7 +1930,7 @@ export default function NCDetalle() {
                 <button
                   className="ncd-btn-secondary"
                   onClick={() => handleSave(false)}
-                  disabled={saving}
+                  disabled={saving || !canEdit || (currentStep === 5 && !canVerif)}
                 >
                   {saving ? <Loader2 size={15} style={{ animation: 'spin 0.7s linear infinite' }} /> : null}
                   Guardar borrador
@@ -1827,7 +1943,7 @@ export default function NCDetalle() {
                     <button
                       className="ncd-btn-primary"
                       onClick={() => handleSave(true)}
-                      disabled={saving || accionesPendientes || verifPendiente}
+                      disabled={saving || !canEdit || accionesPendientes || verifPendiente || (isCierre && !canVerif)}
                       title={accionesPendientes ? 'Cerrá todas las acciones antes de continuar' : verifPendiente ? 'Completá la verificación de todas las acciones' : ''}
                       style={isCierre ? { background: '#10B981', borderColor: '#10B981' } : {}}
                     >
@@ -1859,11 +1975,31 @@ export default function NCDetalle() {
       )}
 
       {/* Person Picker */}
-      {pickerTarget && (
+      {pickerTarget && pickerTarget !== 'responsable' && (
         <PersonPickerModal
           profiles={profiles}
           title={pickerTarget === 'auditor' ? 'Seleccionar Auditor' : 'Seleccionar Emisor'}
           onSelect={(p) => setField(pickerTarget === 'auditor' ? 'auditor_id' : 'emisor_id', p.id)}
+          onClose={() => setPickerTarget(null)}
+        />
+      )}
+      {pickerTarget === 'responsable' && (
+        <PersonPickerModal
+          profiles={profiles}
+          title="Responsables del Proceso"
+          multi
+          selectedIds={form.responsable_proceso}
+          onSelect={(ids) => setField('responsable_proceso', ids)}
+          onClose={() => setPickerTarget(null)}
+        />
+      )}
+      {pickerTarget === 'verif' && (
+        <PersonPickerModal
+          profiles={profiles}
+          title="Responsables de Verificar la Eficacia"
+          multi
+          selectedIds={form.responsable_verif}
+          onSelect={(ids) => setField('responsable_verif', ids)}
           onClose={() => setPickerTarget(null)}
         />
       )}
