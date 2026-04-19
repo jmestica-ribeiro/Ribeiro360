@@ -27,6 +27,7 @@ const NCDetalle       = lazy(() => import('./features/sgi/nc/NCDetalle'));
 const SGIEstadisticas = lazy(() => import('./features/sgi/SGIEstadisticas'));
 const Perfil          = lazy(() => import('./features/perfil/Perfil'));
 const Login           = lazy(() => import('./pages/Login'));
+const NotFound        = lazy(() => import('./pages/NotFound'));
 
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
   const { session, profile, isLoading } = useAuth();
@@ -69,6 +70,7 @@ function AnimatedRoutes() {
           <W><AdminPanel /></W>
         </ProtectedRoute>
       } />
+      <Route path="*" element={<W><NotFound /></W>} />
     </Routes>
   );
 }
