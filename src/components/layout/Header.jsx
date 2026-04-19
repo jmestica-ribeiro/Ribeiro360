@@ -1,15 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, Menu, LogOut, User, Sun, Moon } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Bell, Menu, LogOut, User, Sun, Moon, QrCode } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotificaciones } from '../../hooks/useNotificaciones';
 import NotificacionesModal from './NotificacionesModal';
+import QRModal from '../common/QRModal';
+import '../common/QRModal.css';
 import './Header.css';
 
 const Header = ({ onToggleMenu }) => {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -65,6 +69,17 @@ const Header = ({ onToggleMenu }) => {
         <button className="notification-btn" title="Cambiar tema" onClick={toggleTheme}>
           {isDarkMode ? <Sun size={20} className="text-muted" /> : <Moon size={20} className="text-muted" />}
         </button>
+
+        <button className="notification-btn" title="Generar QR de esta página" onClick={() => setQrOpen(true)}>
+          <QrCode size={20} className="text-muted" />
+        </button>
+
+        {qrOpen && (
+          <QRModal
+            url={window.location.href}
+            onClose={() => setQrOpen(false)}
+          />
+        )}
 
         <button className="notification-btn" onClick={handleBellClick} title="Notificaciones">
           <Bell size={22} className="text-muted" />

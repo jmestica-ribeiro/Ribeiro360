@@ -1,8 +1,37 @@
-import React, { useState, useEffect } from 'react';
-import { Box, TrendingUp, Activity, Globe, ShoppingCart, BarChart2, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Box, TrendingUp, Activity, Globe, ShoppingCart, ExternalLink } from 'lucide-react';
 import { AreaChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart } from 'recharts';
 import '../Explorar.css';
 import '../../dashboard/Dashboard.css';
+
+// ----------------------------------------------------------------------
+// LAZY IFRAME (carga diferida por IntersectionObserver)
+// ----------------------------------------------------------------------
+const LazyIframe = ({ title, src, height, bg }) => {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
+      { rootMargin: '200px' }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} style={{ background: bg, minHeight: height, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '10px', padding: '24px' }}>
+      {visible
+        ? <iframe title={title} width="100%" height={height} src={src} allowFullScreen style={{ border: 'none', display: 'block' }} />
+        : <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', color: '#aaa' }}>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" fill="#d1d5db" /><rect x="14" y="3" width="7" height="7" rx="1" fill="#d1d5db" opacity="0.6" /><rect x="3" y="14" width="7" height="7" rx="1" fill="#d1d5db" opacity="0.6" /><rect x="14" y="14" width="7" height="7" rx="1" fill="#d1d5db" /></svg>
+          <span style={{ fontSize: '12px' }}>Cargando tablero...</span>
+        </div>
+      }
+    </div>
+  );
+};
 
 // ----------------------------------------------------------------------
 // WIDGET DOLAR (Consumiendo DolarAPI)
@@ -405,15 +434,19 @@ const UvaRiesgoWidget = () => {
 // ----------------------------------------------------------------------
 const HERRAMIENTAS_INTERNAS = [
   {
-    num: '01',
     label: 'Resultados Mensuales',
-    icon: '📊',
+    desc: 'Tablero con los resultados financieros del mes.',
+    emoji: '📊',
+    gradient: 'linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%)',
+    svg: <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 17l4-8 4 4 4-6 4 10" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>,
     url: 'https://app.powerbi.com/links/q7o45Qp8Ui?ctid=dafe3bc5-6372-4396-8452-c707f3ecf4bf&pbi_source=linkShare'
   },
   {
-    num: '02',
     label: 'Combustible',
-    icon: '💰',
+    desc: 'Seguimiento y control del consumo de combustible.',
+    emoji: '⛽',
+    gradient: 'linear-gradient(135deg, #134e4a 0%, #0f766e 100%)',
+    svg: <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 17l4-8 4 4 4-6 4 10" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>,
     url: 'https://app.powerbi.com/links/vAOEHA0a5x?ctid=dafe3bc5-6372-4396-8452-c707f3ecf4bf&pbi_source=linkShare&bookmarkGuid=1ce4ff7f-0ceb-46f9-af24-6a609724febd'
   }
 ];
@@ -441,28 +474,36 @@ const PortalAdministracion = () => (
       <Box size={22} color="var(--primary-color)" />
       <h3 style={{ fontSize: '20px', fontWeight: '800', margin: 0, color: 'var(--text-main)' }}>Herramientas Internas</h3>
     </div>
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'center' }} className="herramientas-grid">
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
       {HERRAMIENTAS_INTERNAS.map((item, i) => (
-        <a
-          key={i}
-          href={item.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="quick-card"
-          style={{ '--i': i, textDecoration: 'none', width: '220px' }}
-        >
-          <div className="quick-card-top">
-            <span className="quick-card-num">{item.num}.</span>
-            <span className="quick-card-label">{item.label}</span>
-          </div>
-          <div className="quick-icon" style={{ fontSize: 28 }}>{item.icon}</div>
-          <div className="quick-card-bottom">
-            <span className="quick-card-action">Abrir</span>
-            <div className="quick-card-dots">
-              {Array(9).fill(0).map((_, j) => <span key={j} className="dot" />)}
+        <div key={i} style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ background: item.gradient, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 8px' }}>
+              {item.svg}
             </div>
+            <div style={{ color: '#fff', fontWeight: '800', fontSize: '13px' }}>{item.label}</div>
           </div>
-        </a>
+          <div style={{ flex: 1, padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', textAlign: 'center' }}>
+            <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: 28 }}>{item.emoji}</span>
+            </div>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-main)', marginBottom: 6 }}>{item.label}</div>
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6, maxWidth: 240 }}>{item.desc}</div>
+            </div>
+            <a
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'var(--primary-color)', color: '#1a1a1a', padding: '12px 24px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', textDecoration: 'none' }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+            >
+              <ExternalLink size={16} />
+              Abrir tablero
+            </a>
+          </div>
+        </div>
       ))}
     </div>
 
@@ -474,64 +515,60 @@ const PortalAdministracion = () => (
         <h3 style={{ fontSize: '20px', fontWeight: '800', margin: 0, color: 'var(--text-main)' }}>Compras</h3>
       </div>
 
-      {/* POWER BI - LOGÍSTICA DE PEDIDOS */}
+      {/* TABLEROS POWER BI */}
       <div style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-          <BarChart2 size={16} color="var(--primary-color)" />
-          <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-main)', textTransform: 'uppercase' }}>Logística de Pedidos</span>
-        </div>
+        {/* Header sección */}
         <div style={{
-          background: 'var(--bg-secondary)',
-          border: '1px solid var(--border-color)',
-          borderRadius: '12px',
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 60%, #1e40af 100%)',
+          borderRadius: '20px',
+          padding: '32px 36px',
+          marginBottom: '20px',
+          position: 'relative',
           overflow: 'hidden',
-          boxShadow: 'var(--shadow-sm)',
-          minHeight: '420px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
         }}>
-          {/* REEMPLAZAR src POR EL LINK REAL DEL POWER BI */}
-          <div style={{ width: '100%', padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
-            <BarChart2 size={32} color="var(--text-muted)" style={{ marginBottom: 12 }} />
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>Tablero Power BI — Logística de Pedidos</div>
-            <div style={{ fontSize: 12 }}>Reemplazar por el link del reporte cuando esté disponible</div>
+          <div style={{ position: 'relative', zIndex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+              <div style={{ background: 'rgba(96,165,250,0.2)', border: '1px solid rgba(96,165,250,0.4)', borderRadius: '10px', padding: '8px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" fill="#60a5fa" /><rect x="14" y="3" width="7" height="7" rx="1" fill="#93c5fd" opacity="0.7" /><rect x="3" y="14" width="7" height="7" rx="1" fill="#93c5fd" opacity="0.7" /><rect x="14" y="14" width="7" height="7" rx="1" fill="#60a5fa" opacity="0.5" /></svg>
+                <span style={{ fontSize: '11px', fontWeight: '700', color: '#93c5fd', letterSpacing: '0.05em' }}>POWER BI</span>
+              </div>
+            </div>
+            <h2 style={{ color: '#fff', fontWeight: '900', fontSize: '22px', margin: '0 0 6px 0' }}>Tableros de Gestión</h2>
+            <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '13px', margin: 0 }}>Indicadores y seguimiento del proceso de compras</p>
           </div>
-          {/* UNA VEZ QUE TENGAS EL LINK, REEMPLAZÁ EL DIV DE ARRIBA POR:
-          <iframe
-            title="Logística de Pedidos"
-            width="100%"
-            height="540"
-            src="TU_LINK_POWERBI_AQUI"
-            frameBorder="0"
-            allowFullScreen
-            style={{ display: 'block' }}
-          /> */}
         </div>
-      </div>
 
-      {/* POWER BI - TRACKING DE COMPRAS */}
-      <div style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-          <BarChart2 size={16} color="var(--primary-color)" />
-          <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-main)', textTransform: 'uppercase' }}>Tracking de Compras</span>
-        </div>
-        <div style={{
-          background: 'var(--bg-secondary)',
-          border: '1px solid var(--border-color)',
-          borderRadius: '12px',
-          overflow: 'hidden',
-          boxShadow: 'var(--shadow-sm)',
-          minHeight: '420px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
-          <div style={{ width: '100%', padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
-            <BarChart2 size={32} color="var(--text-muted)" style={{ marginBottom: 12 }} />
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>Tablero Power BI — Tracking de Compras</div>
-            <div style={{ fontSize: 12 }}>Reemplazar por el link del reporte cuando esté disponible</div>
+        {/* Cards de tableros */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+
+          {/* Logística de Pedidos */}
+          <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1.5px solid #e5e7eb', background: '#fff', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+            <div style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 8px' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 17l4-8 4 4 4-6 4 10" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </div>
+              <div>
+                <div style={{ color: '#fff', fontWeight: '800', fontSize: '13px' }}>Logística de Pedidos</div>
+                <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '11px' }}>Seguimiento de órdenes de compra</div>
+              </div>
+            </div>
+            <LazyIframe title="Compras - Pedidos" height={480} src="https://app.powerbi.com/view?r=eyJrIjoiMGQ0YTBkMGItYTdmNy00YTA2LWFkODUtZTIwODNjODAzYmNmIiwidCI6ImRhZmUzYmM1LTYzNzItNDM5Ni04NDUyLWM3MDdmM2VjZjRiZiJ9" bg="#f8faff" />
           </div>
+
+          {/* Tracking de Compras */}
+          <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1.5px solid #e5e7eb', background: '#fff', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+            <div style={{ background: 'linear-gradient(135deg, #134e4a 0%, #0f766e 100%)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 8px' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 17l4-8 4 4 4-6 4 10" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </div>
+              <div>
+                <div style={{ color: '#fff', fontWeight: '800', fontSize: '13px' }}>Tracking de Compras</div>
+                <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '11px' }}>Reemplazar por el link del reporte cuando esté disponible</div>
+              </div>
+            </div>
+            <LazyIframe title="Compras - Tracking" height={480} src="" bg="#f0fdf9" />
+          </div>
+
         </div>
       </div>
 
@@ -539,10 +576,12 @@ const PortalAdministracion = () => (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
 
         {/* SOLICITAR ALOJAMIENTO */}
-        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '18px' }}>🏠</span>
-            <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)', textTransform: 'uppercase' }}>Solicitar Alojamiento</span>
+        <div style={{ background: 'var(--bg-secondary)', border: '1.5px solid #e5e7eb', borderRadius: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 8px' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /><polyline points="9 22 9 12 15 12 15 22" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </div>
+            <div style={{ color: '#fff', fontWeight: '800', fontSize: '13px' }}>Solicitar Alojamiento</div>
           </div>
           <div style={{ flex: 1, padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', textAlign: 'center' }}>
             <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -580,10 +619,12 @@ const PortalAdministracion = () => (
         </div>
 
         {/* SOLICITAR RETIRO DE PEDIDOS */}
-        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '18px' }}>📦</span>
-            <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)', textTransform: 'uppercase' }}>Solicitar Retiro de Pedidos</span>
+        <div style={{ background: 'var(--bg-secondary)', border: '1.5px solid #e5e7eb', borderRadius: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ background: 'linear-gradient(135deg, #134e4a 0%, #0f766e 100%)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 8px' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 10V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M23 3H1v7h22V3z" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M10 12h4" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" /></svg>
+            </div>
+            <div style={{ color: '#fff', fontWeight: '800', fontSize: '13px' }}>Solicitar Retiro de Pedidos</div>
           </div>
           <div style={{ flex: 1, padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', textAlign: 'center' }}>
             <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -622,10 +663,12 @@ const PortalAdministracion = () => (
         </div>
 
         {/* RECURSOS - PLANILLA DESCARGABLE */}
-        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '18px' }}>📎</span>
-            <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)', textTransform: 'uppercase' }}>Recursos</span>
+        <div style={{ background: 'var(--bg-secondary)', border: '1.5px solid #e5e7eb', borderRadius: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ background: 'linear-gradient(135deg, #4a1942 0%, #7c3aed 100%)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 8px' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /><polyline points="14 2 14 8 20 8" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /><line x1="12" y1="18" x2="12" y2="12" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" /><polyline points="9 15 12 18 15 15" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </div>
+            <div style={{ color: '#fff', fontWeight: '800', fontSize: '13px' }}>Recursos</div>
           </div>
           <div style={{ flex: 1, padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', textAlign: 'center' }}>
             <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
