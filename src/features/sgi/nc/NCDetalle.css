@@ -432,6 +432,41 @@ body.dark-theme .ncd-form-group textarea:focus {
   color: var(--tipo-color, #141414);
 }
 
+.ncd-tipo-label[data-tooltip] {
+  position: relative;
+}
+
+.ncd-tipo-label[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 0;
+  transform: none;
+  background: var(--bg-color);
+  color: var(--text-main);
+  border: 1.5px solid var(--tipo-color, var(--border-color));
+  border-top: 4px solid var(--tipo-color, var(--primary-color));
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.55;
+  padding: 10px 14px;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  width: 230px;
+  white-space: normal;
+  text-align: left;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  transform: translateY(4px);
+  z-index: 300;
+}
+
+.ncd-tipo-label[data-tooltip]:hover::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 /* Fuentes checkboxes */
 .ncd-fuentes-grid {
   display: grid;
@@ -476,6 +511,54 @@ body.dark-theme .ncd-fuente-item.checked {
   font-size: 13px;
   font-weight: 500;
   color: var(--text-main);
+}
+
+/* Norma detalle */
+.ncd-norma-detalle {
+  margin-top: 16px;
+  padding: 16px;
+  background: rgba(var(--primary-rgb, 242,220,0), 0.06);
+  border: 1.5px solid var(--primary-color);
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: ncd-fade-in 0.2s ease;
+}
+
+@keyframes ncd-fade-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.ncd-norma-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ncd-norma-chip {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-color);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: var(--font-main);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.ncd-norma-chip:hover {
+  border-color: var(--primary-color);
+  color: var(--text-main);
+}
+
+.ncd-norma-chip.active {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #1a1a1a;
 }
 
 /* Adjuntos upload */
@@ -1533,6 +1616,78 @@ body.dark-theme .ncd-causa-raiz-box textarea {
   gap: 10px;
 }
 
+/* Modal confirmación rectificativa */
+.ncd-confirm-rectif-overlay {
+  z-index: 1100 !important;
+}
+
+.ncd-confirm-rectif-modal {
+  background: var(--bg-color);
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.22);
+  max-width: 440px;
+  width: 100%;
+  padding: 32px 28px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  animation: qr-slide-up 0.2s ease;
+}
+
+.ncd-confirm-rectif-icon {
+  font-size: 36px;
+  color: #E71D36;
+  line-height: 1;
+}
+
+.ncd-confirm-rectif-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.ncd-confirm-rectif-body {
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.ncd-confirm-rectif-fields {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.ncd-confirm-rectif-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.ncd-confirm-rectif-btns button {
+  width: 100%;
+  justify-content: center;
+}
+
+.ncd-accion-badge-rectif {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #fff;
+  background: #E71D36;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
 .ncd-accion-codigo {
   font-size: 12px;
   font-weight: 700;
@@ -1653,13 +1808,16 @@ body.dark-theme .ncd-causa-raiz-box textarea {
   gap: 0;
   padding: 0;
   min-height: 0;
+  overflow: hidden;
+  flex: 1;
 }
 
 .ncd-accion-col-left {
   display: flex;
   flex-direction: column;
   gap: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 /* Bloque superior: datos de la acción */
@@ -1977,7 +2135,114 @@ body.dark-theme .ncd-causa-raiz-box textarea {
   color: #E71D36;
 }
 
+.ncd-hito-adjunto-hint {
+  font-size: 12px;
+  color: #E71D36;
+  margin: 4px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ncd-hito-adjunto-hint::before {
+  content: '⚠';
+  font-size: 11px;
+}
+
 /* ── Step 5 — Verificación de Eficacia ─────────────────────────────────────── */
+/* Verificación — pregunta */
+.ncd-verif-pregunta {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ncd-verif-pregunta-texto {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.ncd-verif-pregunta-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+
+.ncd-verif-pregunta-btns {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ncd-verif-btn-si {
+  padding: 9px 20px;
+  background: var(--primary-color);
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  font-family: var(--font-main);
+  color: #1a1a1a;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.ncd-verif-btn-si:hover { opacity: 0.85; }
+
+.ncd-verif-btn-no {
+  padding: 9px 20px;
+  background: none;
+  border: 1.5px solid var(--border-color);
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  font-family: var(--font-main);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.ncd-verif-btn-no:hover { background: var(--bg-hover); }
+
+.ncd-verif-calidad {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(16,185,129,0.07);
+  border: 1.5px solid #10B981;
+  border-radius: 10px;
+  padding: 14px 16px;
+  flex-wrap: wrap;
+}
+
+.ncd-verif-calidad-texto {
+  font-size: 13px;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.ncd-verif-cambiar {
+  background: none;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-main);
+  color: var(--text-muted);
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  white-space: nowrap;
+}
+
+.ncd-verif-cambiar:hover { color: var(--text-main); }
+
 .ncd-step5-verif {
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);

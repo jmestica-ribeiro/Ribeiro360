@@ -3,6 +3,9 @@ import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Check, Upload, X, FileText, Clock, ChevronRight, Loader2, Search, User, HelpCircle, GitBranch, Settings, Package, Cloud, BarChart2, BookOpen, Users, Paperclip, Download } from 'lucide-react';
 import NCExportarPDF from './NCInformePDF';
+import NormaMultiSelector from './NormaMultiSelector';
+import DocInternoSelector from './DocInternoSelector';
+import './NormaPuntoSelector.css';
 import { supabase } from '../../../lib/supabase';
 import { notificarAsignacion } from '../../../lib/ncNotificaciones';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -28,6 +31,13 @@ const TIPO_COLORS = {
   Fortaleza: { color: '#10B981', rgb: '16,185,129' },
 };
 
+const TIPO_TOOLTIPS = {
+  NC:        'No Conformidad: incumplimiento de un requisito. Requiere análisis de causa y acción correctiva.',
+  OBS:       'Observación: situación que podría derivar en una NC si no se atiende a tiempo.',
+  OM:        'Oportunidad de Mejora: aspecto que, sin ser un incumplimiento, puede optimizarse.',
+  Fortaleza: 'Fortaleza: práctica destacada que sirve como referencia positiva.',
+};
+
 const FUENTES = [
   { key: 'fuente_quejas',                label: 'Quejas / Reclamos' },
   { key: 'fuente_auditoria_interna',     label: 'Auditoría Interna' },
@@ -39,6 +49,9 @@ const FUENTES = [
   { key: 'fuente_servicio_no_conforme',  label: 'Servicio no conforme' },
   { key: 'fuente_otros',                 label: 'Otros' },
 ];
+
+const NORMAS = ['ISO 9001', 'ISO 14001', 'ISO 45001', 'ISO 27001', 'Otra'];
+
 
 const MAX_FILES = 5;
 
@@ -80,12 +93,17 @@ function StepPlaceholder({ step }) {
 }
 
 /* ── Person Picker Button ───────────────────────────────────────────────────── */
-function PersonPickerBtn({ selectedId, profiles, onClick }) {
+function PersonPickerBtn({ selectedId, profiles, onClick, disabled }) {
   const selected = profiles.find(p => p.id === selectedId);
   return (
-    <button type="button" className="ncd-person-btn" onClick={onClick}>
+    <button
+      type="button"
+      className={`ncd-person-btn${disabled ? ' ncd-input-readonly' : ''}`}
+      onClick={onClick}
+      disabled={disabled}
+    >
       <User size={14} />
-      {selected ? selected.full_name : '— Seleccionar —'}
+      {disabled ? 'N/A' : selected ? selected.full_name : '— Seleccionar —'}
     </button>
   );
 }
@@ -267,12 +285,17 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
   // Máximo que puede aportar el próximo hito
   const maxProximoHito = Math.max(5, 100 - avanceCalculado);
 
-  const handleSaveAccion = async () => {
+  const handleGuardar = async () => {
     if (!accionForm.descripcion.trim()) return;
+    const tieneAvance = editingAccion?.id && hitoForm.descripcion.trim();
+    if (tieneAvance && hitoFiles.length === 0) return; // evidencia obligatoria
+
     setSaving(true);
     try {
       const prevResponsableId = editingAccion?.responsable_id || null;
-      if (editingAccion?.id) {
+      let accionId = editingAccion?.id;
+
+      if (accionId) {
         const estado = avanceCalculado === 100 ? 'cerrada' : avanceCalculado > 0 ? 'en_proceso' : 'pendiente';
         await supabase.from('nc_acciones').update({
           descripcion: accionForm.descripcion,
@@ -280,11 +303,11 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
           fecha_vencimiento: accionForm.fecha_vencimiento || null,
           avance: avanceCalculado,
           estado,
-        }).eq('id', editingAccion.id);
+        }).eq('id', accionId);
       } else {
         const { count } = await supabase.from('nc_acciones').select('id', { count: 'exact', head: true }).eq('hallazgo_id', hallazgoId);
         const codigo = `ACC-${String((count || 0) + 1).padStart(4, '0')}`;
-        await supabase.from('nc_acciones').insert({
+        const { data: inserted } = await supabase.from('nc_acciones').insert({
           hallazgo_id: hallazgoId,
           codigo,
           descripcion: accionForm.descripcion,
@@ -292,8 +315,10 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
           fecha_vencimiento: accionForm.fecha_vencimiento || null,
           avance: 0,
           estado: 'pendiente',
-        });
+        }).select('id').single();
+        accionId = inserted?.id;
       }
+
       if (accionForm.responsable_id) {
         await notificarAsignacion({
           hallazgoId,
@@ -303,62 +328,35 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
           prevIds: prevResponsableId ? [prevResponsableId] : [],
         });
       }
+
+      // Si hay datos de avance, registrar el hito junto al guardado
+      if (accionId && hitoForm.descripcion.trim() && hitoFiles.length > 0) {
+        const adjuntoUrls = [];
+        for (const file of hitoFiles.slice(0, 3)) {
+          const ext = file.name.split('.').pop();
+          const path = `hitos/${accionId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+          const { error: uploadError } = await supabase.storage.from('nc-adjuntos').upload(path, file);
+          if (uploadError) { console.error('Error upload:', uploadError); continue; }
+          adjuntoUrls.push(path);
+        }
+        const { error: hitoError } = await supabase.from('nc_accion_hitos').insert({
+          accion_id: accionId,
+          descripcion: hitoForm.descripcion.trim(),
+          fecha: hitoForm.fecha,
+          porcentaje: parseInt(Math.min(hitoForm.porcentaje, maxProximoHito), 10),
+          adjunto_1: adjuntoUrls[0] || null,
+          adjunto_2: adjuntoUrls[1] || null,
+          adjunto_3: adjuntoUrls[2] || null,
+        });
+        if (hitoError) console.error('Error hito:', hitoError);
+        setHitoForm({ descripcion: '', fecha: new Date().toISOString().split('T')[0], porcentaje: 10 });
+        setHitoFiles([]);
+        onHitoSaved?.();
+      }
+
       onSaved();
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleAddHito = async () => {
-    if (!hitoForm.descripcion.trim() || !editingAccion?.id) return;
-    setSavingHito(true);
-    try {
-      // Subir adjuntos si hay
-      const adjuntoUrls = [];
-      for (const file of hitoFiles.slice(0, 3)) {
-        const ext = file.name.split('.').pop();
-        const path = `hitos/${editingAccion.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error: uploadError } = await supabase.storage.from('nc-adjuntos').upload(path, file);
-        if (uploadError) { console.error('Error upload:', uploadError); continue; }
-        adjuntoUrls.push(path); // guardamos el path, no la URL pública
-      }
-
-      const hitoPayload = {
-        accion_id: editingAccion.id,
-        descripcion: hitoForm.descripcion.trim(),
-        fecha: hitoForm.fecha,
-        porcentaje: parseInt(Math.min(hitoForm.porcentaje, maxProximoHito), 10),
-        adjunto_1: adjuntoUrls[0] || null,
-        adjunto_2: adjuntoUrls[1] || null,
-        adjunto_3: adjuntoUrls[2] || null,
-      };
-      const { error: hitoError } = await supabase.from('nc_accion_hitos').insert(hitoPayload);
-      if (hitoError) { console.error('Error hito:', hitoError); throw hitoError; }
-      // El trigger de DB recalcula avance automáticamente — solo releer
-      const { data: hitosActualizados } = await supabase
-        .from('nc_accion_hitos').select('*')
-        .eq('accion_id', editingAccion.id)
-        .order('fecha', { ascending: true });
-      const rows = hitosActualizados || [];
-      const withUrls = await Promise.all(rows.map(async h => {
-        const paths = [h.adjunto_1, h.adjunto_2, h.adjunto_3].filter(Boolean);
-        if (paths.length === 0) return h;
-        const { data: signed } = await supabase.storage.from('nc-adjuntos').createSignedUrls(paths, 3600);
-        const urlMap = {};
-        (signed || []).forEach(s => { urlMap[s.path] = s.signedUrl; });
-        return {
-          ...h,
-          adjunto_1_url: h.adjunto_1 ? urlMap[h.adjunto_1] : null,
-          adjunto_2_url: h.adjunto_2 ? urlMap[h.adjunto_2] : null,
-          adjunto_3_url: h.adjunto_3 ? urlMap[h.adjunto_3] : null,
-        };
-      }));
-      setHitos(withUrls);
-      setHitoForm({ descripcion: '', fecha: new Date().toISOString().split('T')[0], porcentaje: 10 });
-      setHitoFiles([]);
-      onHitoSaved?.();
-    } finally {
-      setSavingHito(false);
     }
   };
 
@@ -477,12 +475,12 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
                       ))}
                     </div>
                   )}
+                  {hitoForm.descripcion.trim() && hitoFiles.length === 0 && (
+                    <p className="ncd-hito-adjunto-hint">
+                      Este campo es obligatorio, por favor, dejá la evidencia de tu acción.
+                    </p>
+                  )}
                 </div>
-
-                <button className="ncd-btn-primary" style={{ alignSelf: 'flex-start' }} onClick={handleAddHito} disabled={savingHito || !hitoForm.descripcion.trim() || avanceCalculado >= 100}>
-                  {savingHito ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : <Check size={14} />}
-                  Registrar hito
-                </button>
               </div>
             )}
           </div>
@@ -541,7 +539,15 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
 
         <div className="ncd-accion-modal-footer">
           <button className="ncd-btn-secondary" onClick={onClose}>Cancelar</button>
-          <button className="ncd-btn-primary" onClick={handleSaveAccion} disabled={saving || !accionForm.descripcion.trim()}>
+          <button
+            className="ncd-btn-primary"
+            onClick={handleGuardar}
+            disabled={
+              saving ||
+              !accionForm.descripcion.trim() ||
+              (editingAccion?.id && hitoForm.descripcion.trim() && hitoFiles.length === 0)
+            }
+          >
             {saving ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : <Check size={14} />}
             {editingAccion ? 'Guardar cambios' : 'Agregar acción'}
           </button>
@@ -609,6 +615,7 @@ export default function NCDetalle() {
   const [sitios, setSitios] = useState([]);        // distinct strings from profiles.office_location
   const [clientes, setClientes] = useState([]);
   const [profiles, setProfiles] = useState([]);
+  const [sgiDocumentos, setSgiDocumentos] = useState([]);
 
   // Form data - Step 1
   const [form, setForm] = useState({
@@ -617,12 +624,14 @@ export default function NCDetalle() {
     fecha: new Date().toISOString().split('T')[0],
     gerencia: '',
     sitio: '',
+    area: '',
     obra: '',
     obra_na: false,
     nro_contrato: '',
     contrato_na: false,
     cliente_id: '',
     auditor_id: '',
+    auditor_na: false,
     emisor_id: '',
     responsable_proceso: [],
     responsable_verif: [],
@@ -632,7 +641,9 @@ export default function NCDetalle() {
     fuente_auditoria_externa: false,
     fuente_requisitos_legales: false,
     fuente_norma: false,
+    fuente_norma_puntos: [],
     fuente_documento_interno: false,
+    fuente_doc_interno_refs: [],
     fuente_producto_no_conforme: false,
     fuente_servicio_no_conforme: false,
     fuente_otros: false,
@@ -678,6 +689,10 @@ export default function NCDetalle() {
   const [acciones, setAcciones] = useState([]);
   const [accionesLoading, setAccionesLoading] = useState(false);
   const [showAccionModal, setShowAccionModal] = useState(false);
+  const [seleccionarVerif, setSeleccionarVerif] = useState(null);
+  const [confirmRectif, setConfirmRectif] = useState(null); // accionId pendiente de confirmar
+  const [rectifForm, setRectifForm] = useState({ responsable_id: '', fecha_vencimiento: '' });
+  const [rectifPicker, setRectifPicker] = useState(false); // null=sin respuesta, true=sí, false=no
   const [editingAccion, setEditingAccion] = useState(null);
   const [accionForm, setAccionForm] = useState({ descripcion: '', responsable_id: '', fecha_vencimiento: '', avance: 0 });
   const [accionPicker, setAccionPicker] = useState(false);
@@ -685,9 +700,10 @@ export default function NCDetalle() {
   /* ── Load lookups ── */
   useEffect(() => {
     const fetchLookups = async () => {
-      const [c, p] = await Promise.all([
+      const [c, p, d] = await Promise.all([
         supabase.from('centros_de_costos').select('id, nombre, categoria').eq('activo', true).order('codigo'),
         supabase.from('profiles').select('id, full_name, job_title, department, office_location, avatar_url').order('full_name'),
+        supabase.from('sgi_documentos').select('id, titulo, codigo, tipo_documento').eq('activo', true).order('titulo'),
       ]);
       if (c.data) setClientes(c.data);
       if (p.data) {
@@ -695,6 +711,7 @@ export default function NCDetalle() {
         setGerencias([...new Set(p.data.map(x => x.department).filter(Boolean))].sort());
         setSitios([...new Set(p.data.map(x => x.office_location).filter(Boolean))].sort());
       }
+      if (d.data) setSgiDocumentos(d.data);
     };
     fetchLookups();
   }, []);
@@ -752,12 +769,14 @@ export default function NCDetalle() {
             fecha: data.fecha || new Date().toISOString().split('T')[0],
             gerencia: data.gerencia || '',
             sitio: data.sitio || '',
+            area: data.area || '',
             obra: data.obra || '',
             obra_na: data.obra === 'N/A',
             nro_contrato: data.nro_contrato || '',
             contrato_na: data.nro_contrato === 'N/A',
             cliente_id: data.cliente_id || '',
             auditor_id: data.auditor_id || '',
+            auditor_na: !!data.auditor_na,
             emisor_id: data.emisor_id || '',
             responsable_proceso: (() => {
               const v = data.responsable_proceso;
@@ -775,7 +794,13 @@ export default function NCDetalle() {
             fuente_auditoria_externa: !!data.fuente_auditoria_externa,
             fuente_requisitos_legales: !!data.fuente_requisitos_legales,
             fuente_norma: !!data.fuente_norma,
+            fuente_norma_puntos: (() => {
+              try { const p = JSON.parse(data.fuente_norma_puntos); return Array.isArray(p) ? p : []; } catch { return []; }
+            })(),
             fuente_documento_interno: !!data.fuente_documento_interno,
+            fuente_doc_interno_refs: (() => {
+              try { const p = JSON.parse(data.fuente_doc_interno_refs); return Array.isArray(p) ? p : []; } catch { return []; }
+            })(),
             fuente_producto_no_conforme: !!data.fuente_producto_no_conforme,
             fuente_servicio_no_conforme: !!data.fuente_servicio_no_conforme,
             fuente_otros: !!data.fuente_otros,
@@ -791,6 +816,7 @@ export default function NCDetalle() {
           savedAssignmentsRef.current = {
             emisor_id: data.emisor_id || '',
             auditor_id: data.auditor_id || '',
+            auditor_na: !!data.auditor_na,
             responsable_proceso: (() => { try { const p = JSON.parse(data.responsable_proceso); return Array.isArray(p) ? p : []; } catch { return []; } })(),
             responsable_verif: (() => { try { const p = JSON.parse(data.responsable_verif); return Array.isArray(p) ? p : []; } catch { return []; } })(),
             responsable_analisis_id: data.responsable_analisis_id || '',
@@ -809,6 +835,11 @@ export default function NCDetalle() {
             otro_descripcion: data.acr_otro_descripcion || '',
             causa_raiz: data.acr_causa_raiz || '',
           });
+
+          // Inicializar respuesta de verificación según si ya había responsables
+          const verifGuardados = (() => { try { const p = JSON.parse(data.responsable_verif); return Array.isArray(p) ? p : []; } catch { return []; } })();
+          if (verifGuardados.length > 0) setSeleccionarVerif(true);
+          else if (data.responsable_verif !== undefined) setSeleccionarVerif(false);
 
           // Load adjuntos paso 1
           const { data: adj } = await supabase
@@ -864,7 +895,9 @@ export default function NCDetalle() {
     if ((currentStep === 4 || currentStep === 5) && !isNew) fetchAcciones();
   }, [currentStep, fetchAcciones, isNew]);
 
-  const canVerif = form.responsable_verif.includes(user?.id);
+  const esResponsableCalidad = profiles.find(p => p.id === user?.id)?.job_title === 'Responsable de Calidad';
+  const canVerif = form.responsable_verif.includes(user?.id) ||
+    (form.responsable_verif.length === 0 && esResponsableCalidad);
 
   // canEdit: admins with 'sgi' tab, or people directly involved in the hallazgo
   const isSgiAdmin = isAdmin || (profile?.admin_tabs ?? []).includes('sgi');
@@ -961,10 +994,12 @@ export default function NCDetalle() {
         fecha: form.fecha || null,
         gerencia: form.gerencia || null,
         sitio: form.sitio || null,
+        area: form.area || null,
         obra: form.obra || null,
         nro_contrato: form.nro_contrato || null,
         cliente_id: form.cliente_id || null,
-        auditor_id: form.auditor_id || null,
+        auditor_id: form.auditor_na ? null : (form.auditor_id || null),
+        auditor_na: form.auditor_na,
         emisor_id: form.emisor_id || null,
         responsable_proceso: form.responsable_proceso.length > 0 ? JSON.stringify(form.responsable_proceso) : null,
         responsable_verif: form.responsable_verif.length > 0 ? JSON.stringify(form.responsable_verif) : null,
@@ -974,7 +1009,9 @@ export default function NCDetalle() {
         fuente_auditoria_externa: form.fuente_auditoria_externa,
         fuente_requisitos_legales: form.fuente_requisitos_legales,
         fuente_norma: form.fuente_norma,
+        fuente_norma_puntos: form.fuente_norma ? JSON.stringify(form.fuente_norma_puntos) : '[]',
         fuente_documento_interno: form.fuente_documento_interno,
+        fuente_doc_interno_refs: form.fuente_documento_interno ? JSON.stringify(form.fuente_doc_interno_refs) : '[]',
         fuente_producto_no_conforme: form.fuente_producto_no_conforme,
         fuente_servicio_no_conforme: form.fuente_servicio_no_conforme,
         fuente_otros: form.fuente_otros,
@@ -1066,6 +1103,7 @@ export default function NCDetalle() {
                     '--tipo-color': tc.color,
                     '--tipo-rgb': tc.rgb,
                   }}
+                  data-tooltip={TIPO_TOOLTIPS[t]}
                 >
                   {t}
                 </label>
@@ -1073,6 +1111,49 @@ export default function NCDetalle() {
             );
           })}
         </div>
+      </div>
+
+      {/* Fuentes */}
+      <div className="ncd-form-section">
+        <p className="ncd-section-title">Fuentes</p>
+        <div className="ncd-fuentes-grid">
+          {FUENTES.map(f => (
+            <label
+              key={f.key}
+              className={`ncd-fuente-item${form[f.key] ? ' checked' : ''}`}
+            >
+              <input
+                type="checkbox"
+                checked={!!form[f.key]}
+                onChange={e => {
+                  setField(f.key, e.target.checked);
+                  if (f.key === 'fuente_norma' && !e.target.checked) setField('fuente_norma_puntos', []);
+                  if (f.key === 'fuente_documento_interno' && !e.target.checked) setField('fuente_doc_interno_refs', []);
+                }}
+              />
+              <span>{f.label}</span>
+            </label>
+          ))}
+        </div>
+
+        {form.fuente_norma && (
+          <div className="ncd-norma-detalle">
+            <NormaMultiSelector
+              value={form.fuente_norma_puntos}
+              onChange={v => setField('fuente_norma_puntos', v)}
+            />
+          </div>
+        )}
+
+        {form.fuente_documento_interno && (
+          <div className="ncd-norma-detalle">
+            <DocInternoSelector
+              documentos={sgiDocumentos}
+              value={form.fuente_doc_interno_refs}
+              onChange={v => setField('fuente_doc_interno_refs', v)}
+            />
+          </div>
+        )}
       </div>
 
       {/* Datos generales */}
@@ -1110,6 +1191,12 @@ export default function NCDetalle() {
             <select id="sitio" value={form.sitio} onChange={e => setField('sitio', e.target.value)}>
               <option value="">— Seleccionar —</option>
               {sitios.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div className="ncd-form-group">
+            <label htmlFor="area">Área</label>
+            <select id="area" value={form.area} onChange={e => setField('area', e.target.value)}>
+              <option value="">— Seleccionar —</option>
             </select>
           </div>
           <div className="ncd-form-group">
@@ -1188,8 +1275,20 @@ export default function NCDetalle() {
             <PersonPickerBtn
               selectedId={form.auditor_id}
               profiles={profiles}
-              onClick={() => setPickerTarget('auditor')}
+              onClick={() => { if (!form.auditor_na) setPickerTarget('auditor'); }}
+              disabled={form.auditor_na}
             />
+            <label className="ncd-check-inline">
+              <input
+                type="checkbox"
+                checked={!!form.auditor_na}
+                onChange={e => {
+                  const checked = e.target.checked;
+                  setForm(f => ({ ...f, auditor_na: checked, auditor_id: checked ? '' : f.auditor_id }));
+                }}
+              />
+              No aplica
+            </label>
           </div>
           <div className="ncd-form-group">
             <label>Emisor del Hallazgo</label>
@@ -1199,7 +1298,7 @@ export default function NCDetalle() {
               onClick={() => setPickerTarget('emisor')}
             />
           </div>
-          <div className="ncd-form-group">
+          <div className="ncd-form-group full">
             <label>Responsable del Proceso</label>
             <MultiPersonPickerBtn
               selectedIds={form.responsable_proceso}
@@ -1217,26 +1316,6 @@ export default function NCDetalle() {
               onChange={e => setField('descripcion', e.target.value)}
             />
           </div>
-        </div>
-      </div>
-
-      {/* Fuentes */}
-      <div className="ncd-form-section">
-        <p className="ncd-section-title">Fuentes</p>
-        <div className="ncd-fuentes-grid">
-          {FUENTES.map(f => (
-            <label
-              key={f.key}
-              className={`ncd-fuente-item${form[f.key] ? ' checked' : ''}`}
-            >
-              <input
-                type="checkbox"
-                checked={!!form[f.key]}
-                onChange={e => setField(f.key, e.target.checked)}
-              />
-              <span>{f.label}</span>
-            </label>
-          ))}
         </div>
       </div>
 
@@ -1551,6 +1630,9 @@ export default function NCDetalle() {
                 <div key={a.id} className="ncd-accion-card" onClick={() => { setEditingAccion(a); setAccionForm({ descripcion: a.descripcion, responsable_id: a.responsable_id || '', fecha_vencimiento: a.fecha_vencimiento || '', avance: a.avance || 0 }); setShowAccionModal(true); }}>
                   <div className="ncd-accion-card-header">
                     <span className="ncd-accion-codigo">{a.codigo}</span>
+                    {a.tipo === 'rectificativa' && (
+                      <span className="ncd-accion-badge-rectif">RECTIFICATIVA</span>
+                    )}
                     <span className="ncd-accion-estado" style={{ background: estadoColor + '20', color: estadoColor }}>{a.estado?.replace('_', ' ')}</span>
                     {diasRestantes !== null && (
                       <span className={`ncd-accion-dias${diasRestantes < 0 ? ' vencida' : diasRestantes === 0 ? ' hoy' : diasRestantes <= 7 ? ' urgente' : ' normal'}`}>
@@ -1561,18 +1643,20 @@ export default function NCDetalle() {
                           : `${diasRestantes} día${diasRestantes !== 1 ? 's' : ''} restante${diasRestantes !== 1 ? 's' : ''}`}
                       </span>
                     )}
-                    <button
-                      className="ncd-accion-delete"
-                      title="Eliminar acción"
-                      onClick={async e => {
-                        e.stopPropagation();
-                        if (!window.confirm(`¿Eliminar ${a.codigo}?`)) return;
-                        await supabase.from('nc_acciones').delete().eq('id', a.id);
-                        fetchAcciones();
-                      }}
-                    >
-                      <X size={14} />
-                    </button>
+                    {a.tipo !== 'rectificativa' && (
+                      <button
+                        className="ncd-accion-delete"
+                        title="Eliminar acción"
+                        onClick={async e => {
+                          e.stopPropagation();
+                          if (!window.confirm(`¿Eliminar ${a.codigo}?`)) return;
+                          await supabase.from('nc_acciones').delete().eq('id', a.id);
+                          fetchAcciones();
+                        }}
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
                   </div>
                   <p className="ncd-accion-desc">{a.descripcion}</p>
                   <div className="ncd-accion-card-footer">
@@ -1603,16 +1687,61 @@ export default function NCDetalle() {
 
       <div className="ncd-form-section">
         <p className="ncd-section-title">Responsable de Verificar la Eficacia</p>
-        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
-          Estas personas podrán editar y completar el Paso 5 de verificación.
-        </p>
-        <div className="ncd-form-group" style={{ maxWidth: 400 }}>
-          <MultiPersonPickerBtn
-            selectedIds={form.responsable_verif}
-            profiles={profiles}
-            onClick={() => setPickerTarget('verif')}
-          />
-        </div>
+
+        {/* Pregunta inicial */}
+        {seleccionarVerif === null && (
+          <div className="ncd-verif-pregunta">
+            <p className="ncd-verif-pregunta-texto">
+              ¿Deseás asignar responsable(s) de verificación?
+            </p>
+            <p className="ncd-verif-pregunta-hint">
+              Si no lo hacés, el/la Responsable de Calidad llevará a cabo esta verificación.
+            </p>
+            <div className="ncd-verif-pregunta-btns">
+              <button type="button" className="ncd-verif-btn-si" onClick={() => setSeleccionarVerif(true)}>
+                Sí, quiero asignar
+              </button>
+              <button type="button" className="ncd-verif-btn-no" onClick={() => { setSeleccionarVerif(false); setField('responsable_verif', []); }}>
+                No, dejar al Responsable de Calidad
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Respondió NO */}
+        {seleccionarVerif === false && (() => {
+          const responsablesCalidad = profiles.filter(p => p.job_title === 'Responsable de Calidad');
+          return (
+            <div className="ncd-verif-calidad">
+              <p className="ncd-verif-calidad-texto">
+                La verificación de eficacia quedará a cargo de{' '}
+                <strong>{responsablesCalidad.length > 0 ? responsablesCalidad.map(p => p.full_name).join(', ') : 'el/la Responsable de Calidad'}</strong>.
+              </p>
+              <button type="button" className="ncd-verif-cambiar" onClick={() => setSeleccionarVerif(null)}>
+                Cambiar respuesta
+              </button>
+            </div>
+          );
+        })()}
+
+        {/* Respondió SÍ */}
+        {seleccionarVerif === true && (
+          <>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
+              El auditor, emisor, responsables del proceso, responsable de análisis y participantes del equipo no pueden ser seleccionados.
+            </p>
+            <div className="ncd-form-group" style={{ maxWidth: 400 }}>
+              <MultiPersonPickerBtn
+                selectedIds={form.responsable_verif}
+                profiles={profiles}
+                onClick={() => setPickerTarget('verif')}
+              />
+            </div>
+            <button type="button" className="ncd-verif-cambiar" style={{ marginTop: 8 }} onClick={() => { setSeleccionarVerif(null); setField('responsable_verif', []); }}>
+              Cambiar respuesta
+            </button>
+          </>
+        )}
       </div>
 
       {showAccionModal && (
@@ -1659,7 +1788,41 @@ export default function NCDetalle() {
         verif_adjunto_3: allAdj[2] || null,
       }).eq('id', accionId);
       setVerif(accionId, { adjuntos: allAdj, files: [], saving: false });
-      showToast('Verificación guardada', 'success');
+
+      // Si no fue eficaz → crear acción rectificativa y volver al paso 4
+      if (v.eficaz === false) {
+        const { count } = await supabase
+          .from('nc_acciones').select('id', { count: 'exact', head: true })
+          .eq('hallazgo_id', id);
+        const codigo = `ACC-${String((count || 0) + 1).padStart(4, '0')}`;
+        const { data: inserted } = await supabase.from('nc_acciones').insert({
+          hallazgo_id: id,
+          codigo,
+          descripcion: `[RECTIFICATIVA] ${v.detalle || 'Acción no fue eficaz — requiere nueva acción correctiva.'}`,
+          responsable_id: rectifForm.responsable_id || null,
+          fecha_vencimiento: rectifForm.fecha_vencimiento || null,
+          avance: 0,
+          estado: 'pendiente',
+          tipo: 'rectificativa',
+        }).select('id').single();
+        if (rectifForm.responsable_id && inserted?.id) {
+          await notificarAsignacion({
+            hallazgoId: id,
+            hallazgoNumero: form.numero || id,
+            tipo: 'responsable_accion',
+            newIds: [rectifForm.responsable_id],
+            prevIds: [],
+          });
+        }
+        setRectifForm({ responsable_id: '', fecha_vencimiento: '' });
+        await supabase.from('nc_hallazgos').update({ paso_actual: 4 }).eq('id', id);
+        setPasoActual(4);
+        setCurrentStep(4);
+        await fetchAcciones();
+        showToast('Acción no eficaz: se creó una acción rectificativa y se regresó al Paso 4', 'error');
+      } else {
+        showToast('Verificación guardada', 'success');
+      }
     } catch {
       setVerif(accionId, { saving: false });
     }
@@ -1834,7 +1997,10 @@ export default function NCDetalle() {
                     <div className="ncd-step5-footer">
                       <button
                         className="ncd-btn-primary"
-                        onClick={() => handleSaveVerif(a.id)}
+                        onClick={() => {
+                          if (v.eficaz === false) setConfirmRectif(a.id);
+                          else handleSaveVerif(a.id);
+                        }}
                         disabled={v.saving || v.eficaz === null || !canVerif}
                       >
                         {v.saving ? <Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> : <Check size={13} />}
@@ -1997,6 +2163,7 @@ export default function NCDetalle() {
                   Guardar borrador
                 </button>
                 {(() => {
+                  const sinAcciones = currentStep === 4 && acciones.length === 0;
                   const accionesPendientes = currentStep === 4 && acciones.length > 0 && acciones.some(a => a.estado !== 'cerrada');
                   const isCierre = currentStep === 5;
                   const verifPendiente = isCierre && acciones.some(a => (accionesVerif[a.id]?.eficaz ?? a.verif_eficaz) === null || (accionesVerif[a.id]?.eficaz ?? a.verif_eficaz) === undefined);
@@ -2004,8 +2171,8 @@ export default function NCDetalle() {
                     <button
                       className="ncd-btn-primary"
                       onClick={() => handleSave(true)}
-                      disabled={saving || !canEdit || accionesPendientes || verifPendiente || (isCierre && !canVerif)}
-                      title={accionesPendientes ? 'Cerrá todas las acciones antes de continuar' : verifPendiente ? 'Completá la verificación de todas las acciones' : ''}
+                      disabled={saving || !canEdit || sinAcciones || accionesPendientes || verifPendiente || (isCierre && !canVerif)}
+                      title={sinAcciones ? 'Agregá al menos una acción antes de continuar' : accionesPendientes ? 'Cerrá todas las acciones antes de continuar' : verifPendiente ? 'Completá la verificación de todas las acciones' : ''}
                       style={isCierre ? { background: '#10B981', borderColor: '#10B981' } : {}}
                     >
                       {saving
@@ -2025,6 +2192,61 @@ export default function NCDetalle() {
           )}
         </div>
       </div>
+
+      {/* Confirmación acción rectificativa */}
+      {confirmRectif && createPortal(
+        <div className="ncd-picker-overlay ncd-confirm-rectif-overlay" onMouseDown={e => { if (e.target === e.currentTarget) setConfirmRectif(null); }}>
+          <div className="ncd-confirm-rectif-modal">
+            <div className="ncd-confirm-rectif-icon">⚠</div>
+            <h4 className="ncd-confirm-rectif-title">Acción marcada como no eficaz</h4>
+            <p className="ncd-confirm-rectif-body">
+              Se generará una nueva acción <strong>RECTIFICATIVA</strong> y el hallazgo volverá al <strong>Paso 4</strong>. Podés asignar un responsable y fecha de vencimiento ahora.
+            </p>
+
+            <div className="ncd-confirm-rectif-fields">
+              <div className="ncd-form-group">
+                <label>Responsable de la acción rectificativa</label>
+                <PersonPickerBtn
+                  selectedId={rectifForm.responsable_id}
+                  profiles={profiles}
+                  onClick={() => setRectifPicker(true)}
+                />
+              </div>
+              <div className="ncd-form-group">
+                <label>Fecha de vencimiento</label>
+                <input
+                  type="date"
+                  value={rectifForm.fecha_vencimiento}
+                  onChange={e => setRectifForm(f => ({ ...f, fecha_vencimiento: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="ncd-confirm-rectif-btns">
+              <button className="ncd-btn-secondary" onClick={() => setConfirmRectif(null)}>
+                Cancelar
+              </button>
+              <button
+                className="ncd-btn-primary"
+                style={{ background: '#E71D36', borderColor: '#E71D36' }}
+                onClick={() => { const aid = confirmRectif; setConfirmRectif(null); handleSaveVerif(aid); }}
+              >
+                <Check size={14} /> Confirmar y generar rectificativa
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+      {rectifPicker && (
+        <PersonPickerModal
+          profiles={profiles}
+          title="Responsable de la acción rectificativa"
+          selectedIds={rectifForm.responsable_id ? [rectifForm.responsable_id] : []}
+          onSelect={p => { setRectifForm(f => ({ ...f, responsable_id: p.id })); setRectifPicker(false); }}
+          onClose={() => setRectifPicker(false)}
+        />
+      )}
 
       {/* Toast */}
       {toast && (
@@ -2054,16 +2276,26 @@ export default function NCDetalle() {
           onClose={() => setPickerTarget(null)}
         />
       )}
-      {pickerTarget === 'verif' && (
-        <PersonPickerModal
-          profiles={profiles}
-          title="Responsables de Verificar la Eficacia"
-          multi
-          selectedIds={form.responsable_verif}
-          onSelect={(ids) => setField('responsable_verif', ids)}
-          onClose={() => setPickerTarget(null)}
-        />
-      )}
+      {pickerTarget === 'verif' && (() => {
+        const excludidos = new Set([
+          form.auditor_id,
+          form.emisor_id,
+          step2.responsable_analisis_id,
+          ...(step2.participantes || []),
+          ...(form.responsable_proceso || []),
+        ].filter(Boolean));
+        const profilesVerif = profiles.filter(p => !excludidos.has(p.id));
+        return (
+          <PersonPickerModal
+            profiles={profilesVerif}
+            title="Responsables de Verificar la Eficacia"
+            multi
+            selectedIds={form.responsable_verif}
+            onSelect={(ids) => setField('responsable_verif', ids)}
+            onClose={() => setPickerTarget(null)}
+          />
+        );
+      })()}
       {showPDF && (
         <NCExportarPDF hallazgoId={id} onClose={() => setShowPDF(false)} />
       )}
