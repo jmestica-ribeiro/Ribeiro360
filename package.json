@@ -7,7 +7,17 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "mock:sgi": "node --env-file=.env scripts/mockSgi.js",
+    "scaffold:feature": "node scripts/scaffoldFeature.js",
+    "schema:fetch": "node --env-file=.env scripts/fetchSupabaseSchema.js",
+    "debug:permissions": "node --env-file=.env scripts/debugPermissions.js",
+    "audit:styles": "node scripts/auditStyles.js",
+    "preview:pdf": "node scripts/previewPdf.js",
+    "audit:security": "node scripts/securityAudit.js",
+    "audit:architecture": "node scripts/architectureAudit.js",
+    "audit:notifications": "node scripts/auditNotifications.js",
+    "services:map": "node scripts/generateServiceMap.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.99.3",

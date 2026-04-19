@@ -82,18 +82,27 @@ export async function saveSgiDocumento(docPayload, versionData) {
   }
 
   if (savedDocId && versionData?.numero_version) {
-    const verPayload = {
-      documento_id: savedDocId,
-      numero_version: versionData.numero_version,
-      fecha_emision: versionData.fecha_emision || null,
-      notas_cambios: versionData.notas_cambios || null,
-      vigente: true,
-    };
+    const isControlado = docFields.documento_controlado ?? false;
     if (versionData._ver_id) {
-      await supabase.from('sgi_versiones').update(verPayload).eq('id', versionData._ver_id);
+      await supabase.from('sgi_versiones').update({
+        numero_version: versionData.numero_version,
+        fecha_emision: versionData.fecha_emision || null,
+        notas_cambios: versionData.notas_cambios || null,
+        ...(versionData.archivo_url && { archivo_url: versionData.archivo_url }),
+      }).eq('id', versionData._ver_id);
     } else {
-      await supabase.from('sgi_versiones').update({ vigente: false }).eq('documento_id', savedDocId);
-      await supabase.from('sgi_versiones').insert(verPayload);
+      if (!isControlado) {
+        await supabase.from('sgi_versiones').update({ vigente: false }).eq('documento_id', savedDocId);
+      }
+      await supabase.from('sgi_versiones').insert({
+        documento_id: savedDocId,
+        numero_version: versionData.numero_version,
+        fecha_emision: versionData.fecha_emision || null,
+        notas_cambios: versionData.notas_cambios || null,
+        vigente: !isControlado,
+        estado_aprobacion: isControlado ? 'en_revision' : 'aprobado',
+        ...(versionData.archivo_url && { archivo_url: versionData.archivo_url }),
+      });
     }
   }
 
@@ -184,7 +193,18 @@ export async function fetchSgiDocumentoById(docId) {
     .select('*, categoria:sgi_categorias(nombre, color, icono)')
     .eq('id', docId)
     .single();
-  if (error) console.error('[sgiService] fetchSgiDocumentoById:', error.message);
+  if (error) {
+    console.error('[sgiService] fetchSgiDocumentoById:', error.message);
+    return { data, error };
+  }
+  if (data?.created_by) {
+    const { data: creador } = await supabase
+      .from('profiles')
+      .select('full_name, department, job_title')
+      .eq('id', data.created_by)
+      .maybeSingle();
+    data.creador = creador ?? null;
+  }
   return { data, error };
 }
 
@@ -196,6 +216,78 @@ export async function fetchSgiVersionesByDocumento(documentoId) {
     .order('numero_version', { ascending: true });
   if (error) console.error('[sgiService] fetchSgiVersionesByDocumento:', error.message);
   return { data: data ?? [], error };
+}
+
+export async function fetchSgiVersionesPendientes() {
+  const { data, error } = await supabase
+    .from('sgi_versiones')
+    .select('id, estado_aprobacion, numero_version, documento:sgi_documentos!documento_id(id, titulo, codigo, activo, created_by, categoria:sgi_categorias(nombre, color, icono))')
+    .in('estado_aprobacion', ['en_revision', 'pendiente_aprobacion']);
+  if (error) console.error('[sgiService] fetchSgiVersionesPendientes:', error.message);
+  const active = (data ?? []).filter(v => v.documento?.activo !== false);
+  if (active.length === 0) return { data: active, error };
+  const createdByIds = [...new Set(active.map(v => v.documento?.created_by).filter(Boolean))];
+  const { data: perfiles } = await supabase
+    .from('profiles')
+    .select('id, department')
+    .in('id', createdByIds);
+  const perfilesMap = Object.fromEntries((perfiles ?? []).map(p => [p.id, p]));
+  const enriched = active.map(v => ({
+    ...v,
+    documento: v.documento
+      ? { ...v.documento, creador: perfilesMap[v.documento.created_by] ?? null }
+      : v.documento,
+  }));
+  return { data: enriched, error };
+}
+
+// ── Circuito de Aprobación ─────────────────────────────────────────────────────
+
+export async function reviewSgiVersion(versionId, reviewerProfile, comentario = null) {
+  const { data, error } = await supabase
+    .from('sgi_versiones')
+    .update({
+      estado_aprobacion: 'pendiente_aprobacion',
+      revisor_id: reviewerProfile.id,
+      revisor: reviewerProfile.full_name,
+      fecha_revision: new Date().toISOString(),
+      comentario_revision: comentario || null,
+    })
+    .eq('id', versionId)
+    .select();
+  if (error) console.error('[sgiService] reviewSgiVersion:', error.message);
+  return { data, error };
+}
+
+export async function approveSgiVersion(versionId, documentoId, approverProfile, comentario = null) {
+  await supabase.from('sgi_versiones').update({ vigente: false }).eq('documento_id', documentoId);
+  const { data, error } = await supabase
+    .from('sgi_versiones')
+    .update({
+      estado_aprobacion: 'aprobado',
+      aprobador_id: approverProfile.id,
+      aprobador: approverProfile.full_name,
+      fecha_aprobacion: new Date().toISOString(),
+      comentario_aprobacion: comentario || null,
+      vigente: true,
+    })
+    .eq('id', versionId)
+    .select();
+  if (error) console.error('[sgiService] approveSgiVersion:', error.message);
+  return { data, error };
+}
+
+export async function rejectSgiVersion(versionId, comentario = null) {
+  const { data, error } = await supabase
+    .from('sgi_versiones')
+    .update({
+      estado_aprobacion: 'rechazado',
+      comentario_revision: comentario || null,
+    })
+    .eq('id', versionId)
+    .select();
+  if (error) console.error('[sgiService] rejectSgiVersion:', error.message);
+  return { data, error };
 }
 
 export async function getSgiSignedUrl(path, seconds = 60) {

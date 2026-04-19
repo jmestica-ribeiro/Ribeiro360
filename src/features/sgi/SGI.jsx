@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText, BookOpen, ClipboardList, Folder, ChevronRight, ChevronLeft,
   Plus, X, Download, History, CheckCircle, ShieldCheck, Search,
-  AlertCircle, Edit2, Trash2, Save, Lock, Unlock, Tag
+  AlertCircle, Edit2, Trash2, Save, Lock, Unlock, Tag, Clock,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -16,6 +16,7 @@ import {
   uploadSgiArchivo,
   softDeleteSgiDocumento,
   getSgiSignedUrl,
+  fetchSgiVersionesPendientes,
 } from '../../services/sgiService';
 import './SGI.css';
 
@@ -46,6 +47,8 @@ const SGI = () => {
   const [docCounts, setDocCounts] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
 
+  const [pendientesRaw, setPendientesRaw] = useState([]);
+
   const [showDocModal, setShowDocModal] = useState(false);
   const [editingDoc, setEditingDoc] = useState(null);
   const [docForm, setDocForm] = useState(EMPTY_DOC_FORM);
@@ -66,10 +69,12 @@ const SGI = () => {
   // ── Fetch ─────────────────────────────────────────────────────────────────
   const fetchCategories = async () => {
     setIsLoading(true);
-    const [{ data }, { data: docList }] = await Promise.all([
+    const [{ data }, { data: docList }, { data: pendData }] = await Promise.all([
       fetchSgiCategoriasActivas(),
       fetchSgiDocsCounts(),
+      fetchSgiVersionesPendientes(),
     ]);
+    setPendientesRaw(pendData ?? []);
 
     setCategories(data);
 
@@ -95,6 +100,9 @@ const SGI = () => {
     const enriched = data.map(doc => ({
       ...doc,
       versionActual: doc.versiones?.find(v => v.vigente) || doc.versiones?.[0] || null,
+      versionPendiente: doc.versiones?.find(v =>
+        v.estado_aprobacion === 'en_revision' || v.estado_aprobacion === 'pendiente_aprobacion'
+      ) || null,
     }));
     setDocuments(enriched);
     setIsLoading(false);
@@ -111,6 +119,9 @@ const SGI = () => {
 
   const openEditDoc = async (doc) => {
     const { data: vigente } = await fetchVersionVigente(doc.id);
+    const refVersion = vigente || doc.versiones?.find(v =>
+      v.estado_aprobacion === 'en_revision' || v.estado_aprobacion === 'pendiente_aprobacion'
+    ) || doc.versiones?.[0] || null;
     setEditingDoc(doc);
     setDocForm({
       titulo: doc.titulo || '', codigo: doc.codigo || '', descripcion: doc.descripcion || '',
@@ -118,10 +129,10 @@ const SGI = () => {
       acceso: doc.acceso || 'No Confidencial', lugar_ubicacion: doc.lugar_ubicacion || '',
       periodo_retencion: doc.periodo_retencion || '', etiquetas: doc.etiquetas || '',
       documento_controlado: doc.documento_controlado || false,
-      _ver_id: vigente?.id || null,
-      numero_version: vigente?.numero_version || '0',
-      fecha_emision: vigente?.fecha_emision || '',
-      notas_cambios: vigente?.notas_cambios || '',
+      _ver_id: refVersion?.id || null,
+      numero_version: refVersion?.numero_version || '0',
+      fecha_emision: refVersion?.fecha_emision || '',
+      notas_cambios: refVersion?.notas_cambios || '',
     });
     setShowDocModal(true);
   };
@@ -174,6 +185,15 @@ const SGI = () => {
     fetchDocuments(); fetchCategories();
   };
 
+  const isTester = profile?.email === 'juan.mestica@ribeirosrl.com.ar';
+  const isRevisorCmass = profile?.department === 'CMASS' || isTester;
+  const pendientes = pendientesRaw.filter(ver => {
+    if (isTester) return true;
+    if (ver.estado_aprobacion === 'en_revision' && isRevisorCmass) return true;
+    if (ver.estado_aprobacion === 'pendiente_aprobacion' && profile?.job_title === 'Gerente' && ver.documento?.creador?.department === profile?.department) return true;
+    return false;
+  });
+
   const currentCategory = categories.find(c => getCatSlug(c.nombre) === categoriaSlug);
   const subCategories = currentCategory 
     ? categories.filter(c => c.parent_id === currentCategory.id)
@@ -217,6 +237,42 @@ const SGI = () => {
             <p>Documentación oficial, procedimientos y registros vigentes del SGI</p>
           </div>
         </div>
+        {pendientes.length > 0 && (
+          <div className="sgi-pendientes-panel">
+            <div className="sgi-pendientes-header">
+              <Clock size={15} />
+              <span>Pendientes de tu acción</span>
+              <span className="sgi-pendientes-count">{pendientes.length}</span>
+            </div>
+            <div className="sgi-pendientes-list">
+              {pendientes.map(ver => {
+                const IconComp = ICON_MAP[ver.documento?.categoria?.icono] || Folder;
+                return (
+                  <div
+                    key={ver.id}
+                    className="sgi-pendiente-row"
+                    onClick={() => navigate(`/sgi/documento/${ver.documento?.id}`)}
+                  >
+                    <div className="sgi-pendiente-cat-icon" style={{ color: ver.documento?.categoria?.color || '#6366f1' }}>
+                      <IconComp size={16} />
+                    </div>
+                    <div className="sgi-pendiente-info">
+                      <span className="sgi-pendiente-title">{ver.documento?.titulo || '—'}</span>
+                      <span className="sgi-pendiente-meta">
+                        Rev. {ver.numero_version} · {ver.documento?.categoria?.nombre || '—'}
+                      </span>
+                    </div>
+                    <span className={`sgi-doc-badge aprobacion-${ver.estado_aprobacion}`}>
+                      {ver.estado_aprobacion === 'en_revision' ? 'Revisión CMASS' : 'Aprobar Gerencia'}
+                    </span>
+                    <ChevronRight size={15} className="sgi-pendiente-arrow" />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="sgi-loading">Cargando carpetas...</div>
         ) : (
@@ -297,6 +353,11 @@ const SGI = () => {
                     <div className="sgi-doc-badges">
                       {doc.tipo_documento && <span className="sgi-doc-badge tipo">{doc.tipo_documento}</span>}
                       {doc.documento_controlado && <span className="sgi-doc-badge controlado">Controlado</span>}
+                      {doc.versionPendiente && (
+                        <span className={`sgi-doc-badge aprobacion-${doc.versionPendiente.estado_aprobacion}`}>
+                          {doc.versionPendiente.estado_aprobacion === 'en_revision' ? 'En revisión' : 'Pend. aprobación'}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="sgi-doc-right">

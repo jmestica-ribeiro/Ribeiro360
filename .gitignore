@@ -23,3 +23,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Archivos de Claude CLI e IA Local
+.claude/
+.mcp.json
