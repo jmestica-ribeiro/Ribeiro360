@@ -73,8 +73,14 @@ export const useNotificaciones = (profile) => {
       }
     });
 
-    (sgiData || []).forEach(ver => {
+    const sgiDedup = (sgiData || []).filter(
+      (ver, idx, arr) => arr.findIndex(v => v.documento_id === ver.documento_id) === idx
+    );
+    sgiDedup.forEach(ver => {
+      // fecha_emision es YYYY-MM-DD — normalizamos a fin del día para comparar
+      // contra currentLastSeen que es un ISO timestamp completo
       const createdAt = ver.fecha_emision;
+      const createdAtTs = new Date(createdAt + 'T23:59:59').toISOString();
       items.push({
         id: `sgi-${ver.id}`,
         tipo: 'documento',
@@ -83,7 +89,7 @@ export const useNotificaciones = (profile) => {
         subtitulo: ver.numero_version ? `v${ver.numero_version}` : null,
         color: '#3B82F6',
         created_at: createdAt,
-        leida: createdAt <= currentLastSeen,
+        leida: createdAtTs <= currentLastSeen,
       });
     });
 
@@ -126,6 +132,7 @@ export const useNotificaciones = (profile) => {
         .from('sgi_versiones')
         .select('id, numero_version, fecha_emision, documento_id, documento:sgi_documentos(titulo)')
         .gte('fecha_emision', sinceISO.split('T')[0])
+        .eq('vigente', true)
         .order('fecha_emision', { ascending: false })
         .limit(10),
       supabase
