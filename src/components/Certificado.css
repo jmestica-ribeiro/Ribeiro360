@@ -1,0 +1,359 @@
+/* ============================
+   OVERLAY
+   ============================ */
+.certificado-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 24px 16px 48px;
+  overflow-y: auto;
+}
+
+.certificado-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  width: 100%;
+  max-width: 900px;
+  justify-content: flex-end;
+}
+
+.cert-btn-print {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #F2DC00;
+  color: #000;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  box-shadow: 0 4px 12px rgba(242, 220, 0, 0.4);
+}
+
+.cert-btn-print:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(242, 220, 0, 0.5);
+}
+
+.cert-btn-close {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.cert-btn-close:hover {
+  background: rgba(255,255,255,0.3);
+}
+
+/* ============================
+   CERTIFICADO
+   ============================ */
+.certificado-print-area {
+  width: 100%;
+  max-width: 900px;
+}
+
+.certificado-paper {
+  background: #fff;
+  width: 100%;
+  aspect-ratio: 1.414 / 1; /* A4 landscape */
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  position: relative;
+}
+
+/* Borde decorativo exterior */
+.cert-border-outer {
+  position: absolute;
+  inset: 16px;
+  border: 3px solid #1a1a1a;
+  border-radius: 4px;
+  padding: 4px;
+}
+
+.cert-border-inner {
+  height: 100%;
+  border: 1px solid #F2DC00;
+  border-radius: 2px;
+  display: flex;
+  flex-direction: column;
+  padding: 28px 48px;
+  background: linear-gradient(135deg, #fffef0 0%, #ffffff 50%, #fffef0 100%);
+}
+
+/* Header */
+.cert-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.cert-logo-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cert-logo-badge {
+  width: 36px;
+  height: 36px;
+  background: #1a1a1a;
+  color: #F2DC00;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.cert-logo-text {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.cert-logo-text strong {
+  color: #c9b800;
+}
+
+.cert-academy-label {
+  font-size: 12px;
+  color: #888;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Título con ornamentos */
+.cert-title-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.cert-title-ornament {
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(to right, transparent, #F2DC00, #1a1a1a);
+}
+
+.cert-title-section .cert-title-ornament:last-child {
+  background: linear-gradient(to left, transparent, #F2DC00, #1a1a1a);
+}
+
+.cert-title {
+  font-size: 22px;
+  font-weight: 900;
+  color: #1a1a1a;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  white-space: nowrap;
+}
+
+/* Cuerpo */
+.cert-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 8px;
+}
+
+.cert-certifica {
+  font-size: 14px;
+  color: #666;
+  font-style: italic;
+}
+
+.cert-name-wrapper {
+  margin: 4px 0 8px;
+}
+
+.cert-name {
+  font-size: 36px;
+  font-weight: 900;
+  color: #1a1a1a;
+  font-family: Georgia, serif;
+  letter-spacing: 1px;
+}
+
+.cert-name-underline {
+  height: 3px;
+  background: linear-gradient(to right, transparent, #F2DC00, transparent);
+  margin-top: 4px;
+  border-radius: 2px;
+}
+
+.cert-completó {
+  font-size: 14px;
+  color: #666;
+  font-style: italic;
+}
+
+.cert-course-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0;
+}
+
+.cert-category-badge {
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 800;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.cert-course-name {
+  font-size: 20px;
+  font-weight: 800;
+  color: #1a1a1a;
+  max-width: 600px;
+  line-height: 1.3;
+}
+
+.cert-score-row {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-top: 8px;
+  padding: 10px 24px;
+  background: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 8px;
+}
+
+.cert-score-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #444;
+}
+
+.cert-score-item strong {
+  color: #1a1a1a;
+}
+
+.cert-date-solo {
+  font-size: 13px;
+  color: #666;
+  margin-top: 8px;
+}
+
+/* Footer firmas */
+.cert-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-top: 16px;
+  padding-top: 12px;
+}
+
+.cert-signature {
+  text-align: center;
+  min-width: 160px;
+}
+
+.cert-signature-line {
+  height: 1px;
+  background: #1a1a1a;
+  margin-bottom: 6px;
+}
+
+.cert-signature-name {
+  font-size: 12px;
+  font-weight: 800;
+  color: #1a1a1a;
+}
+
+.cert-signature-role {
+  font-size: 11px;
+  color: #888;
+}
+
+/* Sello */
+.cert-seal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cert-seal-circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 3px solid #1a1a1a;
+  outline: 2px solid #F2DC00;
+  outline-offset: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 900;
+  color: #1a1a1a;
+  background: #fff;
+}
+
+/* ============================
+   PRINT STYLES
+   ============================ */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .certificado-print-area,
+  .certificado-print-area * {
+    visibility: visible !important;
+  }
+
+  .certificado-print-area {
+    position: fixed !important;
+    inset: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .certificado-paper {
+    width: 100vw !important;
+    height: 100vh !important;
+    aspect-ratio: unset !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
