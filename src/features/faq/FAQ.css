@@ -116,6 +116,12 @@
   font-weight: 700;
 }
 
+/* Dropdown Styles */
+.faq-sector-dropdown {
+  display: none;
+  width: 100%;
+}
+
 .faq-skeleton {
   display: flex;
   flex-direction: column;
@@ -239,9 +245,18 @@
   white-space: pre-wrap;
 }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .faq-container { padding: 20px; }
   .faq-header { flex-direction: column; gap: 16px; }
+  .faq-header-stat { align-items: flex-start; }
+
+  .faq-sector-chips {
+    display: none;
+  }
+  
+  .faq-sector-dropdown {
+    display: block;
+  }
 }
 
 .faq-links {

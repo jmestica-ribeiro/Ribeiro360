@@ -76,6 +76,23 @@
   color: #000;
 }
 
+/* Category Dropdown Styles */
+.eventos-category-dropdown {
+  display: none;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .area-chips {
+    display: none;
+  }
+  
+  .eventos-category-dropdown {
+    display: block;
+    margin-bottom: 24px;
+  }
+}
+
 .calendar-wrapper {
   display: grid;
   grid-template-columns: 1fr 360px;
@@ -324,5 +341,9 @@
 
   .eventos-container {
     padding: 20px;
+  }
+  
+  .eventos-header h2 {
+    font-size: 28px;
   }
 }

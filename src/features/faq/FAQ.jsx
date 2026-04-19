@@ -88,6 +88,22 @@ export default function FAQ() {
             </button>
           ))}
         </div>
+
+        {/* Dropdown for Mobile */}
+        <div className="faq-sector-dropdown">
+           <div className="custom-select-wrapper">
+              <select 
+                value={activeSector} 
+                onChange={(e) => { setActiveSector(e.target.value); setOpenId(null); }}
+              >
+                <option value="todos">Todos los sectores</option>
+                {sectores.map(s => (
+                  <option key={s.id} value={s.id}>{s.nombre}</option>
+                ))}
+              </select>
+              <ChevronDown className="custom-select-icon" size={18} />
+           </div>
+        </div>
       </div>
 
       {isLoading ? (

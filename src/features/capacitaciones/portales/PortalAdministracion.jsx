@@ -277,7 +277,7 @@ const UvaRiesgoWidget = () => {
           fetch('https://api.argentinadatos.com/v1/finanzas/indices/uva'),
           fetch('https://api.argentinadatos.com/v1/finanzas/indices/riesgo-pais/ultimo'),
         ]);
-        const dataUva    = await resUva.json();
+        const dataUva = await resUva.json();
         const dataRiesgo = await resRiesgo.json();
 
         if (Array.isArray(dataUva) && dataUva.length) {
@@ -341,7 +341,7 @@ const UvaRiesgoWidget = () => {
                   <AreaChart data={uvaHist} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="uvaGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%"  stopColor="#F2DC00" stopOpacity={0.85} />
+                        <stop offset="5%" stopColor="#F2DC00" stopOpacity={0.85} />
                         <stop offset="95%" stopColor="#F2DC00" stopOpacity={0.15} />
                       </linearGradient>
                     </defs>
@@ -385,8 +385,8 @@ const UvaRiesgoWidget = () => {
               Al {new Date(riesgo.fecha + 'T00:00:00').toLocaleDateString('es-AR', { day: '2-digit', month: 'long', year: 'numeric' })}
             </div>
             <div style={{ background: 'var(--bg-color)', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-              {riesgo.valor < 500  && '🟢 Riesgo bajo — mercado con confianza en la deuda soberana.'}
-              {riesgo.valor >= 500  && riesgo.valor < 1000 && '🟡 Riesgo moderado — monitorear evolución de spreads.'}
+              {riesgo.valor < 500 && '🟢 Riesgo bajo — mercado con confianza en la deuda soberana.'}
+              {riesgo.valor >= 500 && riesgo.valor < 1000 && '🟡 Riesgo moderado — monitorear evolución de spreads.'}
               {riesgo.valor >= 1000 && riesgo.valor < 2000 && '🔴 Riesgo alto — spreads elevados, acceso a crédito limitado.'}
               {riesgo.valor >= 2000 && '⛔ Riesgo crítico — nivel de distress soberano.'}
             </div>
@@ -400,8 +400,32 @@ const UvaRiesgoWidget = () => {
   );
 };
 
+// ----------------------------------------------------------------------
+// CONFIGURACIÓN DE HERRAMIENTAS INTERNAS
+// ----------------------------------------------------------------------
+const HERRAMIENTAS_INTERNAS = [
+  {
+    num: '01',
+    label: 'Resultados Mensuales',
+    icon: '📊',
+    url: 'https://app.powerbi.com/links/q7o45Qp8Ui?ctid=dafe3bc5-6372-4396-8452-c707f3ecf4bf&pbi_source=linkShare'
+  },
+  {
+    num: '02',
+    label: 'Tracking de Compras',
+    icon: '📈',
+    url: 'https://app.powerbi.com/report-link-2' // REEMPLAZAR POR LINK REAL
+  },
+  {
+    num: '03',
+    label: 'Combustible',
+    icon: '💰',
+    url: 'https://app.powerbi.com/links/vAOEHA0a5x?ctid=dafe3bc5-6372-4396-8452-c707f3ecf4bf&pbi_source=linkShare&bookmarkGuid=1ce4ff7f-0ceb-46f9-af24-6a609724febd'
+  }
+];
+
 const PortalAdministracion = () => (
-  <div>
+  <div className="portal-administracion">
     {/* SECCIÓN FINANCIERA */}
     <div style={{
       marginBottom: '40px',
@@ -423,16 +447,11 @@ const PortalAdministracion = () => (
       <Box size={22} color="var(--primary-color)" />
       <h3 style={{ fontSize: '20px', fontWeight: '800', margin: 0, color: 'var(--text-main)' }}>Herramientas Internas</h3>
     </div>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-      {[
-        { num: '01', label: 'Resultados Mensuales', icon: '📊' },
-        { num: '02', label: 'Tracking de Compras',  icon: '📈' },
-        { num: '03', label: 'Combustible',          icon: '💰' },
-        { num: '04', label: 'Posición Bancaria',    icon: '🏦' },
-      ].map((item, i) => (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
+      {HERRAMIENTAS_INTERNAS.map((item, i) => (
         <a
           key={i}
-          href="#"
+          href={item.url}
           target="_blank"
           rel="noopener noreferrer"
           className="quick-card"

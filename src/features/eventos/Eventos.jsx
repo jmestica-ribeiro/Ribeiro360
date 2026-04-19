@@ -149,6 +149,33 @@ export default function Eventos() {
             );
           })}
         </div>
+
+        {/* Dropdown for Mobile */}
+        <div className="eventos-category-dropdown">
+           <div className="custom-select-wrapper">
+              <select 
+                value={activeCategoria} 
+                onChange={(e) => setActiveCategoria(e.target.value)}
+              >
+                <option value="todas">Todas las categorías</option>
+                {categorias.map(cat => {
+                   const count = eventos.filter((e) => {
+                    if (e.categoria_id !== cat.id) return false;
+                    const d = new Date(e.fecha + 'T00:00:00');
+                    return d.getFullYear() === year && d.getMonth() === month;
+                  }).length;
+                  return (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.nombre} {count > 0 ? `(${count})` : ''}
+                    </option>
+                  );
+                })}
+              </select>
+              <div className="custom-select-icon">
+                <ChevronRight size={18} style={{ transform: 'rotate(90deg)' }} />
+              </div>
+           </div>
+        </div>
       </div>
 
       <div className="calendar-wrapper">
