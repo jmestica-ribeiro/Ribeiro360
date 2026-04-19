@@ -305,7 +305,18 @@ const CoursePlayer = ({ course, onBack }) => {
               const isCompleted = completedModules.includes(mod.id);
               const isActive = activeModule?.id === mod.id && playerView === 'modules';
               return (
-                <button key={mod.id} className={`mod-nav-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`} onClick={() => { setActiveModule(mod); setPlayerView('modules'); }}>
+                <button 
+                  key={mod.id} 
+                  className={`mod-nav-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`} 
+                  onClick={() => {
+                    if (!quizResult?.passed) {
+                      setActiveModule(mod); 
+                      setPlayerView('modules');
+                    }
+                  }}
+                  disabled={quizResult?.passed} // Bloquea volver atrás si ya aprobó
+                  style={{ opacity: quizResult?.passed && !isActive ? 0.6 : 1, cursor: quizResult?.passed ? 'default' : 'pointer' }}
+                >
                   <div className="mod-status-icon">{isCompleted ? <CheckCircle2 size={18} /> : <PlayCircle size={18} />}</div>
                   <div className="mod-nav-info"><span className="mod-idx">Módulo {idx + 1}</span><span className="mod-name">{mod.titulo}</span></div>
                 </button>
@@ -314,7 +325,15 @@ const CoursePlayer = ({ course, onBack }) => {
             {hasQuiz && (
               <button
                 className={`mod-nav-item quiz-nav-item ${playerView === 'quiz' || playerView === 'result' ? 'active' : ''} ${quizResult?.passed ? 'completed' : ''}`}
-                onClick={() => progressPercent === 100 && setPlayerView('quiz')}
+                onClick={() => {
+                  if (progressPercent === 100) {
+                    if (quizResult?.passed) {
+                      setPlayerView('result');
+                    } else {
+                      setPlayerView('quiz');
+                    }
+                  }
+                }}
                 disabled={progressPercent < 100}
                 style={{ opacity: progressPercent < 100 ? 0.4 : 1, marginTop: '8px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}
               >
@@ -341,8 +360,14 @@ const CoursePlayer = ({ course, onBack }) => {
                 {!completedModules.includes(activeModule.id) ? (
                   <button className="btn-complete-mod" onClick={handleComplete}><CheckCircle2 size={20} /> Marcar como Finalizado</button>
                 ) : progressPercent === 100 && hasQuiz ? (
-                  <button className="btn-complete-mod" onClick={() => setPlayerView('quiz')} style={{ background: '#1a1a1a', color: '#F2DC00' }}>
-                    <HelpCircle size={20} /> Ir al Cuestionario Final
+                  <button className="btn-complete-mod" onClick={() => {
+                    if (quizResult?.passed) {
+                      setPlayerView('result');
+                    } else {
+                      setPlayerView('quiz');
+                    }
+                  }} style={{ background: '#1a1a1a', color: '#F2DC00' }}>
+                    <HelpCircle size={20} /> {quizResult?.passed ? 'Ver Resultado del Cuestionario' : 'Ir al Cuestionario Final'}
                   </button>
                 ) : progressPercent === 100 && !hasQuiz ? (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
