@@ -20,6 +20,9 @@ const Eventos      = lazy(() => import('./components/Eventos'));
 const FAQ          = lazy(() => import('./components/FAQ'));
 const SGI          = lazy(() => import('./components/SGI'));
 const SGIDocument  = lazy(() => import('./components/SGIDocument'));
+const NoConformidades = lazy(() => import('./components/nc/NoConformidades'));
+const NCDetalle    = lazy(() => import('./components/nc/NCDetalle'));
+const SGIEstadisticas = lazy(() => import('./components/SGIEstadisticas'));
 const Perfil       = lazy(() => import('./components/Perfil'));
 const Login        = lazy(() => import('./pages/Login'));
 
@@ -59,6 +62,10 @@ function AnimatedRoutes() {
       <Route path="/faq"                 element={<W><FAQ /></W>} />
       <Route path="/sgi"                 element={<W><SGI /></W>} />
       <Route path="/sgi/documento/:docId" element={<W><SGIDocument /></W>} />
+      <Route path="/sgi/estadisticas"    element={<W><SGIEstadisticas /></W>} />
+      <Route path="/sgi/nc"             element={<W><NoConformidades /></W>} />
+      <Route path="/sgi/nc/nuevo"       element={<W><NCDetalle /></W>} />
+      <Route path="/sgi/nc/:id"         element={<W><NCDetalle /></W>} />
       <Route path="/sgi/:categoria"      element={<W><SGI /></W>} />
       <Route path="/perfil"              element={<W><Perfil /></W>} />
       <Route path="/admin"               element={

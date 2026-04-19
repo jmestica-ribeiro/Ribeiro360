@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
-import { Home, Compass, BookOpen, Users, Calendar, Settings, Briefcase, ChevronLeft, ChevronRight, LayoutGrid, MessageCircle, ShieldCheck, ChevronDown } from 'lucide-react';
+import { Home, Compass, BookOpen, Users, Calendar, Settings, Briefcase, ChevronLeft, ChevronRight, LayoutGrid, MessageCircle, ShieldCheck, ChevronDown, BarChart2 } from 'lucide-react';
 import Logo from '../assets/Logo.png';
 import './Sidebar.css';
 
@@ -101,6 +101,14 @@ const Sidebar = ({ isOpen, onToggle, isCollapsed, onToggleCollapse }) => {
                   <NavLink to="/sgi" end className={subLinkClass} title="Documentos">
                     <span className="nav-sub-dot" />
                     <span>Documentos</span>
+                  </NavLink>
+                  <NavLink to="/sgi/nc" className={subLinkClass} title="No Conformidades">
+                    <span className="nav-sub-dot" />
+                    <span>No Conformidades</span>
+                  </NavLink>
+                  <NavLink to="/sgi/estadisticas" className={subLinkClass} title="Estadísticas SGI">
+                    <span className="nav-sub-dot" />
+                    <span>Estadísticas</span>
                   </NavLink>
                 </motion.div>
               )}

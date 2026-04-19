@@ -222,6 +222,7 @@ const Dashboard = () => {
           <div className="quick-access-grid">
             {accesos.map((acceso, i) => (
               <a key={acceso.id} href={acceso.url} className="quick-card" target="_blank" rel="noopener noreferrer" style={{ '--i': i }}>
+                <span className="quick-card-shimmer" style={{ animationDelay: `${i * 0.5 + 0.5}s` }} />
                 <div className="quick-card-top">
                   <span className="quick-card-num">0{i + 1}.</span>
                   <span className="quick-card-label">{acceso.titulo}</span>
