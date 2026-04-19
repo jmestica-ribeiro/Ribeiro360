@@ -185,6 +185,29 @@ export async function fetchSgiDocumentosByCategoria(categoriaId) {
   return { data: data ?? [], error };
 }
 
+export async function searchSgiDocumentos(query, { isAdmin = false } = {}) {
+  const term = query.trim().toLowerCase();
+  const selectFields = 'id, titulo, codigo, etiquetas, categoria:sgi_categorias(nombre, color, icono), versiones:sgi_versiones(vigente, estado_aprobacion)';
+
+  const [{ data: byText }, { data: byTag }] = await Promise.all([
+    supabase.from('sgi_documentos').select(selectFields).eq('activo', true)
+      .or(`titulo.ilike.%${term}%,codigo.ilike.%${term}%`).limit(8),
+    supabase.from('sgi_documentos').select(selectFields).eq('activo', true)
+      .contains('etiquetas', [term]).limit(8),
+  ]);
+
+  const merged = [...(byText ?? [])];
+  for (const doc of byTag ?? []) {
+    if (!merged.find(d => d.id === doc.id)) merged.push(doc);
+  }
+
+  const visible = isAdmin
+    ? merged
+    : merged.filter(d => d.versiones?.some(v => v.vigente && v.estado_aprobacion === 'aprobado'));
+
+  return { data: visible.slice(0, 8), error: null };
+}
+
 // ── Consultas de lectura para SGIDocument.jsx ─────────────────────────────────
 
 export async function fetchSgiDocumentoById(docId) {

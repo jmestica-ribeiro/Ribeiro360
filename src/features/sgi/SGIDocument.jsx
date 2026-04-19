@@ -308,7 +308,18 @@ const SGIDocument = () => {
                 <tr><td className="sgi-td-label">Acceso</td><td>{documento.acceso || '—'}</td></tr>
                 <tr><td className="sgi-td-label">Lugar Ubicación</td><td>{documento.lugar_ubicacion || '—'}</td></tr>
                 <tr><td className="sgi-td-label">Período de Retención</td><td>{documento.periodo_retencion || '—'}</td></tr>
-                {documento.etiquetas && <tr><td className="sgi-td-label">Etiquetas</td><td>{documento.etiquetas}</td></tr>}
+                {documento.etiquetas?.length > 0 && (
+                  <tr>
+                    <td className="sgi-td-label">Etiquetas</td>
+                    <td>
+                      <div className="sgi-tag-list">
+                        {(Array.isArray(documento.etiquetas) ? documento.etiquetas : documento.etiquetas.split(',')).map((tag, i) => (
+                          <span key={i} className="sgi-tag-chip">{tag.trim()}</span>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                )}
                 <tr>
                   <td className="sgi-td-label">Estado</td>
                   <td>

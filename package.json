@@ -12,10 +12,8 @@
     "scaffold:feature": "node scripts/scaffoldFeature.js",
     "schema:fetch": "node --env-file=.env scripts/fetchSupabaseSchema.js",
     "debug:permissions": "node --env-file=.env scripts/debugPermissions.js",
-    "audit:styles": "node scripts/auditStyles.js",
     "preview:pdf": "node scripts/previewPdf.js",
     "audit:security": "node scripts/securityAudit.js",
-    "audit:architecture": "node scripts/architectureAudit.js",
     "audit:notifications": "node scripts/auditNotifications.js",
     "services:map": "node scripts/generateServiceMap.js"
   },

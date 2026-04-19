@@ -649,6 +649,16 @@
 
 .sgi-modal-wide .sgi-modal-header {
   padding: 24px 32px;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary-color) 10%, var(--bg-card)) 0%, var(--bg-card) 100%);
+  border-bottom: 2px solid color-mix(in srgb, var(--primary-color) 30%, transparent);
+}
+
+.sgi-modal-wide .sgi-modal-header h4 {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-main);
+  letter-spacing: -0.01em;
+  -webkit-text-fill-color: unset;
 }
 
 .sgi-modal-wide .sgi-modal-body {
@@ -678,18 +688,18 @@
 
 .sgi-modal-close {
   background: none;
-  border: none;
-  color: var(--text-muted);
+  border: 1px solid color-mix(in srgb, var(--primary-color) 25%, transparent);
+  color: var(--primary-color);
   cursor: pointer;
   display: flex;
-  padding: 4px;
-  border-radius: 6px;
+  padding: 6px;
+  border-radius: 8px;
   transition: var(--transition);
 }
 
 .sgi-modal-close:hover {
-  background: var(--bg-hover);
-  color: var(--text-main);
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  color: var(--primary-color);
 }
 
 .sgi-modal-body {
@@ -714,7 +724,7 @@
 .sgi-form-group {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 3px;
 }
 
 .sgi-form-group.full {
@@ -722,9 +732,9 @@
 }
 
 .sgi-form-group label {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--text-main);
+  color: var(--text-secondary, var(--text-muted));
   text-transform: none;
   letter-spacing: 0;
 }
@@ -746,12 +756,336 @@
 .sgi-form-group input:focus,
 .sgi-form-group select:focus,
 .sgi-form-group textarea:focus {
-  border-color: #a0a0a0;
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.04);
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb, 180, 150, 0), 0.12);
 }
 
 .sgi-form-group textarea {
   resize: vertical;
+}
+
+.sgi-required {
+  color: var(--danger-color, #e53935);
+  font-weight: 700;
+}
+
+/* ── Form sections ────────────────────────────────────────────────────────── */
+.sgi-form-section {
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sgi-form-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--primary-color);
+  margin-bottom: 16px;
+  padding: 6px 12px;
+  background: transparent;
+  border-left: 3px solid var(--primary-color);
+  border-radius: 0 6px 6px 0;
+}
+
+.sgi-form-three-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+/* ── Approval notice ─────────────────────────────────────────────────────── */
+.sgi-approval-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px 16px;
+  background: color-mix(in srgb, var(--primary-color) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary-color) 35%, transparent);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+.sgi-approval-notice svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--primary-color);
+}
+
+/* ── File upload custom ───────────────────────────────────────────────────── */
+/* ── Global search ───────────────────────────────────────────────────────── */
+.sgi-global-search-wrap {
+  position: relative;
+  width: 100%;
+  margin-bottom: 28px;
+}
+
+.sgi-global-search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border: 1.5px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-card);
+  transition: var(--transition);
+}
+
+.sgi-global-search-box:focus-within {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 12%, transparent);
+}
+
+.sgi-global-search-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.sgi-global-search-input {
+  flex: 1;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent;
+  font-size: 14px;
+  color: var(--text-main);
+  padding: 12px 0;
+}
+
+.sgi-global-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.sgi-global-search-clear {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  padding: 4px;
+  border-radius: 6px;
+  transition: var(--transition);
+}
+
+.sgi-global-search-clear:hover {
+  color: var(--text-main);
+  background: var(--bg-hover);
+}
+
+@keyframes sgi-spin { to { transform: rotate(360deg); } }
+.sgi-global-search-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--primary-color);
+  border-radius: 50%;
+  animation: sgi-spin 0.6s linear infinite;
+  flex-shrink: 0;
+}
+
+.sgi-search-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  overflow: hidden;
+  z-index: 300;
+}
+
+.sgi-search-empty {
+  padding: 20px 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.sgi-search-result-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 16px;
+  cursor: pointer;
+  transition: var(--transition);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.sgi-search-result-row:last-child {
+  border-bottom: none;
+}
+
+.sgi-search-result-row:hover {
+  background: var(--bg-hover);
+}
+
+.sgi-search-result-icon {
+  flex-shrink: 0;
+  display: flex;
+}
+
+.sgi-search-result-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sgi-search-result-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sgi-search-result-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.sgi-search-result-tags {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.sgi-search-result-tags .sgi-tag-chip {
+  font-size: 10px;
+  padding: 1px 6px;
+}
+
+.sgi-search-result-arrow {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ── Tag list (read-only) ────────────────────────────────────────────────── */
+.sgi-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ── Tag input ───────────────────────────────────────────────────────────── */
+.sgi-tag-input-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: white;
+  cursor: text;
+  transition: var(--transition);
+}
+
+.dark .sgi-tag-input-wrap {
+  background: var(--bg-input, var(--bg-card));
+}
+
+.sgi-tag-input-wrap:focus-within {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 12%, transparent);
+}
+
+.sgi-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 2px 10px;
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary-color) 30%, transparent);
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--primary-color);
+  white-space: nowrap;
+}
+
+.sgi-tag-chip button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--primary-color);
+  opacity: 0.6;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.sgi-tag-chip button:hover {
+  opacity: 1;
+}
+
+.sgi-tag-input {
+  flex: 1;
+  min-width: 120px;
+  border: none !important;
+  outline: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+  font-size: 13px;
+  background: transparent;
+  color: var(--text-main);
+}
+
+.sgi-file-upload-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-weight: normal !important;
+  font-size: 14px !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+
+.sgi-file-upload-label input[type="file"] {
+  display: none;
+}
+
+.sgi-file-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  transition: var(--transition);
+}
+
+.sgi-file-upload-label:hover .sgi-file-upload-btn {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+
+.sgi-file-upload-name {
+  font-size: 12px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sgi-checkbox-label {
@@ -990,7 +1324,7 @@
 .sgi-form-two-col > div {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 8px;
 }
 
 /* ── Responsive & Animations ────────────────────────────────────────────────── */

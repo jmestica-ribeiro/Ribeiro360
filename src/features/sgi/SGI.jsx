@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText, BookOpen, ClipboardList, Folder, ChevronRight, ChevronLeft,
@@ -17,6 +17,7 @@ import {
   softDeleteSgiDocumento,
   getSgiSignedUrl,
   fetchSgiVersionesPendientes,
+  searchSgiDocumentos,
 } from '../../services/sgiService';
 import './SGI.css';
 
@@ -28,7 +29,7 @@ const getCatSlug = (nombre) =>
 const EMPTY_DOC_FORM = {
   titulo: '', codigo: '', descripcion: '', categoria_id: '',
   tipo_documento: 'Otro', acceso: 'No Confidencial',
-  lugar_ubicacion: '', periodo_retencion: '', etiquetas: '',
+  lugar_ubicacion: '', periodo_retencion: '', etiquetas: [],
   documento_controlado: false,
   numero_version: '0', fecha_emision: '', notas_cambios: '',
   _archivo: null,
@@ -49,10 +50,38 @@ const SGI = () => {
 
   const [pendientesRaw, setPendientesRaw] = useState([]);
 
+  const [globalSearch, setGlobalSearch] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchDrop, setShowSearchDrop] = useState(false);
+  const searchRef = useRef(null);
+  const debounceRef = useRef(null);
+
+  useEffect(() => {
+    const term = globalSearch.trim();
+    if (term.length < 2) { setSearchResults([]); setShowSearchDrop(false); return; }
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      setIsSearching(true);
+      const { data } = await searchSgiDocumentos(term, { isAdmin });
+      setSearchResults(data ?? []);
+      setShowSearchDrop(true);
+      setIsSearching(false);
+    }, 350);
+    return () => clearTimeout(debounceRef.current);
+  }, [globalSearch]);
+
+  useEffect(() => {
+    const handler = (e) => { if (searchRef.current && !searchRef.current.contains(e.target)) setShowSearchDrop(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   const [showDocModal, setShowDocModal] = useState(false);
   const [editingDoc, setEditingDoc] = useState(null);
   const [docForm, setDocForm] = useState(EMPTY_DOC_FORM);
   const [isSaving, setIsSaving] = useState(false);
+  const [tagInput, setTagInput] = useState('');
 
   useEffect(() => { fetchCategories(); }, []);
 
@@ -114,6 +143,7 @@ const SGI = () => {
   const openNewDoc = () => {
     setEditingDoc(null);
     setDocForm({ ...EMPTY_DOC_FORM, categoria_id: currentCategory?.id || '', fecha_emision: new Date().toISOString().split('T')[0] });
+    setTagInput('');
     setShowDocModal(true);
   };
 
@@ -127,7 +157,7 @@ const SGI = () => {
       titulo: doc.titulo || '', codigo: doc.codigo || '', descripcion: doc.descripcion || '',
       categoria_id: doc.categoria_id, tipo_documento: doc.tipo_documento || 'Otro',
       acceso: doc.acceso || 'No Confidencial', lugar_ubicacion: doc.lugar_ubicacion || '',
-      periodo_retencion: doc.periodo_retencion || '', etiquetas: doc.etiquetas || '',
+      periodo_retencion: doc.periodo_retencion || '', etiquetas: Array.isArray(doc.etiquetas) ? doc.etiquetas : [],
       documento_controlado: doc.documento_controlado || false,
       _ver_id: refVersion?.id || null,
       numero_version: refVersion?.numero_version || '0',
@@ -144,7 +174,7 @@ const SGI = () => {
       titulo: docForm.titulo, codigo: docForm.codigo || null, descripcion: docForm.descripcion || null,
       categoria_id: docForm.categoria_id, tipo_documento: docForm.tipo_documento || 'Otro',
       acceso: docForm.acceso || 'No Confidencial', lugar_ubicacion: docForm.lugar_ubicacion || null,
-      periodo_retencion: docForm.periodo_retencion || null, etiquetas: docForm.etiquetas || null,
+      periodo_retencion: docForm.periodo_retencion || null, etiquetas: docForm.etiquetas.length ? docForm.etiquetas : null,
       documento_controlado: docForm.documento_controlado ?? false, activo: true,
     };
 
@@ -199,10 +229,13 @@ const SGI = () => {
     ? categories.filter(c => c.parent_id === currentCategory.id)
     : [];
   
-  const filteredDocs = documents.filter(d =>
-    d.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (d.codigo || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const hasVersionVigente = (doc) => doc.versiones?.some(v => v.vigente && v.estado_aprobacion === 'aprobado');
+
+  const filteredDocs = documents.filter(d => {
+    if (!isAdmin && !hasVersionVigente(d)) return false;
+    return d.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (d.codigo || '').toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   const renderCategoryCard = (cat) => {
     const IconComp = ICON_MAP[cat.icono] || Folder;
@@ -272,6 +305,54 @@ const SGI = () => {
             </div>
           </div>
         )}
+
+        {/* Buscador global */}
+        <div className="sgi-global-search-wrap" ref={searchRef}>
+          <div className="sgi-global-search-box">
+            <Search size={16} className="sgi-global-search-icon" />
+            <input
+              className="sgi-global-search-input"
+              value={globalSearch}
+              onChange={e => setGlobalSearch(e.target.value)}
+              onFocus={() => searchResults.length && setShowSearchDrop(true)}
+              placeholder="Buscar por nombre, código o etiqueta..."
+            />
+            {isSearching && <span className="sgi-global-search-spinner" />}
+            {globalSearch && <button className="sgi-global-search-clear" onClick={() => { setGlobalSearch(''); setShowSearchDrop(false); }}><X size={14} /></button>}
+          </div>
+          <AnimatePresence>
+            {showSearchDrop && (
+              <motion.div className="sgi-search-dropdown"
+                initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.15 }}>
+                {searchResults.length === 0 ? (
+                  <div className="sgi-search-empty">Sin resultados para <strong>"{globalSearch}"</strong></div>
+                ) : searchResults.map(doc => {
+                  const IconComp = ICON_MAP[doc.categoria?.icono] || Folder;
+                  return (
+                    <div key={doc.id} className="sgi-search-result-row" onClick={() => { navigate(`/sgi/documento/${doc.id}`); setShowSearchDrop(false); setGlobalSearch(''); }}>
+                      <span className="sgi-search-result-icon" style={{ color: doc.categoria?.color || 'var(--primary-color)' }}>
+                        <IconComp size={15} />
+                      </span>
+                      <div className="sgi-search-result-info">
+                        <span className="sgi-search-result-title">{doc.titulo}</span>
+                        <span className="sgi-search-result-meta">
+                          {doc.codigo && <>{doc.codigo} · </>}{doc.categoria?.nombre}
+                        </span>
+                      </div>
+                      {doc.etiquetas?.length > 0 && (
+                        <div className="sgi-search-result-tags">
+                          {doc.etiquetas.slice(0, 3).map((t, i) => <span key={i} className="sgi-tag-chip">{t}</span>)}
+                        </div>
+                      )}
+                      <ChevronRight size={14} className="sgi-search-result-arrow" />
+                    </div>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
         {isLoading ? (
           <div className="sgi-loading">Cargando carpetas...</div>
@@ -412,26 +493,20 @@ const SGI = () => {
                 <button className="sgi-modal-close" onClick={() => setShowDocModal(false)}><X size={18} /></button>
               </div>
               <div className="sgi-modal-body">
-                <div className="sgi-form-two-col">
-                  {/* Columna izquierda */}
-                  <div>
+                {/* Sección: Identificación */}
+                <div className="sgi-form-section">
+                  <div className="sgi-form-section-title">
+                    <FileText size={14} />
+                    Identificación
+                  </div>
+                  <div className="sgi-form-two-col">
+                    <div className="sgi-form-group">
+                      <label>Título <span className="sgi-required">*</span></label>
+                      <input value={docForm.titulo} onChange={e => setDocForm(f => ({ ...f, titulo: e.target.value }))} placeholder="Título del documento" />
+                    </div>
                     <div className="sgi-form-group">
                       <label>Código</label>
-                      <input value={docForm.codigo} onChange={e => setDocForm(f => ({ ...f, codigo: e.target.value }))} placeholder="Ingrese código del documento" />
-                    </div>
-                    <div className="sgi-form-group">
-                      <label>Título *</label>
-                      <input value={docForm.titulo} onChange={e => setDocForm(f => ({ ...f, titulo: e.target.value }))} placeholder="Ingrese título del documento" />
-                    </div>
-                    <div className="sgi-form-group">
-                      <label>Revisión</label>
-                      <select value={docForm.numero_version} onChange={e => setDocForm(f => ({ ...f, numero_version: e.target.value }))}>
-                        {Array.from({ length: 11 }, (_, i) => <option key={i} value={String(i)}>{i}</option>)}
-                      </select>
-                    </div>
-                    <div className="sgi-form-group">
-                      <label>Fecha</label>
-                      <input type="date" value={docForm.fecha_emision} onChange={e => setDocForm(f => ({ ...f, fecha_emision: e.target.value }))} />
+                      <input value={docForm.codigo} onChange={e => setDocForm(f => ({ ...f, codigo: e.target.value }))} placeholder="Ej: POE-001" />
                     </div>
                     <div className="sgi-form-group">
                       <label>Tipo de documento</label>
@@ -440,6 +515,80 @@ const SGI = () => {
                         <option>Registro</option><option>Formato</option><option>Otro</option>
                       </select>
                     </div>
+                    <div className="sgi-form-group">
+                      <label>Etiquetas</label>
+                      <div className="sgi-tag-input-wrap">
+                        {docForm.etiquetas.map((tag, i) => (
+                          <span key={i} className="sgi-tag-chip">
+                            {tag}
+                            <button type="button" onClick={() => setDocForm(f => ({ ...f, etiquetas: f.etiquetas.filter((_, j) => j !== i) }))}>×</button>
+                          </span>
+                        ))}
+                        <input
+                          className="sgi-tag-input"
+                          value={tagInput}
+                          onChange={e => setTagInput(e.target.value)}
+                          onKeyDown={e => {
+                            if ((e.key === 'Enter' || e.key === ',') && tagInput.trim()) {
+                              e.preventDefault();
+                              const val = tagInput.trim().toLowerCase();
+                              if (!docForm.etiquetas.includes(val))
+                                setDocForm(f => ({ ...f, etiquetas: [...f.etiquetas, val] }));
+                              setTagInput('');
+                            } else if (e.key === 'Backspace' && !tagInput && docForm.etiquetas.length) {
+                              setDocForm(f => ({ ...f, etiquetas: f.etiquetas.slice(0, -1) }));
+                            }
+                          }}
+                          placeholder={docForm.etiquetas.length ? '' : 'Escribí y presioná Enter o coma'}
+                        />
+                      </div>
+                    </div>
+                    <div className="sgi-form-group" style={{ gridColumn: '1 / -1' }}>
+                      <label>Descripción</label>
+                      <textarea rows={3} value={docForm.descripcion} onChange={e => setDocForm(f => ({ ...f, descripcion: e.target.value }))} placeholder="Breve descripción del propósito del documento..." />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sección: Versión y Control */}
+                <div className="sgi-form-section">
+                  <div className="sgi-form-section-title">
+                    <History size={14} />
+                    Versión y Control
+                  </div>
+                  <div className="sgi-form-three-col">
+                    <div className="sgi-form-group">
+                      <label>Revisión</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={docForm.numero_version}
+                        onChange={e => setDocForm(f => ({ ...f, numero_version: e.target.value }))}
+                        placeholder="0"
+                      />
+                    </div>
+                    <div className="sgi-form-group">
+                      <label>Fecha de emisión</label>
+                      <input type="date" value={docForm.fecha_emision} onChange={e => setDocForm(f => ({ ...f, fecha_emision: e.target.value }))} />
+                    </div>
+                    <div className="sgi-form-group">
+                      <label>Período de Retención</label>
+                      <input value={docForm.periodo_retencion} onChange={e => setDocForm(f => ({ ...f, periodo_retencion: e.target.value }))} placeholder="Ej: 5 años" />
+                    </div>
+                  </div>
+                  <div className="sgi-form-group" style={{ marginTop: 12 }}>
+                    <label>Histórico / Notas de cambio</label>
+                    <textarea rows={3} value={docForm.notas_cambios} onChange={e => setDocForm(f => ({ ...f, notas_cambios: e.target.value }))} placeholder="Describí los cambios introducidos en esta revisión..." />
+                  </div>
+                </div>
+
+                {/* Sección: Acceso y Aprobación */}
+                <div className="sgi-form-section">
+                  <div className="sgi-form-section-title">
+                    <ShieldCheck size={14} />
+                    Acceso y Aprobación
+                  </div>
+                  <div className="sgi-form-two-col">
                     <div className="sgi-form-group">
                       <label>Acceso</label>
                       <select value={docForm.acceso} onChange={e => setDocForm(f => ({ ...f, acceso: e.target.value }))}>
@@ -454,45 +603,46 @@ const SGI = () => {
                       </select>
                     </div>
                   </div>
-                  {/* Columna derecha */}
-                  <div>
-                    <div className="sgi-form-group">
-                      <label>Etiquetas</label>
-                      <input value={docForm.etiquetas} onChange={e => setDocForm(f => ({ ...f, etiquetas: e.target.value }))} placeholder="Ingrese etiquetas del documento" />
+                  {docForm.documento_controlado && (
+                    <div className="sgi-approval-notice">
+                      <CheckCircle size={15} />
+                      <div>
+                        <strong>Este documento pasará a revisión.</strong> Al guardar, quedará en estado <em>en revisión</em> hasta que un responsable lo apruebe antes de publicarse como vigente.
+                      </div>
                     </div>
-                    <div className="sgi-form-group">
-                      <label>Descripción</label>
-                      <textarea rows={4} value={docForm.descripcion} onChange={e => setDocForm(f => ({ ...f, descripcion: e.target.value }))} placeholder="Ingrese la descripción del documento..." />
-                    </div>
-                    <div className="sgi-form-group">
-                      <label>Histórico</label>
-                      <textarea rows={4} value={docForm.notas_cambios} onChange={e => setDocForm(f => ({ ...f, notas_cambios: e.target.value }))} placeholder="Ingrese la descripción de aprobación o cambio..." />
-                    </div>
+                  )}
+                </div>
+
+                {/* Sección: Archivo y Ubicación */}
+                <div className="sgi-form-section" style={{ borderBottom: 'none', marginBottom: 0, paddingBottom: 0 }}>
+                  <div className="sgi-form-section-title">
+                    <Download size={14} />
+                    Archivo y Ubicación
+                  </div>
+                  <div className="sgi-form-two-col">
                     <div className="sgi-form-group">
                       <label>Archivo (PDF / Word / Excel)</label>
-                      <input
-                        type="file"
-                        accept=".pdf,.doc,.docx,.xls,.xlsx"
-                        onChange={e => setDocForm(f => ({ ...f, _archivo: e.target.files[0] || null }))}
-                      />
-                      {docForm._archivo && (
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                          {docForm._archivo.name}
+                      <label className="sgi-file-upload-label">
+                        <input
+                          type="file"
+                          accept=".pdf,.doc,.docx,.xls,.xlsx"
+                          onChange={e => setDocForm(f => ({ ...f, _archivo: e.target.files[0] || null }))}
+                        />
+                        <span className="sgi-file-upload-btn">
+                          <Download size={13} /> Elegir archivo
                         </span>
-                      )}
-                      {!docForm._archivo && editingDoc && (
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                          Dejá vacío para mantener el archivo actual
+                        <span className="sgi-file-upload-name">
+                          {docForm._archivo
+                            ? docForm._archivo.name
+                            : editingDoc
+                              ? 'Dejá vacío para mantener el actual'
+                              : 'Ningún archivo seleccionado'}
                         </span>
-                      )}
+                      </label>
                     </div>
                     <div className="sgi-form-group">
-                      <label>Lugar Ubicación</label>
-                      <input value={docForm.lugar_ubicacion} onChange={e => setDocForm(f => ({ ...f, lugar_ubicacion: e.target.value }))} placeholder="Ingrese la ubicación" />
-                    </div>
-                    <div className="sgi-form-group">
-                      <label>Período de Retención</label>
-                      <input value={docForm.periodo_retencion} onChange={e => setDocForm(f => ({ ...f, periodo_retencion: e.target.value }))} placeholder="Ingrese el período de retención" />
+                      <label>Lugar de Ubicación Física</label>
+                      <input value={docForm.lugar_ubicacion} onChange={e => setDocForm(f => ({ ...f, lugar_ubicacion: e.target.value }))} placeholder="Ej: Archivero 3, Cajón B" />
                     </div>
                   </div>
                 </div>
