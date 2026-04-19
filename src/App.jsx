@@ -25,6 +25,8 @@ const SGIDocument     = lazy(() => import('./features/sgi/SGIDocument'));
 const NoConformidades = lazy(() => import('./features/sgi/nc/NoConformidades'));
 const NCDetalle       = lazy(() => import('./features/sgi/nc/NCDetalle'));
 const SGIEstadisticas = lazy(() => import('./features/sgi/SGIEstadisticas'));
+const Incidentes      = lazy(() => import('./features/sgi/incidentes/Incidentes'));
+const IncidenteDetalle = lazy(() => import('./features/sgi/incidentes/IncidenteDetalle'));
 const Perfil          = lazy(() => import('./features/perfil/Perfil'));
 const Login           = lazy(() => import('./pages/Login'));
 const NotFound        = lazy(() => import('./pages/NotFound'));
@@ -63,6 +65,9 @@ function AnimatedRoutes() {
       <Route path="/sgi/nc"                element={<W><NoConformidades /></W>} />
       <Route path="/sgi/nc/nuevo"          element={<W><NCDetalle /></W>} />
       <Route path="/sgi/nc/:id"            element={<W><NCDetalle /></W>} />
+      <Route path="/sgi/incidentes"        element={<W><Incidentes /></W>} />
+      <Route path="/sgi/incidentes/nuevo"  element={<W><IncidenteDetalle /></W>} />
+      <Route path="/sgi/incidentes/:id"    element={<W><IncidenteDetalle /></W>} />
       <Route path="/sgi/:categoria"        element={<W><SGI /></W>} />
       <Route path="/perfil"                element={<W><Perfil /></W>} />
       <Route path="/admin"                 element={

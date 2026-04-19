@@ -1,11 +1,11 @@
 /* ── Container ─────────────────────────────────────────────────────────────── */
-.nc-container {
+.inc-container {
   padding: 32px 48px;
   max-width: 1400px;
 }
 
 /* ── Page Header ────────────────────────────────────────────────────────────── */
-.nc-page-header {
+.inc-page-header {
   display: flex;
   align-items: center;
   gap: 16px;
@@ -13,37 +13,37 @@
   flex-wrap: wrap;
 }
 
-.nc-header-icon {
+.inc-header-icon {
   width: 48px;
   height: 48px;
   border-radius: 14px;
-  background: rgba(242, 220, 0, 0.15);
+  background: rgba(231, 29, 54, 0.12);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #a89800;
+  color: #E71D36;
   flex-shrink: 0;
 }
 
-body.dark-theme .nc-header-icon {
-  background: rgba(242, 220, 0, 0.12);
-  color: var(--primary-color);
+body.dark-theme .inc-header-icon {
+  background: rgba(231, 29, 54, 0.18);
+  color: #f87171;
 }
 
-.nc-header-text h2 {
+.inc-header-text h2 {
   font-size: 26px;
   font-weight: 800;
   color: var(--text-main);
   margin: 0;
 }
 
-.nc-header-text p {
+.inc-header-text p {
   font-size: 13px;
   color: var(--text-muted);
   margin: 3px 0 0;
 }
 
-.nc-header-actions {
+.inc-header-actions {
   margin-left: auto;
   display: flex;
   align-items: center;
@@ -51,14 +51,14 @@ body.dark-theme .nc-header-icon {
 }
 
 /* ── Resumen por paso ───────────────────────────────────────────────────────── */
-.nc-paso-summary {
+.inc-paso-summary {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 12px;
   margin-bottom: 24px;
 }
 
-.nc-paso-summary-card {
+.inc-paso-summary-card {
   background: var(--bg-color);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
@@ -73,17 +73,16 @@ body.dark-theme .nc-header-icon {
   text-align: center;
 }
 
-.nc-paso-summary-card:hover {
-  border-color: var(--primary-color);
+.inc-paso-summary-card:hover {
+  border-color: #E71D36;
   transform: translateY(-2px);
 }
 
-.nc-paso-summary-card.nc-paso-empty {
+.inc-paso-summary-card.inc-paso-empty {
   opacity: 0.5;
 }
 
-
-.nc-paso-summary-badge {
+.inc-paso-summary-badge {
   width: 22px;
   height: 22px;
   border-radius: 50%;
@@ -98,75 +97,102 @@ body.dark-theme .nc-header-icon {
   margin-bottom: 2px;
 }
 
-.nc-paso-total-badge {
+.inc-paso-total-badge {
   font-size: 13px;
 }
 
-.nc-paso-summary-count {
+.inc-paso-summary-count {
   font-size: 26px;
   font-weight: 800;
   color: var(--text-main);
   line-height: 1;
 }
 
-.nc-paso-summary-label {
+.inc-paso-summary-label {
   font-size: 11px;
   color: var(--text-muted);
   font-weight: 500;
   line-height: 1.3;
 }
 
-.nc-paso-summary-card.nc-paso-active {
-  border-color: var(--primary-color);
-  background: rgba(242, 220, 0, 0.07);
+.inc-paso-summary-card.inc-paso-active {
+  border-color: #E71D36;
+  background: rgba(231, 29, 54, 0.06);
 }
 
-.nc-paso-summary-card.nc-paso-active .nc-paso-summary-badge {
-  background: var(--primary-color);
-  border-color: var(--primary-color);
-  color: #141414;
+.inc-paso-summary-card.inc-paso-active .inc-paso-summary-badge {
+  background: #E71D36;
+  border-color: #E71D36;
+  color: #fff;
 }
 
-.nc-paso-summary-card.nc-paso-active .nc-paso-summary-count {
-  color: #a89800;
+.inc-paso-summary-card.inc-paso-active .inc-paso-summary-count {
+  color: #E71D36;
 }
 
-.nc-paso-summary-card.nc-paso-active .nc-paso-summary-label {
+.inc-paso-summary-card.inc-paso-active .inc-paso-summary-label {
   color: var(--text-main);
   font-weight: 600;
 }
 
-@media (max-width: 900px) {
-  .nc-paso-summary {
+@media (max-width: 1100px) {
+  .inc-paso-summary {
     grid-template-columns: repeat(4, 1fr);
   }
 }
 
 @media (max-width: 600px) {
-  .nc-paso-summary {
+  .inc-paso-summary {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 /* ── Toolbar ────────────────────────────────────────────────────────────────── */
-.nc-toolbar {
+.inc-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.inc-toolbar-row1 {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 20px;
   flex-wrap: wrap;
 }
 
-.nc-toolbar-right {
+.inc-toolbar-right {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-/* Rango de fechas compacto */
-.nc-daterange {
+.inc-filter-pills-clasif {
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  align-items: center;
+}
+
+.inc-pill-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.inc-filter-divider {
+  display: inline-block;
+  width: 1px;
+  height: 18px;
+  background: var(--border-color);
+  margin: 0 4px;
+  flex-shrink: 0;
+}
+
+.inc-daterange {
   display: flex;
   align-items: center;
   gap: 0;
@@ -176,7 +202,7 @@ body.dark-theme .nc-header-icon {
   background: var(--bg-color);
 }
 
-.nc-daterange-input {
+.inc-daterange-input {
   border: none;
   padding: 6px 10px;
   font-size: 13px;
@@ -188,28 +214,26 @@ body.dark-theme .nc-header-icon {
   width: 130px;
 }
 
-.nc-daterange-sep {
+.inc-daterange-sep {
   font-size: 12px;
   color: var(--text-muted);
-  padding: 0 4px;
+  padding: 6px 6px;
   flex-shrink: 0;
   border-left: 1px solid var(--border-color);
   border-right: 1px solid var(--border-color);
   height: 100%;
   display: flex;
   align-items: center;
-  padding: 6px 6px;
 }
 
-/* Select gerencia */
-.nc-select-wrap {
+.inc-select-wrap {
   display: flex;
   align-items: center;
   gap: 0;
   position: relative;
 }
 
-.nc-filter-select {
+.inc-filter-select {
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 6px 10px;
@@ -223,11 +247,11 @@ body.dark-theme .nc-header-icon {
   max-width: 180px;
 }
 
-.nc-filter-select:focus {
-  border-color: var(--primary-color);
+.inc-filter-select:focus {
+  border-color: #E71D36;
 }
 
-.nc-filter-clear {
+.inc-filter-clear {
   background: none;
   border: none;
   color: var(--text-muted);
@@ -240,19 +264,18 @@ body.dark-theme .nc-header-icon {
   margin-left: 2px;
 }
 
-.nc-filter-clear:hover {
+.inc-filter-clear:hover {
   background: var(--bg-hover);
   color: var(--text-main);
 }
 
-/* Filter Pills */
-.nc-filter-pills {
+.inc-filter-pills {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
 }
 
-.nc-pill {
+.inc-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -268,34 +291,25 @@ body.dark-theme .nc-header-icon {
   white-space: nowrap;
 }
 
-.nc-pill:hover {
+.inc-pill:hover {
   background: var(--bg-hover);
   color: var(--text-main);
 }
 
-.nc-pill.active {
+.inc-pill.active {
   background: var(--text-main);
   color: var(--bg-color);
   border-color: var(--text-main);
 }
 
-.nc-pill-dot {
+.inc-pill-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
 }
 
-.nc-toolbar-divider {
-  width: 1px;
-  height: 28px;
-  background: var(--border-color);
-  flex-shrink: 0;
-}
-
-
-/* Estado toggle */
-.nc-estado-toggle {
+.inc-estado-toggle {
   display: flex;
   gap: 4px;
   background: var(--bg-secondary);
@@ -304,7 +318,7 @@ body.dark-theme .nc-header-icon {
   padding: 3px;
 }
 
-.nc-estado-btn {
+.inc-estado-btn {
   padding: 5px 14px;
   border-radius: 16px;
   font-size: 12px;
@@ -316,39 +330,37 @@ body.dark-theme .nc-header-icon {
   transition: var(--transition);
 }
 
-.nc-estado-btn.active {
+.inc-estado-btn.active {
   background: var(--bg-color);
   color: var(--text-main);
   box-shadow: 0 1px 3px rgba(0,0,0,0.12);
 }
 
-body.dark-theme .nc-estado-btn.active {
+body.dark-theme .inc-estado-btn.active {
   background: var(--bg-hover);
 }
 
 /* ── Table ──────────────────────────────────────────────────────────────────── */
-.nc-table-wrapper {
+.inc-table-wrapper {
   background: var(--bg-color);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: hidden;
   box-shadow: var(--shadow-md);
-  -webkit-overflow-scrolling: touch;
 }
 
-.nc-table {
+.inc-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 14px;
 }
 
-.nc-table thead {
+.inc-table thead {
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
 }
 
-.nc-table th {
+.inc-table th {
   padding: 12px 16px;
   text-align: left;
   font-size: 11px;
@@ -359,38 +371,37 @@ body.dark-theme .nc-estado-btn.active {
   white-space: nowrap;
 }
 
-.nc-table tbody tr {
+.inc-table tbody tr {
   border-bottom: 1px solid var(--border-color);
   cursor: pointer;
   transition: background var(--transition);
 }
 
-.nc-table tbody tr:last-child {
+.inc-table tbody tr:last-child {
   border-bottom: none;
 }
 
-.nc-table tbody tr:hover {
+.inc-table tbody tr:hover {
   background: var(--bg-hover);
 }
 
-.nc-table td {
+.inc-table td {
   padding: 14px 16px;
   vertical-align: middle;
   color: var(--text-main);
 }
 
-/* Anchos de columnas */
-.nc-table th:nth-child(1), .nc-table td:nth-child(1) { width: 70px; }   /* Tipo */
-.nc-table th:nth-child(2), .nc-table td:nth-child(2) { width: 120px; white-space: nowrap; } /* Nro */
-.nc-table th:nth-child(3), .nc-table td:nth-child(3) { width: 110px; } /* Fecha */
-.nc-table th:nth-child(4), .nc-table td:nth-child(4) { }               /* Descripción — ocupa el resto */
-.nc-table th:nth-child(5), .nc-table td:nth-child(5) { width: 160px; white-space: nowrap; } /* Gerencia */
-.nc-table th:nth-child(6), .nc-table td:nth-child(6) { width: 140px; white-space: nowrap; } /* Emisor */
-.nc-table th:nth-child(7), .nc-table td:nth-child(7) { width: 120px; } /* Progreso */
-.nc-table th:nth-child(8), .nc-table td:nth-child(8) { width: 90px; }  /* Estado */
+.inc-table th:nth-child(1), .inc-table td:nth-child(1) { width: 100px; }
+.inc-table th:nth-child(2), .inc-table td:nth-child(2) { width: 110px; white-space: nowrap; }
+.inc-table th:nth-child(3), .inc-table td:nth-child(3) { width: 110px; }
+.inc-table th:nth-child(4), .inc-table td:nth-child(4) { }
+.inc-table th:nth-child(5), .inc-table td:nth-child(5) { width: 160px; white-space: nowrap; }
+.inc-table th:nth-child(6), .inc-table td:nth-child(6) { width: 140px; white-space: nowrap; }
+.inc-table th:nth-child(7), .inc-table td:nth-child(7) { width: 120px; }
+.inc-table th:nth-child(8), .inc-table td:nth-child(8) { width: 90px; }
 
 /* Tipo badge */
-.nc-tipo-badge {
+.inc-tipo-badge {
   display: inline-block;
   padding: 3px 9px;
   border-radius: 6px;
@@ -398,20 +409,20 @@ body.dark-theme .nc-estado-btn.active {
   font-weight: 800;
   letter-spacing: 0.4px;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
-.nc-tipo-badge.NC   { background: rgba(231,29,54,0.12);  color: #E71D36; }
-.nc-tipo-badge.OBS  { background: rgba(245,158,11,0.12); color: #d97706; }
-.nc-tipo-badge.OM   { background: rgba(59,130,246,0.12); color: #2563eb; }
-.nc-tipo-badge.Fortaleza { background: rgba(16,185,129,0.12); color: #059669; }
+.inc-tipo-badge.Accidente       { background: rgba(231,29,54,0.12);  color: #E71D36; }
+.inc-tipo-badge.Incidente       { background: rgba(245,158,11,0.12); color: #d97706; }
+.inc-tipo-badge.Casi-Accidente  { background: rgba(59,130,246,0.12); color: #2563eb; }
+.inc-tipo-badge.Enfermedad      { background: rgba(139,92,246,0.12); color: #7c3aed; }
 
-body.dark-theme .nc-tipo-badge.NC   { background: rgba(231,29,54,0.2); }
-body.dark-theme .nc-tipo-badge.OBS  { background: rgba(245,158,11,0.2); }
-body.dark-theme .nc-tipo-badge.OM   { background: rgba(59,130,246,0.2); }
-body.dark-theme .nc-tipo-badge.Fortaleza { background: rgba(16,185,129,0.2); }
+body.dark-theme .inc-tipo-badge.Accidente      { background: rgba(231,29,54,0.2); }
+body.dark-theme .inc-tipo-badge.Incidente      { background: rgba(245,158,11,0.2); }
+body.dark-theme .inc-tipo-badge.Casi-Accidente { background: rgba(59,130,246,0.2); }
+body.dark-theme .inc-tipo-badge.Enfermedad     { background: rgba(139,92,246,0.2); }
 
-/* Numero */
-.nc-numero {
+.inc-numero {
   font-weight: 700;
   font-family: monospace;
   font-size: 13px;
@@ -419,15 +430,13 @@ body.dark-theme .nc-tipo-badge.Fortaleza { background: rgba(16,185,129,0.2); }
   white-space: nowrap;
 }
 
-/* Fecha */
-.nc-fecha {
+.inc-fecha {
   color: var(--text-muted);
   font-size: 13px;
   white-space: nowrap;
 }
 
-/* Descripción truncated */
-.nc-desc {
+.inc-desc {
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -437,66 +446,69 @@ body.dark-theme .nc-tipo-badge.Fortaleza { background: rgba(16,185,129,0.2); }
   font-size: 13px;
 }
 
-/* Emisor */
-.nc-emisor {
+.inc-gerencia,
+.inc-emisor {
   font-size: 13px;
   color: var(--text-muted);
   white-space: nowrap;
 }
 
-/* Paso progress */
-.nc-paso-cell {
+.inc-paso-cell {
   min-width: 110px;
 }
 
-.nc-paso-label {
+.inc-paso-label {
   font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
   margin-bottom: 5px;
 }
 
-.nc-paso-bar-bg {
+.inc-paso-bar-bg {
   height: 5px;
   background: var(--border-color);
   border-radius: 3px;
   overflow: hidden;
 }
 
-.nc-paso-bar-fill {
+.inc-paso-bar-fill {
   height: 100%;
-  background: var(--primary-color);
+  background: #E71D36;
   border-radius: 3px;
   transition: width 0.4s ease;
 }
 
-/* Estado badge */
-.nc-estado-badge {
+.inc-estado-badge {
   display: inline-block;
   padding: 4px 10px;
   border-radius: 20px;
   font-size: 11px;
   font-weight: 700;
   white-space: nowrap;
+  text-transform: capitalize;
 }
 
-.nc-estado-badge.abierto {
-  background: var(--primary-color);
-  color: #141414;
+.inc-estado-badge.abierto {
+  background: rgba(231,29,54,0.12);
+  color: #E71D36;
 }
 
-.nc-estado-badge.cerrado {
+.inc-estado-badge.cerrado {
   background: #d1fae5;
   color: #065f46;
 }
 
-body.dark-theme .nc-estado-badge.cerrado {
+body.dark-theme .inc-estado-badge.abierto {
+  background: rgba(231,29,54,0.2);
+}
+
+body.dark-theme .inc-estado-badge.cerrado {
   background: rgba(16,185,129,0.18);
   color: #34d399;
 }
 
 /* ── Empty State ────────────────────────────────────────────────────────────── */
-.nc-empty {
+.inc-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -507,7 +519,7 @@ body.dark-theme .nc-estado-badge.cerrado {
   text-align: center;
 }
 
-.nc-empty-icon {
+.inc-empty-icon {
   width: 56px;
   height: 56px;
   background: var(--bg-secondary);
@@ -518,43 +530,43 @@ body.dark-theme .nc-estado-badge.cerrado {
   color: var(--text-muted);
 }
 
-.nc-empty p {
+.inc-empty p {
   font-size: 15px;
   font-weight: 600;
   color: var(--text-main);
   margin: 0;
 }
 
-.nc-empty span {
+.inc-empty span {
   font-size: 13px;
   color: var(--text-muted);
 }
 
 /* ── Skeleton ───────────────────────────────────────────────────────────────── */
-.nc-skeleton-row td {
+.inc-skeleton-row td {
   padding: 16px;
 }
 
-.nc-skeleton-cell {
+.inc-skeleton-cell {
   height: 16px;
   border-radius: 6px;
   background: linear-gradient(90deg, var(--bg-secondary) 25%, var(--bg-hover) 50%, var(--bg-secondary) 75%);
   background-size: 200% 100%;
-  animation: nc-shimmer 1.4s ease-in-out infinite;
+  animation: inc-shimmer 1.4s ease-in-out infinite;
 }
 
-@keyframes nc-shimmer {
+@keyframes inc-shimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
 
 /* ── Buttons ────────────────────────────────────────────────────────────────── */
-.nc-btn-primary {
+.inc-btn-primary {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  background: var(--primary-color);
-  color: #141414;
+  background: #E71D36;
+  color: #fff;
   border: none;
   border-radius: 10px;
   padding: 10px 18px;
@@ -566,33 +578,34 @@ body.dark-theme .nc-estado-badge.cerrado {
   text-decoration: none;
 }
 
-.nc-btn-primary:hover {
+.inc-btn-primary:hover {
   opacity: 0.88;
 }
 
 /* ── Responsive ─────────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
-  .nc-container {
+  .inc-container {
     padding: 20px 16px;
   }
 
-  .nc-page-header {
+  .inc-page-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
   }
 
-  .nc-header-actions {
+  .inc-header-actions {
     margin-left: 0;
     width: 100%;
   }
 
-  .nc-btn-primary {
+  .inc-btn-primary {
     width: 100%;
     justify-content: center;
   }
 
-  .nc-table {
-    min-width: 700px;
+  .inc-table th:nth-child(4),
+  .inc-table td:nth-child(4) {
+    display: none;
   }
 }

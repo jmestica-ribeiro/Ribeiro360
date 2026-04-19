@@ -422,3 +422,45 @@ export async function fetchNcInformeData(hallazgoId) {
     error: null,
   };
 }
+
+// ── Consultas para Incidentes ─────────────────────────────────────────────────
+
+export async function fetchIncidentesAbiertos() {
+  const { data, error } = await supabase
+    .from('inc_incidentes')
+    .select('id, paso_actual, estado')
+    .eq('estado', 'abierto');
+  if (error) console.error('[sgiService] fetchIncidentesAbiertos:', error.message);
+  return { data: data ?? [], error };
+}
+
+export async function fetchIncidentesGerencias() {
+  const { data, error } = await supabase
+    .from('inc_incidentes')
+    .select('gerencia')
+    .not('gerencia', 'is', null);
+  if (error) console.error('[sgiService] fetchIncidentesGerencias:', error.message);
+  const unique = [...new Set((data ?? []).map(r => r.gerencia).filter(Boolean))].sort();
+  return { data: unique, error };
+}
+
+export async function fetchIncidentes({ tipo, estado, fechaDesde, fechaHasta, paso, gerencia, tipoIncidente, clasificacion } = {}) {
+  let query = supabase
+    .from('inc_incidentes')
+    .select('id, tipo, numero, fecha, descripcion, paso_actual, estado, gerencia, tipo_incidente, clasificacion, emisor:profiles!emisor_id(full_name)')
+    .order('fecha', { ascending: false });
+
+  if (tipo) query = query.eq('tipo', tipo);
+  if (estado && estado !== 'todos') query = query.eq('estado', estado);
+  if (fechaDesde) query = query.gte('fecha', fechaDesde);
+  if (fechaHasta) query = query.lte('fecha', fechaHasta);
+  if (paso) query = query.eq('paso_actual', paso);
+  if (gerencia) query = query.eq('gerencia', gerencia);
+  if (tipoIncidente) query = query.eq('tipo_incidente', tipoIncidente);
+  if (clasificacion) query = query.eq('clasificacion', clasificacion);
+
+  const { data, error } = await query;
+  if (error) console.error('[sgiService] fetchIncidentes:', error.message);
+  const mapped = (data ?? []).map(r => ({ ...r, emisor_nombre: r.emisor?.full_name ?? null }));
+  return { data: mapped, error };
+}

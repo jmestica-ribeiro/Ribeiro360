@@ -110,6 +110,10 @@ const Sidebar = ({ isOpen, onToggle, isCollapsed, onToggleCollapse }) => {
                     <span className="nav-sub-dot" />
                     <span>No Conformidades</span>
                   </NavLink>
+                  <NavLink to="/sgi/incidentes" className={subLinkClass} title="Incidentes" onClick={handleLinkClick}>
+                    <span className="nav-sub-dot" />
+                    <span>Incidentes</span>
+                  </NavLink>
                   <NavLink to="/sgi/estadisticas" className={subLinkClass} title="Estadísticas SGI" onClick={handleLinkClick}>
                     <span className="nav-sub-dot" />
                     <span>Estadísticas</span>
