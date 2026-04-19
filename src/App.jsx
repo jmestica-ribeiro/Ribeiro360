@@ -1,36 +1,32 @@
 import React, { useState, lazy, Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import PageTransition from './components/PageTransition';
+import PageTransition from './components/layout/PageTransition';
 import { useAuth } from './contexts/AuthContext';
+import { ToastProvider } from './contexts/ToastContext';
+import { PageLoader } from './components/common';
 import './App.css';
 
 // Siempre cargados — parte del shell principal
-import Sidebar from './components/Sidebar';
-import Header from './components/Header';
+import Sidebar from './components/layout/Sidebar';
+import Header from './components/layout/Header';
 
 // Lazy — se cargan solo cuando el usuario navega a esa ruta
-const Dashboard    = lazy(() => import('./components/Dashboard'));
-const Explorar     = lazy(() => import('./components/Explorar'));
-const Onboarding   = lazy(() => import('./components/Onboarding'));
-const AdminPanel   = lazy(() => import('./components/AdminPanel'));
-const Organigrama  = lazy(() => import('./components/Organigrama'));
-const Directorio   = lazy(() => import('./components/Directorio'));
-const MisCursos    = lazy(() => import('./components/MisCursos'));
-const Eventos      = lazy(() => import('./components/Eventos'));
-const FAQ          = lazy(() => import('./components/FAQ'));
-const SGI          = lazy(() => import('./components/SGI'));
-const SGIDocument  = lazy(() => import('./components/SGIDocument'));
-const NoConformidades = lazy(() => import('./components/nc/NoConformidades'));
-const NCDetalle    = lazy(() => import('./components/nc/NCDetalle'));
-const SGIEstadisticas = lazy(() => import('./components/SGIEstadisticas'));
-const Perfil       = lazy(() => import('./components/Perfil'));
-const Login        = lazy(() => import('./pages/Login'));
-
-const PageLoader = () => (
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', color: 'var(--text-muted)', fontSize: '14px', gap: '10px' }}>
-    <div style={{ width: '18px', height: '18px', border: '2px solid var(--border-color)', borderTopColor: 'var(--primary-color)', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
-  </div>
-);
+const Dashboard       = lazy(() => import('./features/dashboard/Dashboard'));
+const Explorar        = lazy(() => import('./features/capacitaciones/Explorar'));
+const Onboarding      = lazy(() => import('./features/onboarding/Onboarding'));
+const AdminPanel      = lazy(() => import('./features/admin/AdminPanel'));
+const Organigrama     = lazy(() => import('./features/organigrama/Organigrama'));
+const Directorio      = lazy(() => import('./features/directorio/Directorio'));
+const MisCursos       = lazy(() => import('./features/capacitaciones/MisCursos'));
+const Eventos         = lazy(() => import('./features/eventos/Eventos'));
+const FAQ             = lazy(() => import('./features/faq/FAQ'));
+const SGI             = lazy(() => import('./features/sgi/SGI'));
+const SGIDocument     = lazy(() => import('./features/sgi/SGIDocument'));
+const NoConformidades = lazy(() => import('./features/sgi/nc/NoConformidades'));
+const NCDetalle       = lazy(() => import('./features/sgi/nc/NCDetalle'));
+const SGIEstadisticas = lazy(() => import('./features/sgi/SGIEstadisticas'));
+const Perfil          = lazy(() => import('./features/perfil/Perfil'));
+const Login           = lazy(() => import('./pages/Login'));
 
 const ProtectedRoute = ({ children, requireAdmin = false }) => {
   const { session, profile, isLoading } = useAuth();
@@ -51,24 +47,24 @@ function AnimatedRoutes() {
   const W = ({ children }) => <PageTransition key={location.pathname}>{children}</PageTransition>;
   return (
     <Routes location={location}>
-      <Route path="/"                    element={<W><Dashboard /></W>} />
-      <Route path="/explorar"            element={<W><Explorar /></W>} />
-      <Route path="/onboarding"          element={<W><Onboarding /></W>} />
-      <Route path="/organigrama"         element={<W><Organigrama /></W>} />
-      <Route path="/directorio"          element={<W><Directorio /></W>} />
-      <Route path="/cursos"              element={<W><MisCursos /></W>} />
-      <Route path="/cursos/:id"          element={<W><MisCursos /></W>} />
-      <Route path="/eventos"             element={<W><Eventos /></W>} />
-      <Route path="/faq"                 element={<W><FAQ /></W>} />
-      <Route path="/sgi"                 element={<W><SGI /></W>} />
-      <Route path="/sgi/documento/:docId" element={<W><SGIDocument /></W>} />
-      <Route path="/sgi/estadisticas"    element={<W><SGIEstadisticas /></W>} />
-      <Route path="/sgi/nc"             element={<W><NoConformidades /></W>} />
-      <Route path="/sgi/nc/nuevo"       element={<W><NCDetalle /></W>} />
-      <Route path="/sgi/nc/:id"         element={<W><NCDetalle /></W>} />
-      <Route path="/sgi/:categoria"      element={<W><SGI /></W>} />
-      <Route path="/perfil"              element={<W><Perfil /></W>} />
-      <Route path="/admin"               element={
+      <Route path="/"                      element={<W><Dashboard /></W>} />
+      <Route path="/explorar"              element={<W><Explorar /></W>} />
+      <Route path="/onboarding"            element={<W><Onboarding /></W>} />
+      <Route path="/organigrama"           element={<W><Organigrama /></W>} />
+      <Route path="/directorio"            element={<W><Directorio /></W>} />
+      <Route path="/cursos"                element={<W><MisCursos /></W>} />
+      <Route path="/cursos/:id"            element={<W><MisCursos /></W>} />
+      <Route path="/eventos"               element={<W><Eventos /></W>} />
+      <Route path="/faq"                   element={<W><FAQ /></W>} />
+      <Route path="/sgi"                   element={<W><SGI /></W>} />
+      <Route path="/sgi/documento/:docId"  element={<W><SGIDocument /></W>} />
+      <Route path="/sgi/estadisticas"      element={<W><SGIEstadisticas /></W>} />
+      <Route path="/sgi/nc"                element={<W><NoConformidades /></W>} />
+      <Route path="/sgi/nc/nuevo"          element={<W><NCDetalle /></W>} />
+      <Route path="/sgi/nc/:id"            element={<W><NCDetalle /></W>} />
+      <Route path="/sgi/:categoria"        element={<W><SGI /></W>} />
+      <Route path="/perfil"                element={<W><Perfil /></W>} />
+      <Route path="/admin"                 element={
         <ProtectedRoute requireAdmin>
           <W><AdminPanel /></W>
         </ProtectedRoute>
@@ -79,7 +75,7 @@ function AnimatedRoutes() {
 
 function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
 
   return (
     <div className={`layout ${isSidebarOpen ? 'sidebar-open' : ''} ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -93,7 +89,7 @@ function AppLayout() {
         <Header onToggleMenu={() => setIsSidebarOpen(!isSidebarOpen)} />
         <main className="dashboard-container">
           <Suspense fallback={<PageLoader />}>
-          <AnimatedRoutes />
+            <AnimatedRoutes />
           </Suspense>
         </main>
       </div>
@@ -104,14 +100,16 @@ function AppLayout() {
 
 function App() {
   return (
-    <Routes>
-      <Route path="/login" element={<LoginRoute />} />
-      <Route path="/*" element={
-        <ProtectedRoute>
-          <AppLayout />
-        </ProtectedRoute>
-      } />
-    </Routes>
+    <ToastProvider>
+      <Routes>
+        <Route path="/login" element={<LoginRoute />} />
+        <Route path="/*" element={
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        } />
+      </Routes>
+    </ToastProvider>
   );
 }
 

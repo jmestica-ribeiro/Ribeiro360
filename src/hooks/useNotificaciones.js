@@ -1,16 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { TIPOS_NC } from '../lib/ncNotificaciones';
+import { visMatchesProfile, courseIsVisible } from '../lib/visibilidad';
 
 const WINDOW_DAYS = 30;
-
-const visMatchesProfile = (rules, profile) => {
-  if (rules.length === 0) return true;
-  return rules.every(r => {
-    const v = profile?.[r.campo];
-    return v && v.toLowerCase() === r.valor.toLowerCase();
-  });
-};
 
 export const useNotificaciones = (profile) => {
   const [notificaciones, setNotificaciones] = useState([]);
@@ -66,8 +59,7 @@ export const useNotificaciones = (profile) => {
 
     const destCursoIds = new Set((cursosDestData || []).map(d => d.curso_id));
     (cursosData || []).forEach(curso => {
-      const rules = (cursosVisData || []).filter(r => r.curso_id === curso.id);
-      if (destCursoIds.has(curso.id) || visMatchesProfile(rules, profile)) {
+      if (courseIsVisible(curso.id, destCursoIds, cursosVisData, profile)) {
         items.push({
           id: `curso-${curso.id}`,
           tipo: 'capacitacion',
