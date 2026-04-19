@@ -22,6 +22,10 @@ const Login = () => {
 
   return (
     <div className="login-container">
+      <div className="login-grid" />
+      <div className="login-orb login-orb-1" />
+      <div className="login-orb login-orb-2" />
+      <div className="login-orb login-orb-3" />
       <div className="login-card">
         <div className="login-logo">
           <img src={Logo} alt="Ribeiro" />

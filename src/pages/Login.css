@@ -1,25 +1,129 @@
+/* ── Background ─────────────────────────────────────────────────────────────── */
 .login-container {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f9fafb;
   padding: 24px;
+  background: #0a0a0a;
+  position: relative;
+  overflow: hidden;
 }
 
+/* Gradiente radial de marca */
+.login-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 50%, rgba(201,168,0,0.18) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 80% at 80% 20%, rgba(201,168,0,0.10) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 50% at 60% 85%, rgba(255,255,255,0.03) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+/* Forma geométrica grande — círculo superior izquierdo */
+.login-container::after {
+  content: '';
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  border: 1px solid rgba(201,168,0,0.12);
+  top: -200px;
+  left: -200px;
+  pointer-events: none;
+}
+
+/* Orbes animados */
+.login-orb {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: orbFloat 8s ease-in-out infinite;
+}
+
+.login-orb-1 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(201,168,0,0.15) 0%, transparent 70%);
+  top: -100px;
+  right: -100px;
+  animation-delay: 0s;
+}
+
+.login-orb-2 {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(201,168,0,0.08) 0%, transparent 70%);
+  bottom: -80px;
+  left: 10%;
+  animation-delay: -3s;
+  animation-duration: 10s;
+}
+
+.login-orb-3 {
+  width: 180px;
+  height: 180px;
+  background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%);
+  top: 40%;
+  right: 15%;
+  animation-delay: -5s;
+  animation-duration: 12s;
+}
+
+/* Grid punteado de fondo */
+.login-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 0%, transparent 100%);
+}
+
+@keyframes orbFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(15px, -20px) scale(1.04); }
+  66%       { transform: translate(-10px, 12px) scale(0.97); }
+}
+
+/* ── Card Glassmorphism ──────────────────────────────────────────────────────── */
 .login-card {
-  background: white;
-  border: 1px solid var(--border-color);
-  border-radius: 20px;
-  padding: 48px 40px;
+  position: relative;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  padding: 48px 44px;
   width: 100%;
   max-width: 420px;
-  box-shadow: 0 8px 40px rgba(0,0,0,0.08);
+  box-shadow:
+    0 0 0 1px rgba(201,168,0,0.08),
+    0 32px 64px rgba(0, 0, 0, 0.5),
+    0 8px 24px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255,255,255,0.1);
   display: flex;
   flex-direction: column;
   gap: 32px;
 }
 
+/* Borde superior dorado sutil */
+.login-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 10%;
+  right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201,168,0,0.6), transparent);
+  border-radius: 50%;
+}
+
+/* ── Logo ───────────────────────────────────────────────────────────────────── */
 .login-logo {
   display: flex;
   align-items: center;
@@ -30,12 +134,13 @@
   width: 48px;
   height: 48px;
   object-fit: contain;
+  filter: drop-shadow(0 2px 8px rgba(201,168,0,0.3));
 }
 
 .login-logo h1 {
   font-size: 26px;
   font-weight: 900;
-  color: var(--text-main);
+  color: #ffffff;
   letter-spacing: -0.5px;
 }
 
@@ -43,6 +148,7 @@
   color: #c9a800;
 }
 
+/* ── Body ───────────────────────────────────────────────────────────────────── */
 .login-body {
   display: flex;
   flex-direction: column;
@@ -52,15 +158,16 @@
 .login-body h2 {
   font-size: 22px;
   font-weight: 800;
-  color: var(--text-main);
+  color: #ffffff;
 }
 
 .login-body p {
   font-size: 14px;
-  color: var(--text-muted);
+  color: rgba(255,255,255,0.5);
   line-height: 1.6;
 }
 
+/* ── Botón Microsoft ────────────────────────────────────────────────────────── */
 .btn-microsoft {
   display: flex;
   align-items: center;
@@ -68,42 +175,50 @@
   gap: 12px;
   width: 100%;
   padding: 14px 20px;
-  background: white;
-  border: 1.5px solid var(--border-color);
-  border-radius: 10px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 12px;
   font-size: 15px;
   font-weight: 700;
-  color: var(--text-main);
+  color: #ffffff;
   cursor: pointer;
-  transition: var(--transition);
+  transition: all 0.2s ease;
   margin-top: 8px;
   font-family: var(--font-main);
+  backdrop-filter: blur(8px);
 }
 
 .btn-microsoft:hover:not(:disabled) {
-  border-color: #00a4ef;
-  background: #f0f9ff;
-  box-shadow: 0 2px 12px rgba(0,164,239,0.15);
+  background: rgba(255,255,255,0.14);
+  border-color: rgba(201,168,0,0.5);
+  box-shadow: 0 4px 20px rgba(201,168,0,0.15), 0 0 0 1px rgba(201,168,0,0.2);
+  transform: translateY(-1px);
+}
+
+.btn-microsoft:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .btn-microsoft:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
+/* ── Footer ─────────────────────────────────────────────────────────────────── */
 .login-footer {
   font-size: 12px;
-  color: var(--text-muted);
+  color: rgba(255,255,255,0.28);
   text-align: center;
   line-height: 1.5;
   padding-top: 8px;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid rgba(255,255,255,0.08);
 }
 
+/* ── Error ──────────────────────────────────────────────────────────────────── */
 .login-error {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #dc2626;
+  background: rgba(220,38,38,0.12);
+  border: 1px solid rgba(220,38,38,0.3);
+  color: #f87171;
   padding: 10px 14px;
   border-radius: 8px;
   font-size: 13px;
