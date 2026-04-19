@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Check, Upload, X, FileText, Clock, ChevronRight, Loader2, Search, User, HelpCircle, GitBranch, Settings, Package, Cloud, BarChart2, BookOpen, Users, Paperclip, Download } from 'lucide-react';
 import NCExportarPDF from './NCInformePDF';
 import { supabase } from '../../lib/supabase';
+import { notificarAsignacion } from '../../lib/ncNotificaciones';
 import { useAuth } from '../../contexts/AuthContext';
 import './NCDetalle.css';
 
@@ -220,7 +221,7 @@ function PersonPickerModal({ profiles, onSelect, onClose, title, multi = false, 
 }
 
 /* ── Accion Modal Inner ─────────────────────────────────────────────────────── */
-function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, accionPicker, setAccionPicker, onClose, onSaved, onHitoSaved, hallazgoId }) {
+function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, accionPicker, setAccionPicker, onClose, onSaved, onHitoSaved, hallazgoId, hallazgoNumero }) {
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState('datos'); // unused, kept for compat
   const [hitos, setHitos] = useState([]);
@@ -270,6 +271,7 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
     if (!accionForm.descripcion.trim()) return;
     setSaving(true);
     try {
+      const prevResponsableId = editingAccion?.responsable_id || null;
       if (editingAccion?.id) {
         const estado = avanceCalculado === 100 ? 'cerrada' : avanceCalculado > 0 ? 'en_proceso' : 'pendiente';
         await supabase.from('nc_acciones').update({
@@ -290,6 +292,15 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
           fecha_vencimiento: accionForm.fecha_vencimiento || null,
           avance: 0,
           estado: 'pendiente',
+        });
+      }
+      if (accionForm.responsable_id) {
+        await notificarAsignacion({
+          hallazgoId,
+          hallazgoNumero: hallazgoNumero || hallazgoId,
+          tipo: 'responsable_accion',
+          newIds: [accionForm.responsable_id],
+          prevIds: prevResponsableId ? [prevResponsableId] : [],
         });
       }
       onSaved();
@@ -649,6 +660,16 @@ export default function NCDetalle() {
 
   const [showPDF, setShowPDF] = useState(false);
 
+  // Ref que rastrea las asignaciones ya guardadas en DB (para detectar nuevas al guardar)
+  const savedAssignmentsRef = useRef({
+    emisor_id: '',
+    auditor_id: '',
+    responsable_proceso: [],
+    responsable_verif: [],
+    responsable_analisis_id: '',
+    participantes: [],
+  });
+
   // Step 5 state — verificación por acción
   const [accionesVerif, setAccionesVerif] = useState({}); // { [accionId]: { eficaz, fecha, detalle, adjuntos, files, saving } }
   const step5FileRefs = useRef({});
@@ -765,6 +786,16 @@ export default function NCDetalle() {
             responsable_analisis_id: data.responsable_analisis_id || '',
             participantes: data.participantes_analisis || [],
           });
+
+          // Snapshot de asignaciones guardadas en DB (para detectar nuevas al guardar)
+          savedAssignmentsRef.current = {
+            emisor_id: data.emisor_id || '',
+            auditor_id: data.auditor_id || '',
+            responsable_proceso: (() => { try { const p = JSON.parse(data.responsable_proceso); return Array.isArray(p) ? p : []; } catch { return []; } })(),
+            responsable_verif: (() => { try { const p = JSON.parse(data.responsable_verif); return Array.isArray(p) ? p : []; } catch { return []; } })(),
+            responsable_analisis_id: data.responsable_analisis_id || '',
+            participantes: data.participantes_analisis || [],
+          };
 
           // Load step 3 fields
           setStep3({
@@ -892,6 +923,31 @@ export default function NCDetalle() {
     setUploadProgress(null);
   };
 
+  /* ── NC notifications helper ── */
+  const _notificarCambiosAsignacion = async (hId, hNumero) => {
+    const prev = savedAssignmentsRef.current;
+    const notifs = [
+      { tipo: 'emisor',                newIds: form.emisor_id ? [form.emisor_id] : [],           prevIds: prev.emisor_id ? [prev.emisor_id] : [] },
+      { tipo: 'auditor',               newIds: form.auditor_id ? [form.auditor_id] : [],         prevIds: prev.auditor_id ? [prev.auditor_id] : [] },
+      { tipo: 'responsable_proceso',   newIds: form.responsable_proceso,                         prevIds: prev.responsable_proceso },
+      { tipo: 'responsable_verif',     newIds: form.responsable_verif,                           prevIds: prev.responsable_verif },
+      { tipo: 'responsable_analisis',  newIds: step2.responsable_analisis_id ? [step2.responsable_analisis_id] : [], prevIds: prev.responsable_analisis_id ? [prev.responsable_analisis_id] : [] },
+      { tipo: 'participante_analisis', newIds: step2.participantes,                              prevIds: prev.participantes },
+    ];
+    await Promise.all(notifs.map(n =>
+      notificarAsignacion({ hallazgoId: hId, hallazgoNumero: hNumero, tipo: n.tipo, newIds: n.newIds, prevIds: n.prevIds })
+    ));
+    // Actualizar snapshot
+    savedAssignmentsRef.current = {
+      emisor_id: form.emisor_id,
+      auditor_id: form.auditor_id,
+      responsable_proceso: [...form.responsable_proceso],
+      responsable_verif: [...form.responsable_verif],
+      responsable_analisis_id: step2.responsable_analisis_id,
+      participantes: [...step2.participantes],
+    };
+  };
+
   /* ── Save / Submit ── */
   const handleSave = async (advance = false) => {
     if (!form.tipo) { showToast('Selecciona un tipo de documento', 'error'); return; }
@@ -944,6 +1000,8 @@ export default function NCDetalle() {
         if (error) throw error;
         hallazgoId = data.id;
         await uploadPendingFiles(hallazgoId);
+        // Notificar asignaciones en hallazgo nuevo
+        await _notificarCambiosAsignacion(hallazgoId, form.numero);
         showToast('Hallazgo creado correctamente', 'success');
         navigate(`/sgi/nc/${hallazgoId}`, { replace: true });
         if (advance) {
@@ -959,8 +1017,10 @@ export default function NCDetalle() {
           .eq('id', id);
         if (error) throw error;
         await uploadPendingFiles(hallazgoId);
+        // Notificar nuevas asignaciones
+        await _notificarCambiosAsignacion(id, form.numero);
         setPasoActual(newPaso);
-        if (advance && !closing) setCurrentStep(newPaso);
+        if (advance && !closing) setCurrentStep(currentStep + 1);
         showToast(closing ? 'Hallazgo cerrado correctamente' : 'Guardado correctamente', 'success');
         if (closing) navigate('/sgi/nc');
       }
@@ -1567,6 +1627,7 @@ export default function NCDetalle() {
           onSaved={() => { setShowAccionModal(false); fetchAcciones(); }}
           onHitoSaved={() => fetchAcciones()}
           hallazgoId={id}
+          hallazgoNumero={form.numero}
         />
       )}
     </>

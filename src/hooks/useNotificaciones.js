@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
+import { TIPOS_NC } from '../lib/ncNotificaciones';
 
 const WINDOW_DAYS = 30;
 
@@ -28,8 +29,23 @@ export const useNotificaciones = (profile) => {
     }
   }, [profile?.id, profile?.notifications_last_seen_at]);
 
-  const buildItems = useCallback((eventosData, eventosVisData, cursosData, cursosVisData, sgiData, currentLastSeen) => {
+  const buildItems = useCallback((eventosData, eventosVisData, cursosData, cursosVisData, cursosDestData, sgiData, ncData, currentLastSeen) => {
     const items = [];
+
+    (ncData || []).forEach(n => {
+      const config = TIPOS_NC[n.tipo];
+      items.push({
+        id: `nc-${n.id}`,
+        tipo: 'hallazgo',
+        itemId: n.hallazgo_id,
+        titulo: config?.subtitulo(n.hallazgo_numero) || `Asignación en ${n.hallazgo_numero}`,
+        subtitulo: config?.label || null,
+        color: '#E71D36',
+        created_at: n.created_at,
+        leida: n.leida || n.created_at <= currentLastSeen,
+        ncId: n.id,
+      });
+    });
 
     (eventosData || []).forEach(evento => {
       const rules = (eventosVisData || []).filter(r => r.evento_id === evento.id);
@@ -48,9 +64,10 @@ export const useNotificaciones = (profile) => {
       }
     });
 
+    const destCursoIds = new Set((cursosDestData || []).map(d => d.curso_id));
     (cursosData || []).forEach(curso => {
       const rules = (cursosVisData || []).filter(r => r.curso_id === curso.id);
-      if (visMatchesProfile(rules, profile)) {
+      if (destCursoIds.has(curso.id) || visMatchesProfile(rules, profile)) {
         items.push({
           id: `curso-${curso.id}`,
           tipo: 'capacitacion',
@@ -83,7 +100,7 @@ export const useNotificaciones = (profile) => {
       return new Date(b.created_at) - new Date(a.created_at);
     });
 
-    return items.slice(0, 10);
+    return items.slice(0, 20);
   }, [profile]);
 
   // Guardamos los datos crudos para poder recalcular leida sin re-fetch
@@ -97,7 +114,7 @@ export const useNotificaciones = (profile) => {
     since.setDate(since.getDate() - WINDOW_DAYS);
     const sinceISO = since.toISOString();
 
-    const [eventosRes, eventosVisRes, cursosRes, cursosVisRes, sgiRes] = await Promise.all([
+    const [eventosRes, eventosVisRes, cursosRes, cursosVisRes, cursosDestRes, sgiRes, ncRes] = await Promise.all([
       supabase
         .from('eventos')
         .select('id, titulo, fecha, created_at, categoria:eventos_categorias(nombre, color)')
@@ -112,30 +129,41 @@ export const useNotificaciones = (profile) => {
         .order('created_at', { ascending: false })
         .limit(10),
       supabase.from('cursos_visibilidad').select('*'),
+      supabase.from('cursos_destinatarios').select('curso_id').eq('user_id', profile.id),
       supabase
         .from('sgi_versiones')
         .select('id, numero_version, fecha_emision, documento_id, documento:sgi_documentos(titulo)')
         .gte('fecha_emision', sinceISO.split('T')[0])
         .order('fecha_emision', { ascending: false })
         .limit(10),
+      supabase
+        .from('nc_notificaciones')
+        .select('id, hallazgo_id, hallazgo_numero, tipo, leida, created_at')
+        .eq('user_id', profile.id)
+        .gt('created_at', sinceISO)
+        .order('created_at', { ascending: false })
+        .limit(20),
     ]);
 
     if (eventosRes.error) console.error('[notif] eventos:', eventosRes.error.message);
     if (cursosRes.error)  console.error('[notif] cursos:', cursosRes.error.message);
     if (sgiRes.error)     console.error('[notif] sgi_versiones:', sgiRes.error.message);
+    if (ncRes.error)      console.error('[notif] nc_notificaciones:', ncRes.error.message);
 
     rawDataRef.current = {
       eventos: eventosRes.data,
       eventosVis: eventosVisRes.data,
       cursos: cursosRes.data,
       cursosVis: cursosVisRes.data,
+      cursosDest: cursosDestRes.data,
       sgi: sgiRes.data,
+      nc: ncRes.data,
     };
 
     const items = buildItems(
       eventosRes.data, eventosVisRes.data,
-      cursosRes.data, cursosVisRes.data,
-      sgiRes.data,
+      cursosRes.data, cursosVisRes.data, cursosDestRes.data,
+      sgiRes.data, ncRes.data,
       currentLastSeen
     );
 
@@ -165,15 +193,24 @@ export const useNotificaciones = (profile) => {
     if (!profile?.id) return;
     const now = new Date().toISOString();
 
-    await supabase
-      .from('profiles')
-      .update({ notifications_last_seen_at: now })
-      .eq('id', profile.id);
+    await Promise.all([
+      supabase
+        .from('profiles')
+        .update({ notifications_last_seen_at: now })
+        .eq('id', profile.id),
+      supabase
+        .from('nc_notificaciones')
+        .update({ leida: true })
+        .eq('user_id', profile.id)
+        .eq('leida', false),
+    ]);
 
     // Recalcular leida con el nuevo timestamp usando datos ya cargados
     if (rawDataRef.current) {
-      const { eventos, eventosVis, cursos, cursosVis, sgi } = rawDataRef.current;
-      const items = buildItems(eventos, eventosVis, cursos, cursosVis, sgi, now);
+      const { eventos, eventosVis, cursos, cursosVis, cursosDest, sgi, nc } = rawDataRef.current;
+      const updatedNc = (nc || []).map(n => ({ ...n, leida: true }));
+      rawDataRef.current.nc = updatedNc;
+      const items = buildItems(eventos, eventosVis, cursos, cursosVis, cursosDest, sgi, updatedNc, now);
       setNotificaciones(items);
     }
 

@@ -1,13 +1,14 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Calendar, BookOpen, FileText, BellOff } from 'lucide-react';
+import { X, Calendar, BookOpen, FileText, BellOff, ClipboardList } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './NotificacionesModal.css';
 
 const TIPO_CONFIG = {
-  evento:      { icon: Calendar, label: 'Evento',       tagColor: '#F59E0B', getRoute: ()         => '/eventos'              },
-  capacitacion:{ icon: BookOpen, label: 'Capacitación', tagColor: '#10B981', getRoute: (id)       => `/cursos/${id}`          },
-  documento:   { icon: FileText, label: 'SGI',          tagColor: '#3B82F6', getRoute: (id)       => `/sgi/documento/${id}`   },
+  evento:      { icon: Calendar,      label: 'Evento',        tagColor: '#F59E0B', getRoute: ()   => '/eventos'              },
+  capacitacion:{ icon: BookOpen,      label: 'Capacitación',  tagColor: '#10B981', getRoute: (id) => `/cursos/${id}`          },
+  documento:   { icon: FileText,      label: 'SGI',           tagColor: '#3B82F6', getRoute: (id) => `/sgi/documento/${id}`   },
+  hallazgo:    { icon: ClipboardList, label: 'No Conformidad',tagColor: '#E71D36', getRoute: (id) => `/sgi/nc/${id}`          },
 };
 
 const NotifItem = ({ item, onClick }) => {

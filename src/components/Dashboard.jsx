@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { PlayCircle, Clock, Award, ArrowRight, BarChart2, BookOpen, Folder, Monitor, FileText, Link as LinkIcon, ExternalLink, Globe, CheckCircle2, XCircle, Trophy, Calendar, Users, GraduationCap } from 'lucide-react';
+import BannerNovedades from './BannerNovedades';
 import * as LucideIcons from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import './Dashboard.css';
@@ -49,6 +50,7 @@ const Dashboard = () => {
   const [enrichedCourses, setEnrichedCourses] = useState([]);
   const [resultados, setResultados] = useState(null);
   const [proximosEventos, setProximosEventos] = useState(null); // null = loading
+  const [novedades, setNovedades] = useState([]);
 
   useEffect(() => {
     if (!userEmail) return;
@@ -108,14 +110,17 @@ const Dashboard = () => {
         setCursoPendiente(cache.cursos.data.cursoPendiente);
         return;
       }
-      const [coursesRes, certsRes, progressRes, cursosVisRes] = await Promise.all([
+      const [coursesRes, certsRes, progressRes, cursosVisRes, cursosDestRes] = await Promise.all([
         supabase.from('cursos').select('*, categoria:cursos_categorias(nombre, color), modulos:cursos_modulos(count)'),
         supabase.from('cursos_resultados').select('id, curso_id').eq('user_email', userEmail).eq('aprobado', true),
         supabase.from('cursos_progreso').select('curso_id').eq('user_email', userEmail).eq('completado', true),
         supabase.from('cursos_visibilidad').select('*'),
+        supabase.from('cursos_destinatarios').select('curso_id').eq('user_id', user?.id),
       ]);
 
+      const destCursoIds = new Set((cursosDestRes.data || []).map(d => d.curso_id));
       const visMatchesCurso = (courseId) => {
+        if (destCursoIds.has(courseId)) return true;
         const rules = (cursosVisRes.data || []).filter(r => r.curso_id === courseId);
         if (rules.length === 0) return true;
         return rules.every(r => { const v = profile?.[r.campo]; return v && v.toLowerCase() === r.valor.toLowerCase(); });
@@ -186,6 +191,20 @@ const Dashboard = () => {
     fetchEventos();
     fetchCursos();
     fetchGlobalStats();
+
+    // Novedades (sin cache — cambian frecuentemente)
+    const today = new Date().toISOString().split('T')[0];
+    supabase
+      .from('novedades')
+      .select('id, titulo, imagen_url, link_url, orden, fecha_hasta')
+      .eq('activo', true)
+      .order('orden', { ascending: true })
+      .then(({ data, error }) => {
+        if (error) { console.error('[novedades]', error.message); return; }
+        const visibles = (data || []).filter(n => !n.fecha_hasta || n.fecha_hasta >= today);
+        setNovedades(visibles);
+      });
+
   }, [userEmail, profile]);
 
   const fadeUp = (delay = 0) => ({
@@ -243,7 +262,7 @@ const Dashboard = () => {
       )}
 
       {/* Próximos Eventos */}
-      <motion.section className="section" {...fadeUp(0.2)}>
+      <motion.section className="section" {...fadeUp(0.15)}>
         <div className="section-header">
           <h2>Próximos Eventos</h2>
           <button className="view-all" onClick={() => navigate('/eventos')}>Ver calendario</button>
@@ -281,6 +300,16 @@ const Dashboard = () => {
           </div>
         )}
       </motion.section>
+
+      {/* Banner Novedades */}
+      {novedades.length > 0 && (
+        <motion.section className="section" {...fadeUp(0.2)}>
+          <div className="section-header">
+            <h2>Novedades</h2>
+          </div>
+          <BannerNovedades novedades={novedades} />
+        </motion.section>
+      )}
 
       {/* Continue Learning */}
       <motion.section className="section" {...fadeUp(0.3)}>

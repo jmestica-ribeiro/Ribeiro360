@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import './AdminPanel.css';
 
-const ALL_TABS = ['capacitaciones', 'paf', 'onboarding', 'eventos', 'faq', 'organigrama', 'sgi'];
+const ALL_TABS = ['capacitaciones', 'paf', 'onboarding', 'eventos', 'faq', 'organigrama', 'sgi', 'novedades'];
 
 const AdminPanel = () => {
   const { profile: currentUserProfile } = useAuth();
@@ -68,8 +68,17 @@ const AdminPanel = () => {
   const [isSavingCourse, setIsSavingCourse] = useState(false);
   const [editingVisibilidadCurso, setEditingVisibilidadCurso] = useState([]);
   const [editingVisibilidadEvento, setEditingVisibilidadEvento] = useState([]);
+  const [editingDestinatariosCurso, setEditingDestinatariosCurso] = useState([]); // [{ user_id, full_name, email }]
+  const [destinatariosSearch, setDestinatariosSearch] = useState('');
   const [editingPreguntas, setEditingPreguntas] = useState([]);
   const [profileValues, setProfileValues] = useState({ job_title: [], department: [], office_location: [] });
+
+  // States for Novedades
+  const [novedades, setNovedades] = useState([]);
+  const [novedadUploading, setNovedadUploading] = useState(false);
+  const [novedadForm, setNovedadForm] = useState({ titulo: '', link_url: '', activo: true, fecha_hasta: '' });
+  const [novedadFile, setNovedadFile] = useState(null);
+  const novedadFileRef = React.useRef(null);
 
   // States for PAF (Plan Anual de Formación)
   const [pafPlanes, setPafPlanes] = useState([]);
@@ -1326,13 +1335,16 @@ const AdminPanel = () => {
     setIsEditingCourse(true);
     setIsLoadingModules(true);
 
-    const [modRes, visRes] = await Promise.all([
+    const [modRes, visRes, destRes] = await Promise.all([
       supabase.from('cursos_modulos').select('*').eq('curso_id', course.id).order('numero_orden', { ascending: true }),
-      supabase.from('cursos_visibilidad').select('*').eq('curso_id', course.id)
+      supabase.from('cursos_visibilidad').select('*').eq('curso_id', course.id),
+      supabase.from('cursos_destinatarios').select('user_id, profile:profiles(full_name, email)').eq('curso_id', course.id),
     ]);
 
     if (modRes.data) setEditingModules(modRes.data);
     if (visRes.data) setEditingVisibilidadCurso(visRes.data);
+    if (destRes.data) setEditingDestinatariosCurso(destRes.data.map(d => ({ user_id: d.user_id, full_name: d.profile?.full_name || '', email: d.profile?.email || '' })));
+    setDestinatariosSearch('');
     try {
       setEditingPreguntas(course.cuestionario ? JSON.parse(course.cuestionario) : []);
     } catch(e) { setEditingPreguntas([]); }
@@ -1383,6 +1395,13 @@ const AdminPanel = () => {
         valor: r.valor
       }));
       await supabase.from('cursos_visibilidad').insert(visPayload);
+    }
+
+    await supabase.from('cursos_destinatarios').delete().eq('curso_id', savedId);
+    if (editingDestinatariosCurso.length > 0) {
+      await supabase.from('cursos_destinatarios').insert(
+        editingDestinatariosCurso.map(d => ({ curso_id: savedId, user_id: d.user_id }))
+      );
     }
 
     await fetchCourses();
@@ -2073,7 +2092,7 @@ const AdminPanel = () => {
                  <div className="section-divider" style={{ margin: '32px 0 16px 0', borderBottom: '1px solid #f0f0f0' }}></div>
 
                  <h4 className="mb-2" style={{ fontSize: '16px', fontWeight: '800' }}>3. Visibilidad</h4>
-                 <p className="text-muted text-xs mb-4">Sin reglas, el curso es visible para todos. Con reglas, solo lo ven quienes coincidan con al menos una.</p>
+                 <p className="text-muted text-xs mb-4">Sin reglas ni destinatarios, el curso es visible para todos. Con reglas, solo lo ven quienes coincidan. Los destinatarios individuales siempre lo ven, independientemente de las reglas.</p>
 
                  <div className="destinatarios-list mb-6">
                     {editingVisibilidadCurso.map((r, idx) => (
@@ -2098,6 +2117,67 @@ const AdminPanel = () => {
                     ))}
                     <button className="btn-add-dest" style={{ width: 'auto', padding: '10px 24px' }} onClick={handleAddVisibilidadCurso}>+ Agregar Regla</button>
                  </div>
+
+                 <div className="section-divider" style={{ margin: '32px 0 24px 0', borderBottom: '1px solid #f0f0f0' }}></div>
+
+                 <h4 className="mb-2" style={{ fontSize: '16px', fontWeight: '800' }}>3b. Destinatarios individuales</h4>
+                 <p className="text-muted text-xs mb-4">Usuarios específicos que verán este curso, independientemente de las reglas de visibilidad.</p>
+
+                 {/* Buscador de usuarios */}
+                 <div style={{ position: 'relative', marginBottom: 12 }}>
+                   <input
+                     className="form-control"
+                     style={{ padding: '8px 12px' }}
+                     placeholder="Buscar usuario por nombre o email..."
+                     value={destinatariosSearch}
+                     onChange={e => setDestinatariosSearch(e.target.value)}
+                   />
+                   {destinatariosSearch.trim().length > 0 && (() => {
+                     const q = destinatariosSearch.toLowerCase();
+                     const results = allUsers.filter(u =>
+                       !editingDestinatariosCurso.some(d => d.user_id === u.id) &&
+                       (u.full_name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q))
+                     ).slice(0, 6);
+                     if (results.length === 0) return null;
+                     return (
+                       <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 50, marginTop: 4 }}>
+                         {results.map(u => (
+                           <div
+                             key={u.id}
+                             style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2, borderBottom: '1px solid #f3f4f6' }}
+                             onMouseDown={e => {
+                               e.preventDefault();
+                               setEditingDestinatariosCurso(prev => [...prev, { user_id: u.id, full_name: u.full_name, email: u.email }]);
+                               setDestinatariosSearch('');
+                             }}
+                           >
+                             <span style={{ fontWeight: 600, fontSize: 14 }}>{u.full_name}</span>
+                             <span style={{ fontSize: 12, color: '#6b7280' }}>{u.email}</span>
+                           </div>
+                         ))}
+                       </div>
+                     );
+                   })()}
+                 </div>
+
+                 {/* Lista de destinatarios seleccionados */}
+                 {editingDestinatariosCurso.length > 0 ? (
+                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                     {editingDestinatariosCurso.map(d => (
+                       <div key={d.user_id} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 20, padding: '4px 10px 4px 12px', fontSize: 13 }}>
+                         <span style={{ fontWeight: 500 }}>{d.full_name || d.email}</span>
+                         <button
+                           style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', alignItems: 'center', padding: 0 }}
+                           onClick={() => setEditingDestinatariosCurso(prev => prev.filter(x => x.user_id !== d.user_id))}
+                         >
+                           <X size={13} />
+                         </button>
+                       </div>
+                     ))}
+                   </div>
+                 ) : (
+                   <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 8 }}>Ningún destinatario individual agregado.</p>
+                 )}
 
                  <div className="section-divider" style={{ margin: '48px 0', borderBottom: '2px solid #f0f0f0' }}></div>
 
@@ -2157,6 +2237,148 @@ const AdminPanel = () => {
     );
   };
 
+  /* ── Novedades ── */
+  const fetchNovedades = async () => {
+    const { data } = await supabase.from('novedades').select('*').order('orden', { ascending: true });
+    setNovedades(data || []);
+  };
+
+  const handleSaveNovedad = async () => {
+    if (!novedadFile && !novedadForm.imagen_url) return;
+    setNovedadUploading(true);
+    try {
+      let imagen_url = novedadForm.imagen_url || null;
+      if (novedadFile) {
+        const ext = novedadFile.name.split('.').pop();
+        const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: upErr } = await supabase.storage.from('novedades').upload(path, novedadFile, { upsert: false });
+        if (upErr) throw upErr;
+        imagen_url = path;
+      }
+      const maxOrden = novedades.length > 0 ? Math.max(...novedades.map(n => n.orden || 0)) + 1 : 1;
+      await supabase.from('novedades').insert({ titulo: novedadForm.titulo || null, link_url: novedadForm.link_url || null, imagen_url, activo: novedadForm.activo, orden: maxOrden, fecha_hasta: novedadForm.fecha_hasta || null });
+      setNovedadForm({ titulo: '', link_url: '', activo: true, fecha_hasta: '' });
+      setNovedadFile(null);
+      await fetchNovedades();
+    } catch (e) { alert(e.message); }
+    finally { setNovedadUploading(false); }
+  };
+
+  const handleDeleteNovedad = async (nov) => {
+    if (!window.confirm('¿Eliminar esta novedad?')) return;
+    if (nov.imagen_url && !nov.imagen_url.startsWith('http')) {
+      await supabase.storage.from('novedades').remove([nov.imagen_url]);
+    }
+    await supabase.from('novedades').delete().eq('id', nov.id);
+    fetchNovedades();
+  };
+
+  const handleToggleNovedad = async (nov) => {
+    await supabase.from('novedades').update({ activo: !nov.activo }).eq('id', nov.id);
+    fetchNovedades();
+  };
+
+  const handleMoveNovedad = async (idx, dir) => {
+    const arr = [...novedades];
+    const swapIdx = idx + dir;
+    if (swapIdx < 0 || swapIdx >= arr.length) return;
+    [arr[idx].orden, arr[swapIdx].orden] = [arr[swapIdx].orden, arr[idx].orden];
+    await Promise.all([
+      supabase.from('novedades').update({ orden: arr[idx].orden }).eq('id', arr[idx].id),
+      supabase.from('novedades').update({ orden: arr[swapIdx].orden }).eq('id', arr[swapIdx].id),
+    ]);
+    fetchNovedades();
+  };
+
+  const getNovedadUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    const { data } = supabase.storage.from('novedades').getPublicUrl(path);
+    return data?.publicUrl || null;
+  };
+
+  const renderNovedadesTab = () => (
+    <div className="admin-list-panel">
+      <div className="admin-list-header">
+        <h3>Novedades <span className="admin-count">{novedades.length}</span></h3>
+        <p className="text-muted text-xs" style={{ marginTop: 4 }}>Banners que se muestran en el Dashboard entre Accesos Rápidos y Próximos Eventos.</p>
+      </div>
+
+      {/* Formulario agregar */}
+      <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
+        <h4 style={{ fontWeight: 700, marginBottom: 16, fontSize: 15 }}>Agregar novedad</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+          <input className="form-control" placeholder="Título (opcional)" value={novedadForm.titulo} onChange={e => setNovedadForm(f => ({ ...f, titulo: e.target.value }))} />
+          <input className="form-control" placeholder="Link (opcional)" value={novedadForm.link_url} onChange={e => setNovedadForm(f => ({ ...f, link_url: e.target.value }))} />
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Visible hasta (opcional)</label>
+            <input className="form-control" type="date" value={novedadForm.fecha_hasta} onChange={e => setNovedadForm(f => ({ ...f, fecha_hasta: e.target.value }))} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <input ref={novedadFileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => setNovedadFile(e.target.files[0] || null)} />
+          <button className="btn-secondary" onClick={() => novedadFileRef.current?.click()}>
+            <ImageIcon size={15} /> {novedadFile ? novedadFile.name : 'Seleccionar imagen'}
+          </button>
+          {novedadFile && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{(novedadFile.size / 1024).toFixed(0)} KB</span>}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, marginLeft: 'auto', cursor: 'pointer' }}>
+            <input type="checkbox" checked={novedadForm.activo} onChange={e => setNovedadForm(f => ({ ...f, activo: e.target.checked }))} />
+            Activo
+          </label>
+          <button className="btn-primary" onClick={handleSaveNovedad} disabled={novedadUploading || !novedadFile}>
+            {novedadUploading ? 'Subiendo...' : '+ Agregar'}
+          </button>
+        </div>
+      </div>
+
+      {/* Lista */}
+      {novedades.length === 0 ? (
+        <p className="text-muted text-sm">No hay novedades todavía.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {novedades.map((nov, idx) => {
+            const imgUrl = getNovedadUrl(nov.imagen_url);
+            const today = new Date().toISOString().split('T')[0];
+            const vencida = nov.fecha_hasta && nov.fecha_hasta < today;
+            const porVencer = nov.fecha_hasta && !vencida && nov.fecha_hasta <= new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0];
+            return (
+              <div key={nov.id} style={{ display: 'flex', alignItems: 'center', gap: 16, background: 'var(--bg-secondary)', border: `1px solid ${vencida ? '#fca5a5' : 'var(--border-color)'}`, borderRadius: 10, padding: '12px 16px', opacity: vencida ? 0.6 : 1 }}>
+                {/* Thumbnail */}
+                <div style={{ width: 100, height: 36, borderRadius: 6, overflow: 'hidden', background: '#eee', flexShrink: 0 }}>
+                  {imgUrl && <img src={imgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                </div>
+                {/* Info */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <span style={{ fontWeight: 600, fontSize: 14 }}>{nov.titulo || <em style={{ color: 'var(--text-muted)' }}>Sin título</em>}</span>
+                  {nov.link_url && <div style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nov.link_url}</div>}
+                  {nov.fecha_hasta && (
+                    <div style={{ fontSize: 11, marginTop: 2, fontWeight: 600, color: vencida ? '#ef4444' : porVencer ? '#f59e0b' : '#6b7280' }}>
+                      {vencida ? '⛔ Vencida' : porVencer ? '⚠️ Vence' : 'Hasta'} {new Date(nov.fecha_hasta + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </div>
+                  )}
+                </div>
+                {/* Activo toggle */}
+                <button
+                  onClick={() => handleToggleNovedad(nov)}
+                  style={{ fontSize: 12, padding: '4px 12px', borderRadius: 20, border: '1px solid', cursor: 'pointer', background: nov.activo ? '#d1fae5' : '#f3f4f6', color: nov.activo ? '#059669' : '#6b7280', borderColor: nov.activo ? '#6ee7b7' : '#e5e7eb', fontWeight: 600 }}
+                >
+                  {nov.activo ? 'Activo' : 'Inactivo'}
+                </button>
+                {/* Reordenar */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <button className="action-btn" onClick={() => handleMoveNovedad(idx, -1)} disabled={idx === 0} style={{ padding: '2px 6px' }}><ChevronUp size={14} /></button>
+                  <button className="action-btn" onClick={() => handleMoveNovedad(idx, 1)} disabled={idx === novedades.length - 1} style={{ padding: '2px 6px' }}><ChevronDown size={14} /></button>
+                </div>
+                {/* Eliminar */}
+                <button className="action-btn delete" onClick={() => handleDeleteNovedad(nov)}><Trash2 size={16} /></button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+
   const TAB_CONFIG = [
     { key: 'capacitaciones', label: 'Capacitaciones', icon: <GraduationCap size={18} />, onClick: () => { setActiveTab('capacitaciones'); setIsEditingCourse(false); } },
     { key: 'paf',            label: 'Plan PAF',        icon: <Calendar size={18} />,      onClick: () => setActiveTab('paf') },
@@ -2165,6 +2387,7 @@ const AdminPanel = () => {
     { key: 'faq',           label: 'FAQ',              icon: <MessageCircle size={18} />, onClick: () => { setActiveTab('faq'); setIsEditingFaq(false); } },
     { key: 'organigrama',   label: 'Organigrama',      icon: <LayoutGrid size={18} />,    onClick: () => { setActiveTab('organigrama'); setIsEditingOrg(false); } },
     { key: 'sgi',           label: 'SGI',              icon: <ShieldCheck size={18} />,   onClick: () => { setActiveTab('sgi'); closeSgiEdit(); } },
+    { key: 'novedades',    label: 'Novedades',        icon: <Bell size={18} />,           onClick: () => { setActiveTab('novedades'); fetchNovedades(); } },
   ];
 
   const visibleTabs = TAB_CONFIG.filter(t => allowedTabs.includes(t.key));
@@ -2203,6 +2426,7 @@ const AdminPanel = () => {
           {activeTab === 'faq' && renderFaqTab()}
           {activeTab === 'organigrama' && renderOrganigramaTab()}
           {activeTab === 'sgi' && renderSGITab()}
+          {activeTab === 'novedades' && renderNovedadesTab()}
           {activeTab === 'usuarios' && isSuperAdmin && (
             <div className="admin-list-panel">
               <div className="admin-list-header">

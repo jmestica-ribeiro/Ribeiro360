@@ -1,0 +1,165 @@
+/* ── Banner Novedades ───────────────────────────────────────────────────────── */
+.banner-nov {
+  position: relative;
+  width: 100%;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #111;
+  aspect-ratio: 16 / 9;
+  max-height: 80vh;
+  user-select: none;
+}
+
+/* Track deslizante */
+.banner-nov-track {
+  display: flex;
+  height: 100%;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.banner-nov-slide {
+  flex: 0 0 100%;
+  height: 100%;
+  position: relative;
+}
+
+.banner-nov-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  background: #111;
+}
+
+.banner-nov-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #1f1f1f 0%, #2a2a2a 100%);
+}
+
+/* Caption */
+.banner-nov-caption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20px 24px 16px;
+  background: linear-gradient(to top, rgba(0,0,0,0.72) 0%, transparent 100%);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.banner-nov-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+}
+
+.banner-nov-link {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #F2DC00;
+  color: #141414;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 20px;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+
+.banner-nov-link:hover {
+  opacity: 0.85;
+}
+
+/* Flechas */
+.banner-nov-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,0.45);
+  border: none;
+  color: #fff;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  opacity: 0;
+  z-index: 2;
+}
+
+.banner-nov:hover .banner-nov-arrow {
+  opacity: 1;
+}
+
+.banner-nov-arrow:hover {
+  background: rgba(0,0,0,0.7);
+}
+
+.banner-nov-arrow.left  { left: 12px; }
+.banner-nov-arrow.right { right: 12px; }
+
+/* Dots */
+.banner-nov-dots {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 2;
+}
+
+.banner-nov-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.45);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.banner-nov-dot.active {
+  background: #F2DC00;
+  transform: scale(1.3);
+}
+
+/* Barra de progreso */
+.banner-nov-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255,255,255,0.15);
+  z-index: 2;
+}
+
+.banner-nov-progress-fill {
+  height: 100%;
+  background: #F2DC00;
+  width: 0%;
+  animation: banner-progress linear forwards;
+}
+
+.banner-nov-progress-fill.paused {
+  animation-play-state: paused;
+}
+
+@keyframes banner-progress {
+  from { width: 0%; }
+  to   { width: 100%; }
+}

@@ -37,7 +37,7 @@ const MisCursos = () => {
   const fetchCourses = async () => {
     setIsLoading(true);
     try {
-      const [coursesRes, progressRes, visRes] = await Promise.all([
+      const [coursesRes, progressRes, visRes, destRes] = await Promise.all([
         supabase
           .from('cursos')
           .select('*, categoria:cursos_categorias(nombre, color, icono), modulos:cursos_modulos(count)'),
@@ -46,11 +46,13 @@ const MisCursos = () => {
           .select('curso_id')
           .eq('user_email', userEmail)
           .eq('completado', true),
-        supabase.from('cursos_visibilidad').select('*')
+        supabase.from('cursos_visibilidad').select('*'),
+        supabase.from('cursos_destinatarios').select('curso_id').eq('user_id', user?.id),
       ]);
 
       if (coursesRes.data) {
         const visRules = visRes.data || [];
+        const destCursoIds = new Set((destRes.data || []).map(d => d.curso_id));
 
         const progressMap = {};
         (progressRes.data || []).forEach(p => {
@@ -59,6 +61,7 @@ const MisCursos = () => {
 
         const enriched = coursesRes.data
           .filter(course => {
+            if (destCursoIds.has(course.id)) return true;
             const rules = visRules.filter(r => r.curso_id === course.id);
             if (rules.length === 0) return true;
             return rules.every(r => {
