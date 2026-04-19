@@ -95,40 +95,44 @@ const AdminPanel = () => {
 
   const fetchAllUsers = async () => {
     setLoadingUsers(true);
-    const { data, error } = await supabase.functions.invoke('admin-users', {
-      body: { action: 'list_users' },
-    });
-    if (!error && data?.data) setAllUsers(data.data);
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, full_name, email, role, admin_tabs')
+      .not('full_name', 'is', null)
+      .order('full_name');
+    if (data) setAllUsers(data);
     setLoadingUsers(false);
   };
 
   const handleUpdateUserRole = async (userId, newRole) => {
-    await supabase.functions.invoke('admin-users', {
-      body: { action: 'update_role', payload: { userId, newRole, adminTabs: null } },
+    await supabase.rpc('admin_update_user_role', {
+      target_user_id: userId,
+      new_role: newRole,
+      new_admin_tabs: allUsers.find(u => u.id === userId)?.admin_tabs ?? null,
     });
     fetchAllUsers();
   };
 
   const handleUpdateUserTabs = async (userId, tabs) => {
-    const currentRole = allUsers.find(u => u.id === userId)?.role ?? 'admin';
-    await supabase.functions.invoke('admin-users', {
-      body: {
-        action: 'update_role',
-        payload: { userId, newRole: currentRole, adminTabs: tabs.length > 0 ? tabs : null },
-      },
+    const currentRole = allUsers.find(u => u.id === userId)?.role ?? 'user';
+    await supabase.rpc('admin_update_user_role', {
+      target_user_id: userId,
+      new_role: currentRole,
+      new_admin_tabs: tabs.length > 0 ? tabs : null,
     });
     fetchAllUsers();
   };
 
   const fetchProfileValues = async () => {
-    const { data, error } = await supabase.functions.invoke('admin-users', {
-      body: { action: 'get_profile_values' },
-    });
-    if (!error && data?.data) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('job_title, department, office_location')
+      .not('full_name', 'is', null);
+    if (data?.length) {
       setProfileValues({
-        job_title: [...new Set(data.data.map(p => p.job_title).filter(Boolean))].sort(),
-        department: [...new Set(data.data.map(p => p.department).filter(Boolean))].sort(),
-        office_location: [...new Set(data.data.map(p => p.office_location).filter(Boolean))].sort(),
+        job_title: [...new Set(data.map(p => p.job_title).filter(Boolean))].sort(),
+        department: [...new Set(data.map(p => p.department).filter(Boolean))].sort(),
+        office_location: [...new Set(data.map(p => p.office_location).filter(Boolean))].sort(),
       });
     }
   };
