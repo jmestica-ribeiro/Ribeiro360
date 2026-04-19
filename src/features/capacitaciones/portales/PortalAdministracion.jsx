@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, TrendingUp, Activity, Globe } from 'lucide-react';
+import { Box, TrendingUp, Activity, Globe, ShoppingCart, BarChart2, ExternalLink } from 'lucide-react';
 import { AreaChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ComposedChart } from 'recharts';
 import '../Explorar.css';
 import '../../dashboard/Dashboard.css';
@@ -412,12 +412,6 @@ const HERRAMIENTAS_INTERNAS = [
   },
   {
     num: '02',
-    label: 'Tracking de Compras',
-    icon: '📈',
-    url: 'https://app.powerbi.com/report-link-2' // REEMPLAZAR POR LINK REAL
-  },
-  {
-    num: '03',
     label: 'Combustible',
     icon: '💰',
     url: 'https://app.powerbi.com/links/vAOEHA0a5x?ctid=dafe3bc5-6372-4396-8452-c707f3ecf4bf&pbi_source=linkShare&bookmarkGuid=1ce4ff7f-0ceb-46f9-af24-6a609724febd'
@@ -447,7 +441,7 @@ const PortalAdministracion = () => (
       <Box size={22} color="var(--primary-color)" />
       <h3 style={{ fontSize: '20px', fontWeight: '800', margin: 0, color: 'var(--text-main)' }}>Herramientas Internas</h3>
     </div>
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px' }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'center' }} className="herramientas-grid">
       {HERRAMIENTAS_INTERNAS.map((item, i) => (
         <a
           key={i}
@@ -455,7 +449,7 @@ const PortalAdministracion = () => (
           target="_blank"
           rel="noopener noreferrer"
           className="quick-card"
-          style={{ '--i': i, textDecoration: 'none' }}
+          style={{ '--i': i, textDecoration: 'none', width: '220px' }}
         >
           <div className="quick-card-top">
             <span className="quick-card-num">{item.num}.</span>
@@ -471,6 +465,206 @@ const PortalAdministracion = () => (
         </a>
       ))}
     </div>
+
+    {/* SECCIÓN COMPRAS */}
+    <div style={{ marginTop: '48px', paddingTop: '32px', borderTop: '1px solid var(--border-color)' }}>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '28px' }}>
+        <ShoppingCart size={22} color="var(--primary-color)" />
+        <h3 style={{ fontSize: '20px', fontWeight: '800', margin: 0, color: 'var(--text-main)' }}>Compras</h3>
+      </div>
+
+      {/* POWER BI - LOGÍSTICA DE PEDIDOS */}
+      <div style={{ marginBottom: '32px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+          <BarChart2 size={16} color="var(--primary-color)" />
+          <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-main)', textTransform: 'uppercase' }}>Logística de Pedidos</span>
+        </div>
+        <div style={{
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '12px',
+          overflow: 'hidden',
+          boxShadow: 'var(--shadow-sm)',
+          minHeight: '420px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          {/* REEMPLAZAR src POR EL LINK REAL DEL POWER BI */}
+          <div style={{ width: '100%', padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
+            <BarChart2 size={32} color="var(--text-muted)" style={{ marginBottom: 12 }} />
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>Tablero Power BI — Logística de Pedidos</div>
+            <div style={{ fontSize: 12 }}>Reemplazar por el link del reporte cuando esté disponible</div>
+          </div>
+          {/* UNA VEZ QUE TENGAS EL LINK, REEMPLAZÁ EL DIV DE ARRIBA POR:
+          <iframe
+            title="Logística de Pedidos"
+            width="100%"
+            height="540"
+            src="TU_LINK_POWERBI_AQUI"
+            frameBorder="0"
+            allowFullScreen
+            style={{ display: 'block' }}
+          /> */}
+        </div>
+      </div>
+
+      {/* POWER BI - TRACKING DE COMPRAS */}
+      <div style={{ marginBottom: '32px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+          <BarChart2 size={16} color="var(--primary-color)" />
+          <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-main)', textTransform: 'uppercase' }}>Tracking de Compras</span>
+        </div>
+        <div style={{
+          background: 'var(--bg-secondary)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '12px',
+          overflow: 'hidden',
+          boxShadow: 'var(--shadow-sm)',
+          minHeight: '420px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <div style={{ width: '100%', padding: '40px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
+            <BarChart2 size={32} color="var(--text-muted)" style={{ marginBottom: 12 }} />
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>Tablero Power BI — Tracking de Compras</div>
+            <div style={{ fontSize: 12 }}>Reemplazar por el link del reporte cuando esté disponible</div>
+          </div>
+        </div>
+      </div>
+
+      {/* FORMULARIOS */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
+
+        {/* SOLICITAR ALOJAMIENTO */}
+        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '18px' }}>🏠</span>
+            <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)', textTransform: 'uppercase' }}>Solicitar Alojamiento</span>
+          </div>
+          <div style={{ flex: 1, padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', textAlign: 'center' }}>
+            <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: 28 }}>🏠</span>
+            </div>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-main)', marginBottom: 6 }}>Formulario de Alojamiento</div>
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6, maxWidth: 240 }}>
+                Completá el formulario para solicitar alojamiento durante tu estadía.
+              </div>
+            </div>
+            <a
+              href="https://forms.office.com/Pages/ResponsePage.aspx?id=xTv-2nJjlkOEUscH8-z0v5ylO7XkDNVCiEAla9_6sGdURUE3TEZHSzVZODBaRDFWNVIyQlExNzJXMC4u"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'var(--primary-color)',
+                color: '#1a1a1a',
+                padding: '12px 24px',
+                borderRadius: '10px',
+                fontWeight: '700',
+                fontSize: '14px',
+                textDecoration: 'none',
+              }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+            >
+              <ExternalLink size={16} />
+              Abrir formulario
+            </a>
+          </div>
+        </div>
+
+        {/* SOLICITAR RETIRO DE PEDIDOS */}
+        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '18px' }}>📦</span>
+            <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)', textTransform: 'uppercase' }}>Solicitar Retiro de Pedidos</span>
+          </div>
+          <div style={{ flex: 1, padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', textAlign: 'center' }}>
+            <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: 28 }}>📦</span>
+            </div>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-main)', marginBottom: 6 }}>Formulario de Retiro</div>
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6, maxWidth: 240 }}>
+                Completá el formulario en SharePoint para solicitar el retiro de tus pedidos.
+              </div>
+            </div>
+            <a
+              href="https://ribeirosrl1.sharepoint.com/sites/BDGenerales/_layouts/15/listforms.aspx?cid=YWI5ZGViYzUtNThlYi00NjVmLWI2ZDctMTlkNWY5MzE1YjVj&nav=YmIwNTY0YjUtN2EzYS00NzY0LWE0MjMtODNkYTJmYjEwNDM4"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'var(--primary-color)',
+                color: '#1a1a1a',
+                padding: '12px 24px',
+                borderRadius: '10px',
+                fontWeight: '700',
+                fontSize: '14px',
+                textDecoration: 'none',
+                transition: 'opacity 0.2s'
+              }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+            >
+              <ExternalLink size={16} />
+              Abrir formulario
+            </a>
+          </div>
+        </div>
+
+        {/* RECURSOS - PLANILLA DESCARGABLE */}
+        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: '12px', boxShadow: 'var(--shadow-sm)', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '18px' }}>📎</span>
+            <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)', textTransform: 'uppercase' }}>Recursos</span>
+          </div>
+          <div style={{ flex: 1, padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', textAlign: 'center' }}>
+            <div style={{ width: 56, height: 56, borderRadius: 16, background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: 28 }}>📊</span>
+            </div>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-main)', marginBottom: 6 }}>Planilla de Compras</div>
+              <div style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: 1.6, maxWidth: 240 }}>
+                Descargá la planilla modelo para gestionar y registrar tus pedidos.
+              </div>
+            </div>
+            <a
+              href="https://ribeirosrl1-my.sharepoint.com/:x:/g/personal/juan_mestica_ribeirosrl_com_ar/IQD_-t6J1qX1Tat1kCKToqyUAZIoLfp53W5RYMAiun11x-Y?e=q0Lo2y"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'var(--primary-color)',
+                color: '#1a1a1a',
+                padding: '12px 24px',
+                borderRadius: '10px',
+                fontWeight: '700',
+                fontSize: '14px',
+                textDecoration: 'none',
+              }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+            >
+              <ExternalLink size={16} />
+              Descargar planilla
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
   </div>
 );
 

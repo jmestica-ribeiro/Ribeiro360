@@ -24,7 +24,7 @@ export async function fetchFaqSectores() {
  * Si el payload incluye `id`, hace update; si no, hace insert.
  */
 export async function saveFaqPregunta(payload) {
-  const { id, ...fields } = payload;
+  const { id, sector, ...fields } = payload;
   const query = id
     ? supabase.from('faq_preguntas').update(fields).eq('id', id).select()
     : supabase.from('faq_preguntas').insert(fields).select();
