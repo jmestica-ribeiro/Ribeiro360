@@ -3,7 +3,7 @@
   min-height: 100vh;
   width: 100%;
   background-color: var(--bg-color);
-  overflow-x: hidden;
+  position: relative;
 }
 
 .main-content {
@@ -13,7 +13,10 @@
   margin-left: 260px;
   min-width: 0;
   max-width: calc(100% - 260px);
+  min-height: 100vh;
   transition: margin-left var(--transition), max-width var(--transition);
+  position: relative;
+  background-color: var(--bg-color);
 }
 
 .sidebar-collapsed .main-content {
