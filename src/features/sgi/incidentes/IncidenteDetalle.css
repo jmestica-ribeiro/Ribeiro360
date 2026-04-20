@@ -34,6 +34,29 @@
   color: var(--text-main);
 }
 
+.incd-pdf-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+.incd-pdf-btn:hover {
+  background: #111827;
+  color: #f2dc00;
+  border-color: #111827;
+}
+
 .incd-page-title {
   font-size: 22px;
   font-weight: 800;
@@ -277,6 +300,268 @@ body.dark-theme .incd-step-item.completed .incd-step-indicator {
 
 .incd-step-body {
   padding: 28px;
+}
+
+/* ── 5P ─────────────────────────────────────────────────────────────────────── */
+.incd-5p-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.incd-5p-tab-wrap {
+  position: relative;
+}
+
+.incd-5p-tab-wrap:hover .incd-5p-tooltip {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.incd-5p-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 12px 14px;
+  min-width: 220px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s, transform 0.15s;
+  z-index: 100;
+}
+
+.incd-5p-tooltip-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+
+.incd-5p-tooltip ul {
+  margin: 0;
+  padding: 0 0 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.incd-5p-tooltip ul li {
+  font-size: 12px;
+  color: var(--text-main);
+  line-height: 1.4;
+}
+
+.incd-5p-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.incd-5p-tab:hover {
+  border-color: var(--primary-color);
+  color: var(--text-main);
+}
+
+.incd-5p-tab.active {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #000;
+  font-weight: 700;
+}
+
+.incd-5p-tab.has-items .incd-5p-tab-badge {
+  background: color-mix(in srgb, currentColor 20%, transparent);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.incd-5p-panel {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 16px;
+  background: var(--bg-main);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.incd-5p-empty {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 12px 0;
+}
+
+.incd-5p-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.incd-5p-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.incd-5p-item-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.incd-5p-item-desc {
+  font-size: 13px;
+  color: var(--text-main);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.incd-5p-thumb {
+  max-height: 120px;
+  max-width: 200px;
+  border-radius: 6px;
+  object-fit: cover;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+}
+
+.incd-5p-file-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.incd-5p-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+}
+
+.incd-5p-add-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.incd-5p-file-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1.5px dashed var(--border-color);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  max-width: 260px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.incd-5p-file-btn:hover,
+.incd-5p-file-btn.has-file {
+  border-color: var(--primary-color);
+  color: var(--text-main);
+}
+
+.incd-5p-file-clear {
+  margin-left: auto;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+.incd-5p-confirm-btn {
+  flex-shrink: 0;
+  padding: 7px 18px;
+  font-size: 13px;
+}
+
+/* ── Evidencias Prompt ──────────────────────────────────────────────────────── */
+.incd-ev-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+  padding: 48px 32px;
+  background: var(--bg-card);
+  border: 1.5px dashed var(--border-color);
+  border-radius: 14px;
+  margin-bottom: 8px;
+}
+
+.incd-ev-prompt-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.incd-ev-prompt-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.incd-ev-prompt-body {
+  font-size: 14px;
+  color: var(--text-muted);
+  max-width: 420px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.incd-ev-prompt-body strong {
+  color: var(--text-main);
+}
+
+.incd-ev-prompt-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 4px;
 }
 
 /* ── Placeholder ────────────────────────────────────────────────────────────── */
@@ -1196,6 +1481,12 @@ body.dark-theme .incd-toast.error {
   color: var(--text-main);
   margin-bottom: 14px;
   line-height: 1.5;
+}
+
+.incd-info-banner--warn {
+  background: rgba(231, 29, 54, 0.07);
+  border-color: rgba(231, 29, 54, 0.3);
+  color: #c0182a;
 }
 
 .incd-tecnica-grid {

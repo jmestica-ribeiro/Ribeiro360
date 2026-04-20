@@ -6,11 +6,12 @@ import './Incidentes.css';
 
 const PASOS = [
   { paso: 1, label: 'Registrar el Incidente' },
-  { paso: 2, label: 'Designar el equipo de Análisis' },
-  { paso: 3, label: 'Registrar el análisis de Causa Raíz' },
-  { paso: 4, label: 'Registrar el Plan de Trabajo' },
-  { paso: 5, label: 'Cerrar las Acciones' },
-  { paso: 6, label: 'Verificar la eficacia las Acciones' },
+  { paso: 2, label: 'Evidencias' },
+  { paso: 3, label: 'Designar el equipo de Análisis' },
+  { paso: 4, label: 'Registrar el análisis de Causa Raíz' },
+  { paso: 5, label: 'Registrar el Plan de Trabajo' },
+  { paso: 6, label: 'Cerrar las Acciones' },
+  { paso: 7, label: 'Verificar la eficacia las Acciones' },
 ];
 
 

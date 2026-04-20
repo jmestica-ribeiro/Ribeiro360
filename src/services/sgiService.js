@@ -423,6 +423,55 @@ export async function fetchNcInformeData(hallazgoId) {
   };
 }
 
+// ── Informe PDF de Incidente ──────────────────────────────────────────────────
+
+export async function fetchIncidenteInformeData(incidenteId) {
+  const [incRes, profilesRes, fivePRes, timelineRes] = await Promise.all([
+    supabase.from('inc_incidentes').select('*').eq('id', incidenteId).single(),
+    supabase.from('profiles').select('id, full_name, job_title, department').order('full_name'),
+    supabase.from('inc_5p').select('*').eq('incidente_id', incidenteId).order('created_at'),
+    supabase.from('inc_timeline').select('*').eq('incidente_id', incidenteId)
+      .order('fecha').order('hora', { nullsFirst: true }),
+  ]);
+
+  const error = incRes.error || profilesRes.error;
+  if (error) return { data: null, error };
+
+  const incidente  = incRes.data;
+  const profiles   = profilesRes.data || [];
+  const evidencias = fivePRes.data    || [];
+  const timeline   = timelineRes.data || [];
+
+  // Signed URLs para fotos del incidente
+  const fotoPaths = [
+    incidente.foto_1, incidente.foto_2, incidente.foto_3,
+    incidente.foto_4, incidente.foto_5, incidente.foto_6,
+  ].filter(Boolean);
+
+  const adjuntosPaths = evidencias.map(e => e.adjunto_path).filter(Boolean);
+  const allPaths = [...fotoPaths, ...adjuntosPaths];
+
+  let signedUrls = {};
+  if (allPaths.length > 0) {
+    const { data: signed } = await supabase.storage
+      .from('inc-adjuntos').createSignedUrls(allPaths, 3600);
+    (signed || []).forEach(s => { signedUrls[s.path] = s.signedUrl; });
+  }
+
+  // Cliente
+  let cliente = null;
+  if (incidente.cliente_id) {
+    const { data: c } = await supabase.from('centros_de_costos')
+      .select('nombre').eq('id', incidente.cliente_id).single();
+    cliente = c?.nombre || null;
+  }
+
+  return {
+    data: { incidente, profiles, evidencias, timeline, signedUrls, cliente },
+    error: null,
+  };
+}
+
 // ── Consultas para Incidentes ─────────────────────────────────────────────────
 
 export async function fetchIncidentesAbiertos() {

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Check, Clock, ChevronRight, Loader2, Search, User, Upload, X, Camera, HelpCircle, GitBranch, Settings, Package, Cloud, BarChart2, BookOpen, Users } from 'lucide-react';
+import { ArrowLeft, Check, Clock, ChevronRight, Loader2, Search, User, Upload, X, Camera, HelpCircle, GitBranch, FileText } from 'lucide-react';
+import IncidenteInformePDF from './IncidenteInformePDF';
 import { useAuth } from '../../../contexts/AuthContext';
 import { supabase } from '../../../lib/supabase';
 import './IncidenteDetalle.css';
@@ -9,21 +10,24 @@ import './IncidenteDetalle.css';
 /* ── Constants ──────────────────────────────────────────────────────────────── */
 const STEPS = [
   { num: 1, label: 'Registrar el Incidente' },
-  { num: 2, label: 'Designar el Equipo de Análisis' },
-  { num: 3, label: 'Análisis de Causa Raíz' },
-  { num: 4, label: 'Plan de Trabajo' },
-  { num: 5, label: 'Cerrar las Acciones' },
-  { num: 6, label: 'Verificar la Eficacia' },
+  { num: 2, label: 'Evidencias' },
+  { num: 3, label: 'Designar el Equipo de Análisis' },
+  { num: 4, label: 'Análisis de Causa Raíz' },
+  { num: 5, label: 'Plan de Trabajo' },
+  { num: 6, label: 'Cerrar las Acciones' },
+  { num: 7, label: 'Verificar la Eficacia' },
 ];
 
 const CLASIF_COLORS = {
+  Ninguna:   { color: '#6B7280', rgb: '107,114,128' },
+  Menor:     { color: '#10B981', rgb: '16,185,129' },
   Relevante: { color: '#F59E0B', rgb: '245,158,11' },
   Crítica:   { color: '#E71D36', rgb: '231,29,54' },
   Mayor:     { color: '#8B5CF6', rgb: '139,92,246' },
 };
 
 const TIPOS_INCIDENTE = ['Personal', 'Vehicular', 'Ambiental', 'Industrial'];
-const CLASIFICACIONES = ['Relevante', 'Crítica', 'Mayor'];
+const CLASIFICACIONES = ['Ninguna', 'Menor', 'Relevante', 'Crítica', 'Mayor'];
 const MAX_FOTOS = 6;
 
 const EMPTY_FORM = {
@@ -191,6 +195,7 @@ export default function IncidenteDetalle() {
   const [loading, setLoading]       = useState(!isNew);
   const [saving, setSaving]         = useState(false);
   const [toast, setToast]           = useState(null);
+  const [showPDF, setShowPDF]       = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [pasoActual, setPasoActual] = useState(1);
 
@@ -212,9 +217,6 @@ export default function IncidenteDetalle() {
   const [pendingFotos, setPendingFotos]       = useState([]); // { file, preview }
   const [savedFotos, setSavedFotos]           = useState([]); // paths guardados en DB
   const fotoRef = useRef(null);
-
-  /* timeline pendiente (solo en nuevo incidente, antes de tener id) */
-  const [pendingTimeline, setPendingTimeline] = useState([]); // { fecha, hora, actividad }
 
   const clasifColor = CLASIF_COLORS[form.clasificacion] || null;
 
@@ -351,13 +353,6 @@ export default function IncidenteDetalle() {
       if (isNew) {
         const { data, error } = await supabase.from('inc_incidentes').insert(payload).select('id').single();
         if (error) throw error;
-        // Guardar filas de timeline pendientes
-        if (pendingTimeline.length > 0) {
-          await supabase.from('inc_timeline').insert(
-            pendingTimeline.map(r => ({ ...r, incidente_id: data.id, created_by: user?.id || null }))
-          );
-          setPendingTimeline([]);
-        }
         showToast('Incidente creado correctamente');
         navigate(`/sgi/incidentes/${data.id}`, { replace: true });
       } else {
@@ -374,20 +369,38 @@ export default function IncidenteDetalle() {
     }
   };
 
-  /* ── Save paso 2 ── */
+  /* ── Save Paso 2: Evidencias ── */
   const handleSavePaso2 = async (advance = false) => {
+    if (!id) return;
+    setSaving(true);
+    try {
+      const nextPaso = advance ? Math.max(pasoActual, 3) : pasoActual;
+      const { error } = await supabase.from('inc_incidentes').update({ paso_actual: nextPaso }).eq('id', id);
+      if (error) throw error;
+      if (advance) { setPasoActual(p => Math.max(p, 3)); setCurrentStep(3); }
+      showToast(advance ? 'Paso 2 completado' : 'Evidencias guardadas');
+    } catch (err) {
+      console.error(err);
+      showToast('Error al guardar', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /* ── Save Paso 3: Designar Equipo ── */
+  const handleSavePaso3 = async (advance = false) => {
     if (!step2.responsable_analisis_id) { showToast('Seleccioná un responsable de análisis', 'error'); return; }
     setSaving(true);
     try {
-      const nextPaso = advance ? 3 : 2;
+      const nextPaso = advance ? 4 : 3;
       const { error } = await supabase.from('inc_incidentes').update({
         responsable_analisis_id:  step2.responsable_analisis_id,
         participantes_analisis:   JSON.stringify(step2.participantes),
         paso_actual:              Math.max(pasoActual, nextPaso),
       }).eq('id', id);
       if (error) throw error;
-      if (advance) { setPasoActual(p => Math.max(p, 3)); setCurrentStep(3); }
-      showToast(advance ? 'Paso 2 completado' : 'Equipo guardado');
+      if (advance) { setPasoActual(p => Math.max(p, 4)); setCurrentStep(4); }
+      showToast(advance ? 'Paso 3 completado' : 'Equipo guardado');
     } catch (err) {
       console.error(err);
       showToast('Error al guardar el equipo', 'error');
@@ -396,21 +409,21 @@ export default function IncidenteDetalle() {
     }
   };
 
-  /* ── Save Paso 3 ── */
-  const handleSavePaso3 = async (advance = false) => {
+  /* ── Save Paso 4: Análisis de Causa Raíz ── */
+  const handleSavePaso4 = async (advance = false, tecnicaEfectiva = step3.tecnica) => {
     if (!id) return;
     setSaving(true);
     try {
-      const nextPaso = advance ? Math.max(pasoActual, 4) : pasoActual;
+      const nextPaso = advance ? Math.max(pasoActual, 5) : pasoActual;
       const { error } = await supabase.from('inc_incidentes').update({
-        acr_tecnica:    step3.tecnica,
+        acr_tecnica:    tecnicaEfectiva,
         acr_porques:    step3.porques,
         acr_causa_raiz: step3.causa_raiz || null,
         paso_actual:    nextPaso,
       }).eq('id', id);
       if (error) throw error;
-      if (advance) { setPasoActual(p => Math.max(p, 4)); setCurrentStep(4); }
-      showToast(advance ? 'Paso 3 completado' : 'Análisis guardado');
+      if (advance) { setPasoActual(p => Math.max(p, 5)); setCurrentStep(5); }
+      showToast(advance ? 'Paso 4 completado' : 'Análisis guardado');
     } catch (err) {
       console.error(err);
       showToast('Error al guardar el análisis', 'error');
@@ -449,6 +462,7 @@ export default function IncidenteDetalle() {
   return (
     <div className="incd-container">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {showPDF && <IncidenteInformePDF incidenteId={id} onClose={() => setShowPDF(false)} />}
 
       {/* Header */}
       <div className="incd-page-header">
@@ -463,6 +477,11 @@ export default function IncidenteDetalle() {
         )}
         {!isNew && form.tipo_incidente && (
           <span className="incd-clasif-badge">{form.tipo_incidente}</span>
+        )}
+        {!isNew && pasoActual >= 2 && (
+          <button className="incd-pdf-btn" onClick={() => setShowPDF(true)}>
+            <FileText size={14} /> Exportar PDF
+          </button>
         )}
       </div>
 
@@ -495,7 +514,6 @@ export default function IncidenteDetalle() {
                 pendingFotos={pendingFotos} setPendingFotos={setPendingFotos}
                 savedFotos={savedFotos} setSavedFotos={setSavedFotos}
                 fotoRef={fotoRef}
-                pendingTimeline={pendingTimeline} setPendingTimeline={setPendingTimeline}
                 isNew={isNew} isAdmin={isAdmin} saving={saving}
                 onSave={() => handleSavePaso1(false)}
                 onSaveAndAdvance={() => handleSavePaso1(true)}
@@ -503,26 +521,42 @@ export default function IncidenteDetalle() {
               />
             )}
             {currentStep === 2 && (
-              <Step2
-                step2={step2} setStep2={setStep2}
-                step2Picker={step2Picker} setStep2Picker={setStep2Picker}
-                profiles={profiles} saving={saving}
+              <StepEvidencias
+                incidenteId={id}
+                saving={saving}
                 pasoActual={pasoActual}
+                clasificacion={form.clasificacion}
                 onSave={() => handleSavePaso2(false)}
                 onSaveAndAdvance={() => handleSavePaso2(true)}
               />
             )}
             {currentStep === 3 && (
-              <Step3
-                step3={step3} setStep3={setStep3}
-                clasificacion={form.clasificacion}
-                saving={saving}
+              <Step2
+                step2={step2} setStep2={setStep2}
+                step2Picker={step2Picker} setStep2Picker={setStep2Picker}
+                profiles={profiles} saving={saving}
                 pasoActual={pasoActual}
                 onSave={() => handleSavePaso3(false)}
                 onSaveAndAdvance={() => handleSavePaso3(true)}
               />
             )}
-            {currentStep > 3 && <StepPlaceholder step={step} />}
+            {currentStep === 4 && (
+              <Step3
+                step3={step3} setStep3={setStep3}
+                clasificacion={form.clasificacion}
+                saving={saving}
+                pasoActual={pasoActual}
+                onSave={() => {
+                  const esCritico = form.clasificacion === 'Crítica' || form.clasificacion === 'Mayor';
+                  handleSavePaso4(false, esCritico ? 'sistemico' : step3.tecnica);
+                }}
+                onSaveAndAdvance={() => {
+                  const esCritico = form.clasificacion === 'Crítica' || form.clasificacion === 'Mayor';
+                  handleSavePaso4(true, esCritico ? 'sistemico' : step3.tecnica);
+                }}
+              />
+            )}
+            {currentStep > 4 && <StepPlaceholder step={step} />}
           </div>
         </div>
       </div>
@@ -531,7 +565,7 @@ export default function IncidenteDetalle() {
 }
 
 /* ── Step 1 ─────────────────────────────────────────────────────────────────── */
-function Step1({ form, setForm, profiles, clientes, gerencias, sitios, pendingFotos, setPendingFotos, savedFotos, setSavedFotos, fotoRef, pendingTimeline, setPendingTimeline, isNew, isAdmin, saving, onSave, onSaveAndAdvance, pasoActual, id }) {
+function Step1({ form, setForm, profiles, clientes, gerencias, sitios, pendingFotos, setPendingFotos, savedFotos, setSavedFotos, fotoRef, isNew, isAdmin, saving, onSave, onSaveAndAdvance, pasoActual, id }) {
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
   const emisor = profiles.find(p => p.id === form.emisor_id);
   const respSeg = profiles.find(p => p.id === form.responsable_seguimiento_id);
@@ -748,9 +782,6 @@ function Step1({ form, setForm, profiles, clientes, gerencias, sitios, pendingFo
         </div>
       </div>
 
-      {/* Timeline */}
-      <TimelineSection incidenteId={id} pendingTimeline={pendingTimeline} setPendingTimeline={setPendingTimeline} />
-
       {/* Acciones */}
       <div className="incd-step-actions">
         <button type="button" className="incd-btn-secondary" onClick={onSave} disabled={saving}>
@@ -785,10 +816,8 @@ const TECNICAS_INC = [
 
 function Step3({ step3, setStep3, clasificacion, saving, pasoActual, onSave, onSaveAndAdvance }) {
   const esCritico = clasificacion === 'Crítica' || clasificacion === 'Mayor';
-  // Si es crítico, forzar sistémico
-  React.useEffect(() => {
-    if (esCritico && step3.tecnica !== 'sistemico') setStep3(s => ({ ...s, tecnica: 'sistemico' }));
-  }, [esCritico]); // eslint-disable-line
+  // Derivar la técnica efectiva en render para evitar parpadeo con useEffect asíncrono
+  const tecnicaEfectiva = esCritico ? 'sistemico' : step3.tecnica;
 
   return (
     <div className="incd-step-form">
@@ -806,7 +835,7 @@ function Step3({ step3, setStep3, clasificacion, saving, pasoActual, onSave, onS
             return (
               <div
                 key={t.key}
-                className={`incd-tecnica-card${step3.tecnica === t.key ? ' active' : ''}${locked ? ' locked' : ''}`}
+                className={`incd-tecnica-card${tecnicaEfectiva === t.key ? ' active' : ''}${locked ? ' locked' : ''}`}
                 onClick={() => !locked && setStep3(s => ({ ...s, tecnica: t.key }))}
               >
                 <div className="incd-tecnica-card-icon">{t.icon}</div>
@@ -819,7 +848,7 @@ function Step3({ step3, setStep3, clasificacion, saving, pasoActual, onSave, onS
       </div>
 
       {/* 5 Por qués */}
-      {step3.tecnica === '5_porques' && (
+      {tecnicaEfectiva === '5_porques' && (
         <div className="incd-form-section">
           <p className="incd-section-title">Los 5 Por qués</p>
           <div className="incd-porques-list">
@@ -850,7 +879,7 @@ function Step3({ step3, setStep3, clasificacion, saving, pasoActual, onSave, onS
       )}
 
       {/* Sistémico */}
-      {step3.tecnica === 'sistemico' && (
+      {tecnicaEfectiva === 'sistemico' && (
         <div className="incd-form-section">
           <p className="incd-section-title">Análisis Sistémico</p>
           <div className="incd-form-group">
@@ -886,7 +915,7 @@ function Step3({ step3, setStep3, clasificacion, saving, pasoActual, onSave, onS
           {saving ? <Loader2 size={15} className="incd-spin" /> : null}
           Guardar borrador
         </button>
-        {pasoActual <= 3 && (
+        {pasoActual <= 4 && (
           <button type="button" className="incd-btn-primary" onClick={onSaveAndAdvance} disabled={saving}>
             {saving ? <Loader2 size={15} className="incd-spin" /> : <Check size={15} />}
             Siguiente paso
@@ -972,7 +1001,7 @@ function Step2({ step2, setStep2, step2Picker, setStep2Picker, profiles, saving,
           {saving ? <Loader2 size={15} className="incd-spin" /> : null}
           Guardar borrador
         </button>
-        {pasoActual <= 2 && (
+        {pasoActual <= 3 && (
           <button type="button" className="incd-btn-primary" onClick={onSaveAndAdvance} disabled={saving}>
             {saving ? <Loader2 size={15} className="incd-spin" /> : <Check size={15} />}
             Siguiente paso
@@ -1001,8 +1030,287 @@ function Step2({ step2, setStep2, step2Picker, setStep2Picker, profiles, saving,
   );
 }
 
+const CLASIF_OPCIONAL = ['Ninguna', 'Menor'];
+
+/* ── Step 2: Evidencias ─────────────────────────────────────────────────────── */
+function StepEvidencias({ incidenteId, saving, pasoActual, clasificacion, onSaveAndAdvance, onSave }) {
+  const isOpcional = CLASIF_OPCIONAL.includes(clasificacion);
+  const [showPrompt, setShowPrompt] = useState(isOpcional);
+  const [counts, setCounts] = useState({ p5: 0, timeline: 0 });
+  const totalEvidencias = counts.p5 + counts.timeline;
+
+  return (
+    <div className="incd-step-form">
+      {showPrompt ? (
+        <div className="incd-ev-prompt">
+          <div className="incd-ev-prompt-icon">
+            <Camera size={32} />
+          </div>
+          <h4 className="incd-ev-prompt-title">Evidencias opcionales</h4>
+          <p className="incd-ev-prompt-body">
+            Para incidentes clasificados como <strong>{clasificacion || 'esta categoría'}</strong>, el registro de evidencias es opcional.
+            <br />¿Deseas agregar la cronología y registros al incidente?
+          </p>
+          <div className="incd-ev-prompt-actions">
+            <button
+              type="button"
+              className="incd-btn-primary"
+              onClick={() => setShowPrompt(false)}
+            >
+              <Check size={15} /> Sí, agregar evidencias
+            </button>
+            <button
+              type="button"
+              className="incd-btn-secondary"
+              onClick={onSaveAndAdvance}
+              disabled={saving}
+            >
+              {saving ? <Loader2 size={15} className="incd-spin" /> : null}
+              No, continuar sin evidencias
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {isOpcional && (
+            <div className="incd-info-banner">
+              Las evidencias son <strong>opcionales</strong> para incidentes <strong>{clasificacion}</strong>. Podés omitirlas y continuar al siguiente paso.
+            </div>
+          )}
+          <Cinco5PSection incidenteId={incidenteId} onCountChange={n => setCounts(c => ({ ...c, p5: n }))} />
+          <TimelineSection incidenteId={incidenteId} onCountChange={n => setCounts(c => ({ ...c, timeline: n }))} />
+          {!isOpcional && totalEvidencias === 0 && (
+            <div className="incd-info-banner incd-info-banner--warn">
+              Debés cargar al menos una evidencia (5P o cronología) para poder continuar al siguiente paso.
+            </div>
+          )}
+          <div className="incd-step-actions">
+            <button type="button" className="incd-btn-secondary" onClick={isOpcional ? onSaveAndAdvance : onSave} disabled={saving}>
+              {saving ? <Loader2 size={15} className="incd-spin" /> : null}
+              {isOpcional ? 'Omitir y continuar' : 'Guardar borrador'}
+            </button>
+            <button
+              type="button"
+              className="incd-btn-primary"
+              onClick={onSaveAndAdvance}
+              disabled={saving || (!isOpcional && totalEvidencias === 0)}
+              title={!isOpcional && totalEvidencias === 0 ? 'Cargá al menos una evidencia para continuar' : undefined}
+            >
+              {saving ? <Loader2 size={15} className="incd-spin" /> : <Check size={15} />}
+              Siguiente paso
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ── 5P Section ─────────────────────────────────────────────────────────────── */
+const CATEGORIAS_5P = [
+  {
+    label: 'Proceso',
+    ejemplos: ['Procedimientos operativos', 'Instructivos de trabajo', 'Análisis de riesgos (IPER, IPCR, etc)', 'Cumplimiento de tareas', 'Secuencia del proceso'],
+  },
+  {
+    label: 'Posición',
+    ejemplos: ['Ubicación exacta del evento', 'Condiciones del entorno (clima, iluminación)', 'Señalización existente', 'Orden y limpieza del área', 'Condiciones del terreno'],
+  },
+  {
+    label: 'Partes',
+    ejemplos: ['Equipos involucrados', 'Herramientas utilizadas', 'Materiales manipulados', 'Estado de los equipos', 'Fallas técnicas'],
+  },
+  {
+    label: 'Personas',
+    ejemplos: ['Operador involucrado', 'Supervisores', 'Testigos', 'Nivel de capacitación', 'Conducta observada'],
+  },
+  {
+    label: 'Papel',
+    ejemplos: ['Permisos de trabajo, documentos de la tarea', 'Análisis de Trabajo (Petra, ATS, etc)', 'Check list', 'Procedimientos vigentes', 'Registros de capacitación'],
+  },
+];
+
+function Cinco5PSection({ incidenteId, onCountChange }) {
+  const { user } = useAuth();
+  const [evidencias, setEvidencias]       = useState([]);
+  const [loading, setLoading]             = useState(true);
+  const [activeCategoria, setActiveCategoria] = useState(null);
+  const [saving, setSaving]               = useState(false);
+  const [newDesc, setNewDesc]             = useState('');
+  const [newFile, setNewFile]             = useState(null);
+  const [signedUrls, setSignedUrls]       = useState({});
+  const fileRef = useRef(null);
+
+  const load = useCallback(async () => {
+    if (!incidenteId) return;
+    setLoading(true);
+    const { data } = await supabase.from('inc_5p').select('*')
+      .eq('incidente_id', incidenteId).order('created_at', { ascending: true });
+    const rows = data || [];
+    setEvidencias(rows);
+    onCountChange?.(rows.length);
+    // Generar signed URLs para adjuntos
+    const paths = rows.map(r => r.adjunto_path).filter(Boolean);
+    if (paths.length > 0) {
+      const { data: signed } = await supabase.storage.from('inc-adjuntos').createSignedUrls(paths, 3600);
+      const map = {};
+      (signed || []).forEach(s => { map[s.path] = s.signedUrl; });
+      setSignedUrls(map);
+    }
+    setLoading(false);
+  }, [incidenteId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleSelectCategoria = (cat) => {
+    setActiveCategoria(prev => prev === cat ? null : cat);
+    setNewDesc('');
+    setNewFile(null);
+  };
+
+  const handleAdd = async () => {
+    if (!newDesc.trim() && !newFile) return;
+    setSaving(true);
+    try {
+      let adjunto_path = null;
+      if (newFile) {
+        const ext  = newFile.name.split('.').pop();
+        const path = `incidentes/${incidenteId}/5p/${activeCategoria}/${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from('inc-adjuntos').upload(path, newFile);
+        if (!upErr) adjunto_path = path;
+      }
+      await supabase.from('inc_5p').insert({
+        incidente_id: incidenteId,
+        categoria:    activeCategoria,
+        descripcion:  newDesc.trim() || null,
+        adjunto_path,
+        created_by:   user?.id || null,
+      });
+      setNewDesc('');
+      setNewFile(null);
+      await load();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    await supabase.from('inc_5p').delete().eq('id', id);
+    setEvidencias(prev => prev.filter(r => r.id !== id));
+  };
+
+  const countFor = (label) => evidencias.filter(r => r.categoria === label).length;
+  const rowsFor  = (label) => evidencias.filter(r => r.categoria === label);
+
+  const isImage = (path) => path && /\.(jpe?g|png|gif|webp|svg)$/i.test(path);
+
+  return (
+    <div className="incd-form-section">
+      <div className="incd-section-title">Evidencias 5P</div>
+
+      {/* Selector de categorías */}
+      <div className="incd-5p-tabs">
+        {CATEGORIAS_5P.map(({ label, ejemplos }) => {
+          const count = countFor(label);
+          const isActive = activeCategoria === label;
+          return (
+            <div key={label} className="incd-5p-tab-wrap">
+              <button
+                type="button"
+                className={`incd-5p-tab${isActive ? ' active' : ''}${count > 0 ? ' has-items' : ''}`}
+                onClick={() => handleSelectCategoria(label)}
+              >
+                <span className="incd-5p-tab-label">{label}</span>
+                {count > 0 && <span className="incd-5p-tab-badge">{count}</span>}
+              </button>
+              <div className="incd-5p-tooltip">
+                <p className="incd-5p-tooltip-title">Ejemplos de evidencias</p>
+                <ul>
+                  {ejemplos.map(ej => <li key={ej}>{ej}</li>)}
+                </ul>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Panel de la categoría activa */}
+      {activeCategoria && (
+        <div className="incd-5p-panel">
+          {loading ? (
+            <div className="incd-timeline-empty"><Loader2 size={16} className="incd-spin" /> Cargando...</div>
+          ) : (
+            <>
+              {/* Lista de evidencias existentes */}
+              {rowsFor(activeCategoria).length === 0 ? (
+                <p className="incd-5p-empty">Sin evidencias cargadas para <strong>{activeCategoria}</strong></p>
+              ) : (
+                <div className="incd-5p-list">
+                  {rowsFor(activeCategoria).map(ev => (
+                    <div key={ev.id} className="incd-5p-item">
+                      <div className="incd-5p-item-body">
+                        {ev.descripcion && <p className="incd-5p-item-desc">{ev.descripcion}</p>}
+                        {ev.adjunto_path && (
+                          isImage(ev.adjunto_path) && signedUrls[ev.adjunto_path] ? (
+                            <a href={signedUrls[ev.adjunto_path]} target="_blank" rel="noreferrer">
+                              <img src={signedUrls[ev.adjunto_path]} alt="adjunto" className="incd-5p-thumb" />
+                            </a>
+                          ) : signedUrls[ev.adjunto_path] ? (
+                            <a href={signedUrls[ev.adjunto_path]} target="_blank" rel="noreferrer" className="incd-5p-file-link">
+                              <Upload size={13} /> Ver adjunto
+                            </a>
+                          ) : null
+                        )}
+                      </div>
+                      <button className="incd-tl-btn del" onClick={() => handleDelete(ev.id)} title="Eliminar"><X size={13} /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Formulario de nueva evidencia */}
+              <div className="incd-5p-add-form">
+                <textarea
+                  className="incd-textarea"
+                  rows={2}
+                  placeholder={`Descripción de la evidencia de ${activeCategoria}...`}
+                  value={newDesc}
+                  onChange={e => setNewDesc(e.target.value)}
+                />
+                <div className="incd-5p-add-row">
+                  <button
+                    type="button"
+                    className={`incd-5p-file-btn${newFile ? ' has-file' : ''}`}
+                    onClick={() => fileRef.current?.click()}
+                  >
+                    <Upload size={14} />
+                    {newFile ? newFile.name : 'Adjuntar archivo'}
+                    {newFile && (
+                      <span className="incd-5p-file-clear" onClick={e => { e.stopPropagation(); setNewFile(null); }}><X size={11} /></span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    className="incd-btn-primary incd-5p-confirm-btn"
+                    onClick={handleAdd}
+                    disabled={saving || (!newDesc.trim() && !newFile)}
+                  >
+                    {saving ? <Loader2 size={14} className="incd-spin" /> : <Check size={14} />}
+                    Agregar
+                  </button>
+                </div>
+                <input ref={fileRef} type="file" style={{ display: 'none' }} onChange={e => { setNewFile(e.target.files[0] || null); e.target.value = ''; }} />
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Timeline Section ───────────────────────────────────────────────────────── */
-function TimelineSection({ incidenteId, pendingTimeline = [], setPendingTimeline }) {
+function TimelineSection({ incidenteId, onCountChange }) {
   const { user } = useAuth();
   const today = new Date().toISOString().split('T')[0];
 
@@ -1024,7 +1332,9 @@ function TimelineSection({ incidenteId, pendingTimeline = [], setPendingTimeline
       .eq('incidente_id', incidenteId)
       .order('fecha', { ascending: true })
       .order('hora', { ascending: true, nullsFirst: true });
-    setRows(data || []);
+    const rows = data || [];
+    setRows(rows);
+    onCountChange?.(rows.length);
     setLoading(false);
   }, [incidenteId]);
 
@@ -1037,13 +1347,6 @@ function TimelineSection({ incidenteId, pendingTimeline = [], setPendingTimeline
   const handleAdd = async () => {
     if (!newRow.actividad.trim()) return;
     const entry = { fecha: newRow.fecha, hora: newRow.hora || null, actividad: newRow.actividad.trim() };
-
-    if (!incidenteId) {
-      // Modo local: guardar en estado pendiente
-      setPendingTimeline(prev => [...prev, entry]);
-      setNewRow({ fecha: today, hora: '', actividad: '' });
-      return;
-    }
 
     setSaving(true);
     await supabase.from('inc_timeline').insert({ ...entry, incidente_id: incidenteId, created_by: user?.id || null });
@@ -1058,8 +1361,6 @@ function TimelineSection({ incidenteId, pendingTimeline = [], setPendingTimeline
     setRows(r => r.filter(x => x.id !== rowId));
   };
 
-  const removePending = (idx) => setPendingTimeline(prev => prev.filter((_, i) => i !== idx));
-
   /* ── Editar (solo filas DB) ── */
   const startEdit = (row) => { setEditingId(row.id); setEditForm({ fecha: row.fecha, hora: row.hora || '', actividad: row.actividad }); };
 
@@ -1071,13 +1372,11 @@ function TimelineSection({ incidenteId, pendingTimeline = [], setPendingTimeline
   };
 
   // Filas a mostrar ordenadas por fecha+hora
-  const allRows = (incidenteId ? rows : pendingTimeline.map((r, i) => ({ ...r, _local: true, _idx: i })))
-    .slice()
-    .sort((a, b) => {
-      const ka = `${a.fecha || ''}${a.hora || '99:99'}`;
-      const kb = `${b.fecha || ''}${b.hora || '99:99'}`;
-      return ka.localeCompare(kb);
-    });
+  const allRows = rows.slice().sort((a, b) => {
+    const ka = `${a.fecha || ''}${a.hora || '99:99'}`;
+    const kb = `${b.fecha || ''}${b.hora || '99:99'}`;
+    return ka.localeCompare(kb);
+  });
 
   return (
     <div className="incd-form-section">
@@ -1098,31 +1397,28 @@ function TimelineSection({ incidenteId, pendingTimeline = [], setPendingTimeline
               <tr><td colSpan={4}><div className="incd-timeline-empty">Cargando...</div></td></tr>
             ) : allRows.length === 0 ? (
               <tr><td colSpan={4}><div className="incd-timeline-empty">Sin eventos — agregá la primera fila abajo</div></td></tr>
-            ) : allRows.map((row, i) => (
-              !row._local && editingId === row.id ? (
+            ) : allRows.map((row) => (
+              editingId === row.id ? (
                 <tr key={row.id} className="incd-timeline-editing">
                   <td><input type="date" className="incd-tl-input" value={editForm.fecha}     onChange={e => setEditForm(f => ({ ...f, fecha: e.target.value }))} /></td>
                   <td><input type="time" className="incd-tl-input" value={editForm.hora}      onChange={e => setEditForm(f => ({ ...f, hora:  e.target.value }))} /></td>
                   <td><input type="text" className="incd-tl-input" value={editForm.actividad} onChange={e => setEditForm(f => ({ ...f, actividad: e.target.value }))} autoFocus /></td>
                   <td>
                     <div className="incd-tl-actions">
-                      <button className="incd-tl-btn save"   onClick={handleSaveEdit}             title="Guardar"><Check size={13} /></button>
-                      <button className="incd-tl-btn cancel" onClick={() => setEditingId(null)}   title="Cancelar"><X size={13} /></button>
+                      <button className="incd-tl-btn save"   onClick={handleSaveEdit}           title="Guardar"><Check size={13} /></button>
+                      <button className="incd-tl-btn cancel" onClick={() => setEditingId(null)} title="Cancelar"><X size={13} /></button>
                     </div>
                   </td>
                 </tr>
               ) : (
-                <tr key={row._local ? `p-${row._idx}` : row.id}>
+                <tr key={row.id}>
                   <td className="incd-tl-fecha">{formatFecha(row.fecha)}</td>
                   <td className="incd-tl-hora">{formatHora(row.hora)}</td>
-                  <td className="incd-tl-actividad">
-                    {row.actividad}
-                    {row._local && <span className="incd-tl-pending-tag">Por guardar</span>}
-                  </td>
+                  <td className="incd-tl-actividad">{row.actividad}</td>
                   <td>
                     <div className="incd-tl-actions">
-                      {!row._local && <button className="incd-tl-btn edit" onClick={() => startEdit(row)} title="Editar"><Clock size={13} /></button>}
-                      <button className="incd-tl-btn del" onClick={() => row._local ? removePending(row._idx) : handleDelete(row.id)} title="Eliminar"><X size={13} /></button>
+                      <button className="incd-tl-btn edit" onClick={() => startEdit(row)} title="Editar"><Clock size={13} /></button>
+                      <button className="incd-tl-btn del"  onClick={() => handleDelete(row.id)} title="Eliminar"><X size={13} /></button>
                     </div>
                   </td>
                 </tr>
