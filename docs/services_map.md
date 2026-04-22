@@ -2,6 +2,14 @@
 
 *Índice de funciones disponibles en la capa de servicios para acceso rápido del Agente.*
 
+## [navService.js](../../src/services/navService.js)
+- `fetchNavConfig()` — obtiene array `{ key, visible }[]` de ítems del sidebar
+- `updateNavItem(key, visible)` — upsert visibilidad de un ítem del menú
+
+## [portalesService.js](../../src/services/portalesService.js)
+- `fetchPortalesConfig()` — obtiene mapa de visibilidad `{ departamento, publico }[]`
+- `updatePortalVisibilidad(departamento, publico)` — upsert visibilidad de un portal
+
 ## [cursosService.js](../../src/services/cursosService.js)
 - `fetchCursos()`
 - `fetchCursosCategorias()`

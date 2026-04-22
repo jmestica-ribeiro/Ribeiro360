@@ -13,6 +13,18 @@
 | department | string | | Departamento / Gerencia |
 | sucursal | string | | Sitio / Sede |
 
+### nav_config
+| Columna | Tipo | Formato | Info |
+|:---|:---|:---|:---|
+| key | string | text | PK — clave del ítem (explorar, cursos, sgi, etc.) |
+| visible | boolean | | Si false, el ítem se oculta del sidebar para todos |
+
+### portales_config
+| Columna | Tipo | Formato | Info |
+|:---|:---|:---|:---|
+| departamento | string | text | PK — nombre exacto del departamento |
+| publico | boolean | | Si true, visible para todos los empleados |
+
 ### sgi_categorias
 | Columna | Tipo | Formato | Info |
 |:---|:---|:---|:---|

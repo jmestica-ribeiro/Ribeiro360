@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { fetchNavConfig } from '../services/navService';
 
 const AuthContext = createContext({});
 
@@ -17,6 +18,14 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [navConfig, setNavConfig] = useState({});
+
+  const refreshNavConfig = async () => {
+    const { data } = await fetchNavConfig();
+    const map = {};
+    data.forEach(({ key, visible }) => { map[key] = visible; });
+    setNavConfig(map);
+  };
 
   useEffect(() => {
     // onAuthStateChange captura tanto el login inicial (con provider_token)
@@ -67,6 +76,9 @@ export const AuthProvider = ({ children }) => {
       await supabase.from('profiles').upsert(fallback, { onConflict: 'id' });
       setProfile(fallback);
     }
+
+    // Cargar config de navegación una sola vez por sesión
+    await refreshNavConfig();
     setIsLoading(false);
   };
 
@@ -75,7 +87,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, setProfile, isLoading, signOut }}>
+    <AuthContext.Provider value={{ session, user, profile, setProfile, isLoading, signOut, navConfig, refreshNavConfig }}>
       {children}
     </AuthContext.Provider>
   );

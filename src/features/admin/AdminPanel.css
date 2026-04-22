@@ -1261,3 +1261,89 @@ textarea.form-control {
   text-overflow: ellipsis;
   max-width: 280px;
 }
+
+/* ── PortalesTab ── */
+.portales-tab-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius);
+  transition: var(--transition);
+}
+.portales-tab-row:hover {
+  border-color: var(--primary-color);
+}
+
+.portales-tab-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.portales-tab-titulo {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.portales-tab-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.portales-tab-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.portales-tab-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+.portales-tab-badge.publico {
+  background: color-mix(in srgb, var(--primary-color) 15%, transparent);
+  color: var(--primary-color);
+}
+.portales-tab-badge.interno {
+  background: var(--bg-hover);
+  color: var(--text-muted);
+}
+
+.portales-tab-toggle {
+  padding: 7px 16px;
+  border-radius: var(--border-radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-color);
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+.portales-tab-toggle:hover:not(:disabled) {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+.portales-tab-toggle.activo {
+  background: color-mix(in srgb, var(--primary-color) 12%, transparent);
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+}
+.portales-tab-toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+

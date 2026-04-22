@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GraduationCap, Calendar, Rocket, MessageCircle, LayoutGrid, ShieldCheck, Bell, Users } from 'lucide-react';
+import { GraduationCap, Calendar, Rocket, MessageCircle, LayoutGrid, ShieldCheck, Bell, Users, Compass, PanelLeft } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import CapacitacionesTab from './tabs/CapacitacionesTab';
 import PAFTab from './tabs/PAFTab';
@@ -10,6 +10,8 @@ import OrganigramaTab from './tabs/OrganigramaTab';
 import SGITab from './tabs/SGITab';
 import NovedadesTab from './tabs/NovedadesTab';
 import UsuariosTab from './tabs/UsuariosTab';
+import PortalesTab from './tabs/PortalesTab';
+import NavTab from './tabs/NavTab';
 import './AdminPanel.css';
 
 const ALL_TABS = ['capacitaciones', 'paf', 'onboarding', 'eventos', 'faq', 'organigrama', 'sgi', 'novedades'];
@@ -57,6 +59,18 @@ const AdminPanel = () => {
             <>
               <div style={{ borderTop: '1px solid var(--border-color)', margin: '12px 0' }} />
               <button
+                className={`admin-tab ${activeTab === 'portales' ? 'active' : ''}`}
+                onClick={() => setActiveTab('portales')}
+              >
+                <Compass size={18} /> Portales
+              </button>
+              <button
+                className={`admin-tab ${activeTab === 'nav' ? 'active' : ''}`}
+                onClick={() => setActiveTab('nav')}
+              >
+                <PanelLeft size={18} /> Menú
+              </button>
+              <button
                 className={`admin-tab ${activeTab === 'usuarios' ? 'active' : ''}`}
                 onClick={() => setActiveTab('usuarios')}
               >
@@ -75,6 +89,8 @@ const AdminPanel = () => {
           {activeTab === 'organigrama'    && <OrganigramaTab />}
           {activeTab === 'sgi'            && <SGITab />}
           {activeTab === 'novedades'      && <NovedadesTab />}
+          {activeTab === 'portales' && isSuperAdmin && <PortalesTab />}
+          {activeTab === 'nav'      && isSuperAdmin && <NavTab />}
           {activeTab === 'usuarios' && isSuperAdmin && <UsuariosTab />}
         </div>
       </div>

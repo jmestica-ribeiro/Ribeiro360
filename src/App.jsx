@@ -81,8 +81,9 @@ function AnimatedRoutes() {
 }
 
 function AppLayout() {
+  const isMobile = window.innerWidth < 768;
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(isMobile);
 
   return (
     <div className={`layout ${isSidebarOpen ? 'sidebar-open' : ''} ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
