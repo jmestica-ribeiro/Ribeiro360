@@ -46,12 +46,11 @@ export const AuthProvider = ({ children }) => {
           office_location: msData.officeLocation || null,
           avatar_url: session.user.user_metadata?.avatar_url || null,
         };
-        // Usar update en lugar de upsert para no sobreescribir role/admin_tabs
-        const { count } = await supabase.from('profiles').update(msPayload).eq('id', userId).select('id', { count: 'exact', head: true });
-        if (!count) {
-          // Perfil no existe aún, insertarlo con valores por defecto de role
-          await supabase.from('profiles').insert({ id: userId, ...msPayload });
-        }
+        // upsert ignorando role/admin_tabs — solo actualiza campos de Microsoft
+        await supabase.from('profiles').upsert(
+          { id: userId, ...msPayload },
+          { onConflict: 'id', ignoreDuplicates: false }
+        );
       }
     }
 

@@ -49,6 +49,7 @@ const Dashboard = () => {
   const [accesos, setAccesos] = useState([]);
   const [cursoPendiente, setCursoPendiente] = useState(null);
   const [enrichedCourses, setEnrichedCourses] = useState([]);
+  const [cursosLoaded, setCursosLoaded] = useState(false);
   const [resultados, setResultados] = useState(null);
   const [proximosEventos, setProximosEventos] = useState(null); // null = loading
   const [novedades, setNovedades] = useState([]);
@@ -104,6 +105,7 @@ const Dashboard = () => {
         setStats(cache.cursos.data.stats);
         setEnrichedCourses(cache.cursos.data.enrichedCourses);
         setCursoPendiente(cache.cursos.data.cursoPendiente);
+        setCursosLoaded(true);
         return;
       }
       const [coursesRes, certsRes, progressRes, cursosVisRes, cursosDestRes] = await Promise.all([
@@ -154,6 +156,7 @@ const Dashboard = () => {
       setStats(resStats);
       setEnrichedCourses(recentFive);
       setCursoPendiente(resCursoPendiente);
+      setCursosLoaded(true);
     };
 
     const fetchGlobalStats = async () => {
@@ -400,7 +403,7 @@ const Dashboard = () => {
             <button className="view-all" onClick={() => navigate('/cursos')}>Ver academia</button>
           </div>
 
-          {enrichedCourses.length === 0 ? (
+          {!cursosLoaded ? (
             <div className="activity-skeleton">
               {[1, 2, 3].map(i => <div key={i} className="skeleton" style={{ height: '56px', borderRadius: '8px' }} />)}
             </div>
@@ -446,7 +449,7 @@ const Dashboard = () => {
             <h2>Mi Avance</h2>
           </div>
 
-          {enrichedCourses.length === 0 ? (
+          {!cursosLoaded ? (
             <div className="skeleton" style={{ height: '200px', borderRadius: '12px', marginBottom: '24px' }} />
           ) : (() => {
             const completados = enrichedCourses.filter(c => c.progressPct === 100).length;
