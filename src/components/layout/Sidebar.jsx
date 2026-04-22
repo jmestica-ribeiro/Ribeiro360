@@ -60,8 +60,11 @@ const Sidebar = ({ isOpen, onToggle, isCollapsed, onToggleCollapse }) => {
           </div>
           {!isVisuallyCollapsed && <h2>Ribeiro<span> 360</span></h2>}
         </div>
-        <button className="collapse-btn" onClick={isOpen ? onToggle : onToggleCollapse}>
-          {isOpen ? <X size={18} /> : (isVisuallyCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />)}
+        <button
+          className={`collapse-btn${isOpen ? ' collapse-btn--mobile' : ''}`}
+          onClick={isOpen ? onToggle : onToggleCollapse}
+        >
+          {isOpen ? <X size={14} /> : (isVisuallyCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />)}
         </button>
       </div>
 

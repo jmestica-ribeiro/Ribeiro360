@@ -2,7 +2,9 @@
   width: 260px;
   height: 100vh;
   background: linear-gradient(180deg, #141414 0%, #0f0f0f 100%);
-  border-right: 1px solid #1e1e1e;
+  border-right: 1px solid transparent;
+  background-clip: padding-box;
+  box-shadow: inset -1px 0 0 0 #1e1e1e, 1px 0 18px 0 rgba(0,0,0,0.45);
   padding: 24px;
   display: flex;
   flex-direction: column;
@@ -24,6 +26,7 @@
   justify-content: space-between;
   margin-bottom: 16px;
   padding: 0 4px;
+  position: relative;
 }
 
 .logo-group {
@@ -33,21 +36,25 @@
 }
 
 .logo-container {
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #fff;
-  border-radius: 10px;
-  padding: 4px;
   flex-shrink: 0;
 }
 
 .logo-img {
-  max-width: 100%;
-  max-height: 100%;
+  width: 44px;
+  height: 44px;
   object-fit: contain;
+  border-radius: 50%;
+  filter: drop-shadow(0 0 8px rgba(242, 220, 0, 0.45));
+  transition: filter 0.3s ease;
+}
+
+.logo-img:hover {
+  filter: drop-shadow(0 0 14px rgba(242, 220, 0, 0.75));
 }
 
 .sidebar-header h2 {
@@ -62,21 +69,31 @@
 }
 
 .collapse-btn {
-  background: #222;
-  border: none;
-  color: #aaa;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
+  position: absolute;
+  right: -12px;
+  top: 28px;
+  background: #1e1e1e;
+  border: 1px solid #2a2a2a;
+  color: #555;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: var(--transition);
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  z-index: 10;
+}
+
+.sidebar:hover .collapse-btn {
+  opacity: 1;
 }
 
 .collapse-btn:hover {
-  background: var(--primary-color);
+  background: #F2DC00;
+  border-color: #F2DC00;
   color: #141414;
 }
 
@@ -146,10 +163,10 @@
 }
 
 .nav-item.active {
-  background-color: #F2DC00;
+  background: linear-gradient(90deg, #F2DC00 0%, #f5e633 100%);
   color: #141414;
   font-weight: 700;
-  box-shadow: 0 4px 16px rgba(242, 220, 0, 0.18);
+  box-shadow: 0 4px 20px rgba(242, 220, 0, 0.28), inset 0 1px 0 rgba(255,255,255,0.15);
   position: relative;
 }
 
@@ -294,6 +311,14 @@
 
 .nav-subitem.active .nav-sub-dot {
   background: var(--primary-color);
+}
+
+.collapse-btn--mobile {
+  position: static;
+  opacity: 1;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
 }
 
 /* Responsive */
