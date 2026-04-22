@@ -40,6 +40,19 @@ export async function fetchProfileValues() {
  * @param {string} newRole - 'user' | 'admin' | 'superadmin'
  * @param {string[]|null} adminTabs - tabs visibles en el admin, o null para todos
  */
+/**
+ * Envía un CSV de Entra ID a la Edge Function para sincronizar usuarios.
+ * @param {File} csvFile
+ */
+export async function syncMsUsers(csvFile) {
+  const csvText = await csvFile.text();
+  const { data, error } = await supabase.functions.invoke('sync-ms-users', {
+    body: { csv: csvText },
+  });
+  if (error) return { data: null, error };
+  return { data, error: null };
+}
+
 export async function updateUserRoleAndTabs(userId, newRole, adminTabs) {
   const { error } = await supabase.rpc('admin_update_user_role', {
     target_user_id: userId,

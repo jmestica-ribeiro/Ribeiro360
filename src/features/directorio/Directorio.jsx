@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Mail, MapPin, User, MessageCircle, Send, X, Filter, ChevronLeft, ChevronRight, ChevronDown, Building2 } from 'lucide-react';
+import { Search, Mail, MapPin, User, MessageCircle, Send, X, Filter, ChevronLeft, ChevronRight, ChevronDown, Building2, LayoutGrid, List } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import './Directorio.css';
@@ -29,8 +29,39 @@ const Avatar = ({ profile, size = 64 }) => {
   );
 };
 
+const Highlight = ({ text, term }) => {
+  if (!term) return <>{text}</>;
+  const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  const parts = text.split(regex);
+  return (
+    <>
+      {parts.map((part, i) =>
+        regex.test(part) ? <mark key={i} className="search-highlight">{part}</mark> : part
+      )}
+    </>
+  );
+};
+
+const SkeletonCard = () => (
+  <div className="employee-card skeleton-card">
+    <div className="emp-card-header skeleton-header" />
+    <div className="emp-card-body">
+      <div className="emp-avatar-wrap">
+        <div className="skeleton-avatar" />
+      </div>
+      <div className="skeleton-line skeleton-name" />
+      <div className="skeleton-line skeleton-role" />
+      <div className="skeleton-badge" />
+    </div>
+    <div className="emp-details">
+      <div className="skeleton-line skeleton-detail" />
+      <div className="skeleton-line skeleton-detail" />
+    </div>
+    <div className="skeleton-btn" />
+  </div>
+);
+
 const Directorio = () => {
-  const ITEMS_PER_PAGE = 8;
   const { user } = useAuth();
   const [profiles, setProfiles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,6 +70,28 @@ const Directorio = () => {
   const [activeLocation, setActiveLocation] = useState('Cualquiera');
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(8);
+  const [viewMode, setViewMode] = useState('grid');
+  const gridRef = useRef(null);
+
+  const recalcItemsPerPage = useCallback(() => {
+    if (!gridRef.current) return;
+    if (viewMode === 'list') {
+      const available = window.innerHeight - gridRef.current.getBoundingClientRect().top - 80;
+      setItemsPerPage(Math.max(5, Math.floor(available / 64)));
+    } else {
+      const gridWidth = gridRef.current.offsetWidth;
+      const cols = Math.max(1, Math.floor((gridWidth + 16) / (230 + 16)));
+      setItemsPerPage(cols * 2);
+    }
+  }, [viewMode]);
+
+  useEffect(() => {
+    const ro = new ResizeObserver(recalcItemsPerPage);
+    if (gridRef.current) ro.observe(gridRef.current);
+    recalcItemsPerPage();
+    return () => ro.disconnect();
+  }, [recalcItemsPerPage, profiles, viewMode]);
 
   useEffect(() => {
     fetchProfiles();
@@ -46,7 +99,7 @@ const Directorio = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, activeDept, activeLocation]);
+  }, [searchTerm, activeDept, activeLocation, itemsPerPage]);
 
   const fetchProfiles = async () => {
     setIsLoading(true);
@@ -72,8 +125,8 @@ const Directorio = () => {
     return matchSearch && matchDept && matchLoc;
   });
 
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const currentItems = filtered.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const currentItems = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const openTeams = (email) => {
     window.open(`https://teams.microsoft.com/l/chat/0/0?users=${email}`, '_blank');
@@ -159,12 +212,22 @@ const Directorio = () => {
 
       {!isLoading && filtered.length > 0 && (
         <div className="results-count">
-          Mostrando {currentItems.length} de {filtered.length} resultado{filtered.length !== 1 ? 's' : ''}
+          <span>Mostrando {currentItems.length} de {filtered.length} resultado{filtered.length !== 1 ? 's' : ''}</span>
+          <div className="view-toggle">
+            <button className={`view-toggle-btn${viewMode === 'grid' ? ' active' : ''}`} onClick={() => setViewMode('grid')} title="Vista grilla">
+              <LayoutGrid size={16} />
+            </button>
+            <button className={`view-toggle-btn${viewMode === 'list' ? ' active' : ''}`} onClick={() => setViewMode('list')} title="Vista lista">
+              <List size={16} />
+            </button>
+          </div>
         </div>
       )}
 
       {isLoading ? (
-        <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-muted)' }}>Cargando directorio...</div>
+        <div className={viewMode === 'grid' ? 'directory-grid' : 'directory-list'} ref={gridRef}>
+          {Array.from({ length: itemsPerPage }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
       ) : filtered.length === 0 ? (
         <div className="empty-results">
           <User size={64} className="text-muted" />
@@ -177,9 +240,9 @@ const Directorio = () => {
           )}
         </div>
       ) : (
-        <div className="directory-grid">
+        <div className={viewMode === 'grid' ? 'directory-grid' : 'directory-list'} ref={gridRef}>
           <AnimatePresence mode="popLayout">
-            {currentItems.map((profile, i) => (
+            {currentItems.map((profile, i) => viewMode === 'grid' ? (
               <motion.div
                 key={profile.id}
                 layout
@@ -189,32 +252,56 @@ const Directorio = () => {
                 transition={{ type: 'spring', stiffness: 400, damping: 35, delay: i * 0.03 }}
                 className="employee-card"
               >
-                <div className="emp-card-top">
-                  <Avatar profile={profile} size={56} />
-                  <div className="emp-main-info">
-                    <h3>{profile.full_name || 'Sin nombre'}</h3>
-                    {profile.job_title && <p className="emp-role">{profile.job_title}</p>}
-                    {profile.department && <span className="emp-dept-badge">{profile.department}</span>}
+                <div className="emp-card-header" />
+                <div className="emp-card-body">
+                  <div className="emp-avatar-wrap">
+                    <Avatar profile={profile} size={56} />
+                  </div>
+                  <h3 className="emp-name"><Highlight text={profile.full_name || 'Desconocido'} term={searchTerm} /></h3>
+                  <p className="emp-role"><Highlight text={profile.job_title || 'Desconocido'} term={searchTerm} /></p>
+                  <span className="emp-dept-badge">{profile.department || 'Desconocido'}</span>
+                </div>
+                <div className="emp-details">
+                  <div className="detail-item">
+                    <Mail size={12} />
+                    <span><Highlight text={profile.email || 'Desconocido'} term={searchTerm} /></span>
+                  </div>
+                  <div className="detail-item">
+                    <MapPin size={12} />
+                    <span>{profile.office_location || 'Desconocido'}</span>
                   </div>
                 </div>
-
-                <div className="emp-details">
-                  {profile.email && (
-                    <div className="detail-item">
-                      <Mail size={13} />
-                      <span>{profile.email}</span>
-                    </div>
-                  )}
-                  {profile.office_location && (
-                    <div className="detail-item">
-                      <MapPin size={13} />
-                      <span>{profile.office_location}</span>
-                    </div>
-                  )}
+                <button className="btn-contact-ghost" onClick={() => setSelectedProfile(profile)}>
+                  <MessageCircle size={14} />
+                  Contactar
+                </button>
+              </motion.div>
+            ) : (
+              <motion.div
+                key={profile.id}
+                layout
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, transition: { duration: 0.1 } }}
+                transition={{ type: 'spring', stiffness: 400, damping: 35, delay: i * 0.015 }}
+                className="employee-list-row"
+              >
+                <Avatar profile={profile} size={40} />
+                <div className="list-row-name">
+                  <span className="list-name"><Highlight text={profile.full_name || 'Desconocido'} term={searchTerm} /></span>
+                  <span className="list-role"><Highlight text={profile.job_title || 'Desconocido'} term={searchTerm} /></span>
                 </div>
-
-                <button className="btn-contact-primary-full" onClick={() => setSelectedProfile(profile)}>
-                  <MessageCircle size={15} />
+                <span className="list-badge">{profile.department || 'Desconocido'}</span>
+                <div className="list-row-detail">
+                  <Mail size={12} />
+                  <span><Highlight text={profile.email || 'Desconocido'} term={searchTerm} /></span>
+                </div>
+                <div className="list-row-detail">
+                  <MapPin size={12} />
+                  <span>{profile.office_location || 'Desconocido'}</span>
+                </div>
+                <button className="btn-contact-ghost list-btn" onClick={() => setSelectedProfile(profile)}>
+                  <MessageCircle size={13} />
                   Contactar
                 </button>
               </motion.div>
@@ -229,11 +316,27 @@ const Directorio = () => {
             <ChevronLeft size={18} /> Anterior
           </button>
           <div className="page-numbers">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(num => (
-              <button key={num} className={`page-num ${currentPage === num ? 'active' : ''}`} onClick={() => setCurrentPage(num)}>
-                {num}
-              </button>
-            ))}
+            {(() => {
+              const pages = [];
+              const delta = 2;
+              const left = Math.max(2, currentPage - delta);
+              const right = Math.min(totalPages - 1, currentPage + delta);
+
+              pages.push(
+                <button key={1} className={`page-num ${currentPage === 1 ? 'active' : ''}`} onClick={() => setCurrentPage(1)}>1</button>
+              );
+              if (left > 2) pages.push(<span key="left-ellipsis" className="page-ellipsis">…</span>);
+              for (let i = left; i <= right; i++) {
+                pages.push(
+                  <button key={i} className={`page-num ${currentPage === i ? 'active' : ''}`} onClick={() => setCurrentPage(i)}>{i}</button>
+                );
+              }
+              if (right < totalPages - 1) pages.push(<span key="right-ellipsis" className="page-ellipsis">…</span>);
+              if (totalPages > 1) pages.push(
+                <button key={totalPages} className={`page-num ${currentPage === totalPages ? 'active' : ''}`} onClick={() => setCurrentPage(totalPages)}>{totalPages}</button>
+              );
+              return pages;
+            })()}
           </div>
           <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)} className="pagination-btn">
             Siguiente <ChevronRight size={18} />

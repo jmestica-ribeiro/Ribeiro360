@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { GraduationCap, Calendar, Rocket, MessageCircle, LayoutGrid, ShieldCheck } from 'lucide-react';
-import { fetchAllUsers, updateUserRoleAndTabs } from '../../../services/usuariosService';
+import React, { useState, useEffect, useRef } from 'react';
+import { GraduationCap, Calendar, Rocket, MessageCircle, LayoutGrid, ShieldCheck, Upload, CheckCircle, AlertCircle } from 'lucide-react';
+import { fetchAllUsers, updateUserRoleAndTabs, syncMsUsers } from '../../../services/usuariosService';
 import { useAuth } from '../../../contexts/AuthContext';
 import { AdminListPanel, LoadingSpinner } from '../../../components/common';
 
@@ -32,6 +32,83 @@ const ROLE_BADGE = {
   user:       { label: 'Usuario',     bg: 'var(--bg-hover)', color: 'var(--text-muted)' },
 };
 
+// ── Panel de sincronización desde Entra ID ───────────────────────────────────
+const SyncPanel = ({ onSuccess }) => {
+  const fileRef = useRef(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [result, setResult] = useState(null);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleSync = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsSyncing(true);
+    setResult(null);
+    setErrorMsg('');
+    const { data, error } = await syncMsUsers(file);
+    setIsSyncing(false);
+    if (error) { setErrorMsg(error.message); return; }
+    setResult(data);
+    onSuccess();
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  return (
+    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 14, padding: '16px 20px', marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <p style={{ fontWeight: 700, fontSize: 14 }}>Sincronizar desde Entra ID</p>
+          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+            Importá el CSV exportado desde Azure con las columnas: displayName, userPrincipalName, userType, accountEnabled, jobTitle, department, officeLocation.
+          </p>
+        </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 10, background: 'var(--primary-color)', color: '#141414', fontWeight: 700, fontSize: 13, cursor: isSyncing ? 'not-allowed' : 'pointer', opacity: isSyncing ? 0.6 : 1, flexShrink: 0 }}>
+          {isSyncing ? <LoadingSpinner size={14} /> : <Upload size={14} />}
+          {isSyncing ? 'Procesando...' : 'Cargar CSV'}
+          <input ref={fileRef} type="file" accept=".csv" style={{ display: 'none' }} disabled={isSyncing} onChange={handleSync} />
+        </label>
+      </div>
+
+      {errorMsg && (
+        <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: '#fef2f2', border: '1px solid #fecaca' }}>
+          <AlertCircle size={16} color="#dc2626" />
+          <p style={{ fontSize: 13, color: '#dc2626' }}>{errorMsg}</p>
+        </div>
+      )}
+
+      {result && (
+        <div style={{ marginTop: 12, padding: '12px 14px', borderRadius: 10, background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <CheckCircle size={16} color="#16a34a" />
+            <p style={{ fontSize: 13, fontWeight: 700, color: '#16a34a' }}>Sincronización completada</p>
+          </div>
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+            {[
+              { label: 'Creados', value: result.creados, color: '#16a34a' },
+              { label: 'Ya existían', value: result.ya_existian, color: '#2563eb' },
+              { label: 'Omitidos', value: result.omitidos, color: '#9ca3af' },
+            ].map(({ label, value, color }) => (
+              <div key={label} style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: 20, fontWeight: 800, color }}>{value}</p>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{label}</p>
+              </div>
+            ))}
+          </div>
+          {result.errores?.length > 0 && (
+            <details style={{ marginTop: 10 }}>
+              <summary style={{ fontSize: 12, color: '#dc2626', cursor: 'pointer' }}>{result.errores.length} error(es) — ver detalle</summary>
+              <ul style={{ marginTop: 6, paddingLeft: 16 }}>
+                {result.errores.map((e, i) => <li key={i} style={{ fontSize: 11, color: '#dc2626' }}>{e}</li>)}
+              </ul>
+            </details>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Tab principal ─────────────────────────────────────────────────────────────
 const UsuariosTab = () => {
   const { profile: currentUserProfile } = useAuth();
   const [users, setUsers] = useState([]);
@@ -62,6 +139,7 @@ const UsuariosTab = () => {
 
   return (
     <AdminListPanel title="Usuarios" count={users.length}>
+      <SyncPanel onSuccess={loadUsers} />
       {isLoading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 24 }}>
           <LoadingSpinner size={24} />
