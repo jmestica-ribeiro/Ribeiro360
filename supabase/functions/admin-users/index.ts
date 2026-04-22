@@ -78,6 +78,41 @@ serve(async (req: Request) => {
       });
     }
 
+    // --- Eliminar usuario (solo superadmin) ---
+    if (action === 'delete_user') {
+      if (!isSuperAdmin) {
+        return new Response(JSON.stringify({ error: 'Solo superadmin puede eliminar usuarios' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const { userId } = payload ?? {};
+      if (!userId) {
+        return new Response(JSON.stringify({ error: 'Falta parámetro: userId' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Impedir auto-eliminación
+      if (userId === user.id) {
+        return new Response(JSON.stringify({ error: 'No podés eliminarte a vos mismo' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Eliminar perfil primero, luego el usuario de auth
+      await adminClient.from('profiles').delete().eq('id', userId);
+      const { error } = await adminClient.auth.admin.deleteUser(userId);
+      if (error) throw error;
+
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     return new Response(JSON.stringify({ error: `Acción desconocida: ${action}` }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

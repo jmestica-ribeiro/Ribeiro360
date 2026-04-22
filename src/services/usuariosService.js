@@ -53,6 +53,14 @@ export async function syncMsUsers(csvFile) {
   return { data, error: null };
 }
 
+export async function deleteUser(userId) {
+  const { data, error } = await supabase.functions.invoke('admin-users', {
+    body: { action: 'delete_user', payload: { userId } },
+  });
+  if (error) console.error('[usuariosService] deleteUser:', error.message);
+  return { data, error };
+}
+
 export async function updateUserRoleAndTabs(userId, newRole, adminTabs) {
   const { error } = await supabase.rpc('admin_update_user_role', {
     target_user_id: userId,
