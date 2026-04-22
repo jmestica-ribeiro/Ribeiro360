@@ -2,7 +2,7 @@
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
-  'https://ribeiro360.vercel.app',
+  'https://intranet.ribeiro.ar',
 ];
 
 export function getCorsHeaders(req: Request): Record<string, string> {
