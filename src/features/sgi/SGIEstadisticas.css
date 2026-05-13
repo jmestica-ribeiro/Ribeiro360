@@ -423,6 +423,54 @@
   color: #3B82F6;
 }
 
+/* ── Docs carpetas grid ───────────────────────────────────────────────────────── */
+.sgi-docs-carpetas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.sgi-docs-carpeta-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.sgi-docs-carpeta-color {
+  width: 6px;
+  height: 40px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.sgi-docs-carpeta-body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.sgi-docs-carpeta-nombre {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sgi-docs-carpeta-meta {
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
   .sgi-stat-kpis {

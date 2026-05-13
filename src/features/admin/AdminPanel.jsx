@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GraduationCap, Calendar, Rocket, MessageCircle, LayoutGrid, ShieldCheck, Bell, Users, Compass, PanelLeft } from 'lucide-react';
+import { GraduationCap, Calendar, Rocket, MessageCircle, LayoutGrid, ShieldCheck, Bell, Users, Compass, PanelLeft, Images, Wrench } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import CapacitacionesTab from './tabs/CapacitacionesTab';
 import PAFTab from './tabs/PAFTab';
@@ -12,9 +12,11 @@ import NovedadesTab from './tabs/NovedadesTab';
 import UsuariosTab from './tabs/UsuariosTab';
 import PortalesTab from './tabs/PortalesTab';
 import NavTab from './tabs/NavTab';
+import MultimediaTab from './tabs/MultimediaTab';
+import HerramientasTab from './tabs/HerramientasTab';
 import './AdminPanel.css';
 
-const ALL_TABS = ['capacitaciones', 'paf', 'onboarding', 'eventos', 'faq', 'organigrama', 'sgi', 'novedades'];
+const ALL_TABS = ['capacitaciones', 'paf', 'onboarding', 'eventos', 'faq', 'organigrama', 'sgi', 'novedades', 'multimedia', 'herramientas'];
 
 const TAB_CONFIG = [
   { key: 'capacitaciones', label: 'Capacitaciones', icon: <GraduationCap size={18} /> },
@@ -25,6 +27,8 @@ const TAB_CONFIG = [
   { key: 'organigrama',    label: 'Organigrama',      icon: <LayoutGrid size={18} /> },
   { key: 'sgi',            label: 'SGI',              icon: <ShieldCheck size={18} /> },
   { key: 'novedades',      label: 'Novedades',        icon: <Bell size={18} /> },
+  { key: 'multimedia',     label: 'Multimedia',       icon: <Images size={18} /> },
+  { key: 'herramientas',  label: 'Herramientas',     icon: <Wrench size={18} /> },
 ];
 
 const AdminPanel = () => {
@@ -89,6 +93,8 @@ const AdminPanel = () => {
           {activeTab === 'organigrama'    && <OrganigramaTab />}
           {activeTab === 'sgi'            && <SGITab />}
           {activeTab === 'novedades'      && <NovedadesTab />}
+          {activeTab === 'multimedia'     && <MultimediaTab />}
+          {activeTab === 'herramientas'  && <HerramientasTab />}
           {activeTab === 'portales' && isSuperAdmin && <PortalesTab />}
           {activeTab === 'nav'      && isSuperAdmin && <NavTab />}
           {activeTab === 'usuarios' && isSuperAdmin && <UsuariosTab />}

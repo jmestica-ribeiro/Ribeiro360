@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
-import { Home, Compass, BookOpen, Users, Calendar, Settings, Briefcase, ChevronLeft, ChevronRight, LayoutGrid, MessageCircle, ShieldCheck, ChevronDown, X } from 'lucide-react';
+import { Home, Compass, BookOpen, Users, Calendar, Settings, Briefcase, ChevronLeft, ChevronRight, LayoutGrid, MessageCircle, ShieldCheck, ChevronDown, X, Images, Wrench } from 'lucide-react';
 import Logo from '../../assets/Logo.png';
 import './Sidebar.css';
 
@@ -20,6 +20,8 @@ const NAV_ITEMS = {
     { key: 'eventos',     label: 'Eventos',              to: '/eventos',     icon: Calendar },
     { key: 'organigrama', label: 'Organigrama',          to: '/organigrama', icon: LayoutGrid },
     { key: 'faq',         label: 'Preguntas Frecuentes', to: '/faq',         icon: MessageCircle },
+    { key: 'multimedia',    label: 'Multimedia',           to: '/multimedia',    icon: Images },
+    { key: 'herramientas', label: 'Herramientas por Sector', to: '/herramientas', icon: Wrench },
   ],
 };
 

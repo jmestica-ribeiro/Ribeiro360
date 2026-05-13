@@ -15,6 +15,7 @@ const NAV_ITEMS_CONFIG = [
     { key: 'eventos',     label: 'Eventos' },
     { key: 'organigrama', label: 'Organigrama' },
     { key: 'faq',         label: 'Preguntas Frecuentes' },
+    { key: 'multimedia',  label: 'Contenido Multimedia' },
   ]},
   { section: 'Gestión', items: [
     { key: 'sgi', label: 'SGI (módulo completo)' },

@@ -329,15 +329,19 @@ export async function fetchSgiEstadisticasData() {
     { data: hallazgos, error: e2 },
     { data: acciones, error: e3 },
     { data: categorias, error: e4 },
+    { data: accionesInc, error: e5 },
+    { data: incidentes, error: e6 },
   ] = await Promise.all([
     supabase.from('sgi_documentos').select('id, tipo_documento, categoria_id, created_at, activo').eq('activo', true),
     supabase.from('nc_hallazgos').select('id, tipo, estado, gerencia, paso_actual, fecha, created_at'),
-    supabase.from('nc_acciones').select('id, estado, hallazgo_id, fecha_vencimiento, avance'),
-    supabase.from('sgi_categorias').select('id, nombre, color').eq('activo', true).is('parent_id', null),
+    supabase.from('nc_acciones').select('id, estado, hallazgo_id, fecha_vencimiento, avance, descripcion, responsable_id, responsable:profiles!responsable_id(full_name), hallazgo:nc_hallazgos!hallazgo_id(numero, gerencia, tipo)'),
+    supabase.from('sgi_categorias').select('id, nombre, color, parent_id').eq('activo', true),
+    supabase.from('inc_acciones').select('id, estado, incidente_id, fecha_vencimiento, avance, descripcion, responsable_id, tipo, verif_eficaz, codigo, responsable:profiles!responsable_id(full_name), incidente:inc_incidentes!incidente_id(numero, gerencia, tipo_incidente)'),
+    supabase.from('inc_incidentes').select('id, numero, estado, gerencia, tipo_incidente, clasificacion, paso_actual, fecha, created_at'),
   ]);
   const error = e1 || e2 || e3 || e4;
   if (error) console.error('[sgiService] fetchSgiEstadisticasData:', error.message);
-  return { documentos: documentos ?? [], hallazgos: hallazgos ?? [], acciones: acciones ?? [], categorias: categorias ?? [], error };
+  return { documentos: documentos ?? [], hallazgos: hallazgos ?? [], acciones: acciones ?? [], categorias: categorias ?? [], accionesInc: accionesInc ?? [], incidentes: incidentes ?? [], error };
 }
 
 // ── Consultas para NoConformidades.jsx ───────────────────────────────────────
@@ -426,12 +430,13 @@ export async function fetchNcInformeData(hallazgoId) {
 // ── Informe PDF de Incidente ──────────────────────────────────────────────────
 
 export async function fetchIncidenteInformeData(incidenteId) {
-  const [incRes, profilesRes, fivePRes, timelineRes] = await Promise.all([
+  const [incRes, profilesRes, fivePRes, timelineRes, accionesRes] = await Promise.all([
     supabase.from('inc_incidentes').select('*').eq('id', incidenteId).single(),
     supabase.from('profiles').select('id, full_name, job_title, department').order('full_name'),
     supabase.from('inc_5p').select('*').eq('incidente_id', incidenteId).order('created_at'),
     supabase.from('inc_timeline').select('*').eq('incidente_id', incidenteId)
       .order('fecha').order('hora', { nullsFirst: true }),
+    supabase.from('inc_acciones').select('*').eq('incidente_id', incidenteId).order('fecha_vencimiento', { ascending: true, nullsFirst: false }),
   ]);
 
   const error = incRes.error || profilesRes.error;
@@ -441,6 +446,18 @@ export async function fetchIncidenteInformeData(incidenteId) {
   const profiles   = profilesRes.data || [];
   const evidencias = fivePRes.data    || [];
   const timeline   = timelineRes.data || [];
+  const acciones   = accionesRes.data || [];
+
+  // Hitos por acción
+  let hitos = [];
+  if (acciones.length > 0) {
+    const { data: hitosData } = await supabase
+      .from('inc_acciones_hitos')
+      .select('*')
+      .in('accion_id', acciones.map(a => a.id))
+      .order('fecha', { ascending: true });
+    hitos = hitosData || [];
+  }
 
   // Signed URLs para fotos del incidente
   const fotoPaths = [
@@ -467,7 +484,7 @@ export async function fetchIncidenteInformeData(incidenteId) {
   }
 
   return {
-    data: { incidente, profiles, evidencias, timeline, signedUrls, cliente },
+    data: { incidente, profiles, evidencias, timeline, signedUrls, cliente, acciones, hitos },
     error: null,
   };
 }

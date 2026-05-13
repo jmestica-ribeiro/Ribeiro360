@@ -67,25 +67,32 @@ serve(async (req: Request) => {
     }
     const rows = parseCSV(csvText);
 
-    // Solo Member + accountEnabled = true
-    const eligible = rows.filter(row => {
-      const type    = getField(row, 'userType', 'User type', 'usertype').toLowerCase();
+    // Separar members activos vs inactivos/deshabilitados
+    const memberRows = rows.filter(row =>
+      getField(row, 'userType', 'User type', 'usertype').toLowerCase() === 'member'
+    );
+    const activeRows   = memberRows.filter(row => {
       const enabled = getField(row, 'accountEnabled', 'Account enabled', 'accountenabled').toLowerCase();
-      return type === 'member' && (enabled === 'true' || enabled === '1' || enabled === 'yes');
+      return enabled === 'true' || enabled === '1' || enabled === 'yes';
+    });
+    const inactiveRows = memberRows.filter(row => {
+      const enabled = getField(row, 'accountEnabled', 'Account enabled', 'accountenabled').toLowerCase();
+      return enabled !== 'true' && enabled !== '1' && enabled !== 'yes';
     });
 
-    const summary = { created: 0, existing: 0, skipped: 0, errors: [] as string[] };
+    const summary = { created: 0, existing: 0, skipped: 0, inactivated: 0, errors: [] as string[] };
 
-    for (const row of eligible) {
-      const email        = getField(row, 'userPrincipalName', 'User principal name').toLowerCase();
-      const fullName     = getField(row, 'displayName', 'Display name');
-      const jobTitle     = getField(row, 'jobTitle', 'Job title') || null;
-      const department   = getField(row, 'department', 'Department') || null;
+    // ── 1. Procesar usuarios activos ────────────────────────────────────────────
+    for (const row of activeRows) {
+      const email          = getField(row, 'userPrincipalName', 'User principal name').toLowerCase();
+      const fullName       = getField(row, 'displayName', 'Display name');
+      const jobTitle       = getField(row, 'jobTitle', 'Job title') || null;
+      const department     = getField(row, 'department', 'Department') || null;
       const officeLocation = getField(row, 'officeLocation', 'Office location') || null;
 
       if (!email || !fullName) { summary.skipped++; continue; }
 
-      // 1. Intentar crear el usuario en auth
+      // 1a. Intentar crear el usuario en auth
       const { data: created, error: createError } = await adminClient.auth.admin.createUser({
         email,
         email_confirm: true,
@@ -97,7 +104,6 @@ serve(async (req: Request) => {
       if (createError) {
         const msg = createError.message.toLowerCase();
         if (msg.includes('already been registered') || msg.includes('already exists') || msg.includes('duplicate')) {
-          // Buscar el UUID del usuario existente via RPC
           const { data: existingId, error: rpcError } = await adminClient
             .rpc('get_user_id_by_email', { user_email: email });
           if (rpcError || !existingId) {
@@ -115,23 +121,45 @@ serve(async (req: Request) => {
         summary.created++;
       }
 
-      // 2. Upsert del perfil (no sobreescribe role/admin_tabs)
+      // 1b. Upsert completo del perfil (pisa datos, no toca role/admin_tabs)
       if (supabaseUserId) {
         const { error: upsertError } = await adminClient.from('profiles').upsert(
-          { id: supabaseUserId, email, full_name: fullName, job_title: jobTitle, department, office_location: officeLocation },
+          { id: supabaseUserId, email, full_name: fullName, job_title: jobTitle, department, office_location: officeLocation, is_active: true },
           { onConflict: 'id', ignoreDuplicates: false }
         );
         if (upsertError) summary.errors.push(`${email} (perfil): ${upsertError.message}`);
       }
     }
 
+    // ── 2. Marcar como inactivos los usuarios deshabilitados en Azure ───────────
+    for (const row of inactiveRows) {
+      const email = getField(row, 'userPrincipalName', 'User principal name').toLowerCase();
+      if (!email) continue;
+
+      const { data: existingId, error: rpcError } = await adminClient
+        .rpc('get_user_id_by_email', { user_email: email });
+      if (rpcError || !existingId) continue; // No existe en la BD, nada que hacer
+
+      const { error: updateError } = await adminClient
+        .from('profiles')
+        .update({ is_active: false })
+        .eq('id', existingId as string);
+
+      if (updateError) {
+        summary.errors.push(`${email} (inactivar): ${updateError.message}`);
+      } else {
+        summary.inactivated++;
+      }
+    }
+
     return new Response(JSON.stringify({
       ok: true,
       total_en_csv: rows.length,
-      total_procesados: eligible.length,
+      total_procesados: activeRows.length,
       creados: summary.created,
       ya_existian: summary.existing,
       omitidos: summary.skipped,
+      inactivados: summary.inactivated,
       errores: summary.errors,
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 

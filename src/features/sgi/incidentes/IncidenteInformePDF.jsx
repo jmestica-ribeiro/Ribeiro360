@@ -69,7 +69,7 @@ function Badge({ label, color }) {
 
 /* ── Contenido del informe ────────────────────────────────────────────────── */
 function InformeContent({ data }) {
-  const { incidente: inc, profiles, evidencias, timeline, signedUrls, cliente } = data;
+  const { incidente: inc, profiles, evidencias, timeline, signedUrls, cliente, acciones = [], hitos = [] } = data;
 
   const getProfile = (id) => profiles.find(p => p.id === id);
 
@@ -265,14 +265,44 @@ function InformeContent({ data }) {
             </div>
           )}
 
-          {inc.acr_tecnica === 'sistemico' && inc.acr_sistemico && (
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: '#6b7280', marginBottom: 6 }}>Análisis Sistémico</div>
-              <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '10px 14px', fontSize: 12, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                {inc.acr_sistemico}
-              </div>
-            </div>
-          )}
+          {inc.acr_tecnica === 'sistemico' && (() => {
+            const causas = (() => { try { return Array.isArray(inc.acr_sistemico_causas) ? inc.acr_sistemico_causas : JSON.parse(inc.acr_sistemico_causas || '[]'); } catch { return []; } })();
+            const catColors = { 'Factores Organizacionales': '#1a5276', 'Contexto de trabajo / de la Operación': '#117a65', 'Desempeño Humano / Fallas Técnicas': '#935116', 'Barreras Ausentes / Fallidas': '#7b241c' };
+            const grupos = causas.reduce((acc, c) => { (acc[c.categoria] = acc[c.categoria] || []).push(c); return acc; }, {});
+            return (
+              <>
+                {causas.length > 0 && (
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: '#6b7280', marginBottom: 8 }}>Causas Identificadas ({causas.length})</div>
+                    {Object.entries(grupos).map(([cat, items]) => {
+                      const color = catColors[cat] || '#374151';
+                      return (
+                        <div key={cat} style={{ marginBottom: 8 }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: '#fff', background: color, padding: '3px 10px', borderRadius: '6px 6px 0 0', display: 'inline-block' }}>{cat}</div>
+                          <div style={{ border: `1px solid ${color}40`, borderRadius: '0 6px 6px 6px', overflow: 'hidden' }}>
+                            {items.map((c, i) => (
+                              <div key={i} style={{ padding: '6px 12px', background: i % 2 === 0 ? '#fff' : '#f9fafb', borderBottom: i < items.length - 1 ? '1px solid #f3f4f6' : 'none', fontSize: 11, color: '#111827', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                                <span style={{ color, fontWeight: 900, fontSize: 14, lineHeight: 1 }}>•</span>
+                                <span style={{ lineHeight: 1.5 }}><span style={{ color: '#6b7280', fontSize: 10 }}>{c.subcategoria} · </span>{c.label}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {inc.acr_sistemico && (
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: '#6b7280', marginBottom: 6 }}>Análisis Sistémico</div>
+                    <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '10px 14px', fontSize: 12, lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                      {inc.acr_sistemico}
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
 
           {inc.acr_causa_raiz && (
             <div style={{ background: '#fefce8', border: '1px solid #fde047', borderRadius: 8, padding: '12px 16px', marginBottom: 14 }}>
@@ -280,6 +310,82 @@ function InformeContent({ data }) {
               <div style={{ fontSize: 12, color: '#111827', lineHeight: 1.6 }}>{inc.acr_causa_raiz}</div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Paso 5: Plan de Trabajo ── */}
+      {acciones.length > 0 && (
+        <div>
+          <SectionTitle num="5" label="Plan de Trabajo" />
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
+            <thead>
+              <tr style={{ background: '#111827', color: '#f2dc00' }}>
+                <th style={{ padding: '6px 10px', textAlign: 'left', fontWeight: 700, width: 80 }}>Código</th>
+                <th style={{ padding: '6px 10px', textAlign: 'left', fontWeight: 700 }}>Descripción</th>
+                <th style={{ padding: '6px 10px', textAlign: 'left', fontWeight: 700, width: 120 }}>Responsable</th>
+                <th style={{ padding: '6px 10px', textAlign: 'left', fontWeight: 700, width: 90 }}>Vencimiento</th>
+                <th style={{ padding: '6px 10px', textAlign: 'center', fontWeight: 700, width: 70 }}>Avance</th>
+                <th style={{ padding: '6px 10px', textAlign: 'left', fontWeight: 700, width: 80 }}>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {acciones.map((a, i) => {
+                const resp = profiles.find(p => p.id === a.responsable_id);
+                const estadoColor = { pendiente: '#F59E0B', en_proceso: '#3B82F6', cerrada: '#10B981' }[a.estado] || '#9ca3af';
+                const accionHitos = hitos.filter(h => h.accion_id === a.id);
+                return (
+                  <React.Fragment key={a.id}>
+                    <tr style={{ background: i % 2 === 0 ? '#ffffff' : '#f9fafb' }}>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #f3f4f6', fontWeight: 700, color: '#374151' }}>
+                        {a.codigo}
+                        {a.tipo === 'rectificativa' && <span style={{ display: 'block', fontSize: 9, color: '#DC2626', fontWeight: 700 }}>RECTIF.</span>}
+                      </td>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #f3f4f6', color: '#111827', lineHeight: 1.5 }}>{a.descripcion}</td>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #f3f4f6', color: '#374151' }}>{resp?.full_name || '—'}</td>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #f3f4f6', color: '#374151' }}>{fmt(a.fecha_vencimiento)}</td>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #f3f4f6', textAlign: 'center', fontWeight: 700, color: a.avance === 100 ? '#10B981' : '#374151' }}>{a.avance || 0}%</td>
+                      <td style={{ padding: '8px 10px', borderBottom: '1px solid #f3f4f6' }}>
+                        <span style={{ background: estadoColor + '20', color: estadoColor, borderRadius: 4, padding: '2px 7px', fontSize: 10, fontWeight: 700 }}>{a.estado?.replace('_', ' ')}</span>
+                      </td>
+                    </tr>
+                    {accionHitos.map(h => (
+                      <tr key={h.id} style={{ background: '#fefce8' }}>
+                        <td style={{ padding: '4px 10px 4px 20px', borderBottom: '1px solid #f3f4f6', color: '#9ca3af', fontSize: 10 }}>↳ hito</td>
+                        <td colSpan={3} style={{ padding: '4px 10px', borderBottom: '1px solid #f3f4f6', fontSize: 11, color: '#374151' }}>{h.descripcion}</td>
+                        <td style={{ padding: '4px 10px', borderBottom: '1px solid #f3f4f6', textAlign: 'center', fontSize: 11, color: '#d97706', fontWeight: 700 }}>+{h.porcentaje}%</td>
+                        <td style={{ padding: '4px 10px', borderBottom: '1px solid #f3f4f6', fontSize: 10, color: '#9ca3af' }}>{fmt(h.fecha)}</td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* ── Paso 6: Verificación de Eficacia ── */}
+      {acciones.some(a => a.verif_eficaz !== null && a.verif_eficaz !== undefined) && (
+        <div style={{ marginTop: 20 }}>
+          <SectionTitle num="6" label="Verificación de Eficacia" />
+          {acciones.filter(a => a.verif_eficaz !== null && a.verif_eficaz !== undefined).map((a, i) => {
+            const resp = profiles.find(p => p.id === a.responsable_id);
+            const eficaz = a.verif_eficaz;
+            return (
+              <div key={a.id} style={{ marginBottom: 12, border: `1px solid ${eficaz ? '#86efac' : '#fca5a5'}`, borderRadius: 8, overflow: 'hidden' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', background: eficaz ? '#f0fdf4' : '#fff1f2' }}>
+                  <span style={{ fontWeight: 700, fontSize: 12 }}>{a.codigo}</span>
+                  <span style={{ fontWeight: 700, fontSize: 12, color: eficaz ? '#15803d' : '#DC2626' }}>{eficaz ? '✓ Eficaz' : '✗ No eficaz'}</span>
+                  {a.verif_fecha && <span style={{ fontSize: 11, color: '#6b7280', marginLeft: 'auto' }}>Evaluado: {fmt(a.verif_fecha)}</span>}
+                </div>
+                {a.verif_detalle && (
+                  <div style={{ padding: '8px 14px', fontSize: 11, color: '#374151', lineHeight: 1.5, background: '#fff' }}>
+                    {a.verif_detalle}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

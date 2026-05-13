@@ -8,10 +8,9 @@ const PASOS = [
   { paso: 1, label: 'Registrar el Incidente' },
   { paso: 2, label: 'Evidencias' },
   { paso: 3, label: 'Designar el equipo de Análisis' },
-  { paso: 4, label: 'Registrar el análisis de Causa Raíz' },
-  { paso: 5, label: 'Registrar el Plan de Trabajo' },
-  { paso: 6, label: 'Cerrar las Acciones' },
-  { paso: 7, label: 'Verificar la eficacia las Acciones' },
+  { paso: 4, label: 'Análisis de Causa Raíz' },
+  { paso: 5, label: 'Plan de Trabajo' },
+  { paso: 6, label: 'Verificar la Eficacia' },
 ];
 
 
@@ -225,9 +224,9 @@ export default function Incidentes() {
           <thead>
             <tr>
               <th>Tipo</th>
+              <th>Criticidad</th>
               <th>Nro.</th>
               <th>Fecha</th>
-              <th>Descripción</th>
               <th>Gerencia</th>
               <th>Emisor</th>
               <th>Progreso</th>
@@ -260,16 +259,22 @@ export default function Incidentes() {
                 return (
                   <tr key={h.id} onClick={() => navigate(`/sgi/incidentes/${h.id}`)}>
                     <td>
-                      <span className={`inc-tipo-badge ${h.tipo?.replace(' ', '-')}`}>{h.tipo}</span>
+                      {h.tipo_incidente && (
+                        <span className={`inc-tipo-badge ${h.tipo_incidente.replace(' ', '-')}`}>{h.tipo_incidente}</span>
+                      )}
+                    </td>
+                    <td>
+                      {h.clasificacion && (() => {
+                        const c = CLASIFICACION_FILTERS.find(f => f.value === h.clasificacion);
+                        const color = c?.color || '#9ca3af';
+                        return <span style={{ background: color + '20', color, borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>{h.clasificacion}</span>;
+                      })()}
                     </td>
                     <td>
                       <span className="inc-numero">{h.numero || '—'}</span>
                     </td>
                     <td>
                       <span className="inc-fecha">{formatDate(h.fecha)}</span>
-                    </td>
-                    <td>
-                      <span className="inc-desc">{h.descripcion || '—'}</span>
                     </td>
                     <td>
                       <span className="inc-gerencia">{h.gerencia || '—'}</span>

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Check, Clock, ChevronRight, Loader2, Search, User, Upload, X, Camera, HelpCircle, GitBranch, FileText } from 'lucide-react';
+import { ArrowLeft, Check, Clock, ChevronRight, Loader2, Search, User, Upload, X, Camera, HelpCircle, GitBranch, FileText, Paperclip } from 'lucide-react';
 import IncidenteInformePDF from './IncidenteInformePDF';
+import SistemicoPicker from './SistemicoPicker';
 import { useAuth } from '../../../contexts/AuthContext';
 import { supabase } from '../../../lib/supabase';
 import './IncidenteDetalle.css';
@@ -14,8 +15,7 @@ const STEPS = [
   { num: 3, label: 'Designar el Equipo de Análisis' },
   { num: 4, label: 'Análisis de Causa Raíz' },
   { num: 5, label: 'Plan de Trabajo' },
-  { num: 6, label: 'Cerrar las Acciones' },
-  { num: 7, label: 'Verificar la Eficacia' },
+  { num: 6, label: 'Verificar la Eficacia' },
 ];
 
 const CLASIF_COLORS = {
@@ -48,6 +48,7 @@ const EMPTY_FORM = {
   gerencia:                 '',
   sitio:                    '',
   emisor_id:                '',
+  responsable_verif:        [],
 };
 
 /* ── Toast ──────────────────────────────────────────────────────────────────── */
@@ -195,6 +196,7 @@ export default function IncidenteDetalle() {
   const [loading, setLoading]       = useState(!isNew);
   const [saving, setSaving]         = useState(false);
   const [toast, setToast]           = useState(null);
+  const [incEstado, setIncEstado]   = useState('abierto');
   const [showPDF, setShowPDF]       = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [pasoActual, setPasoActual] = useState(1);
@@ -206,6 +208,7 @@ export default function IncidenteDetalle() {
     tecnica: '5_porques',
     porques: ['', '', '', '', ''],
     causa_raiz: '',
+    sistemico_causas: [],
   });
 
   const [profiles, setProfiles] = useState([]);
@@ -217,6 +220,22 @@ export default function IncidenteDetalle() {
   const [pendingFotos, setPendingFotos]       = useState([]); // { file, preview }
   const [savedFotos, setSavedFotos]           = useState([]); // paths guardados en DB
   const fotoRef = useRef(null);
+
+  /* acciones (paso 5) */
+  const [acciones, setAcciones]               = useState([]);
+  const [accionesLoading, setAccionesLoading] = useState(false);
+  const [showAccionModal, setShowAccionModal] = useState(false);
+  const [editingAccion, setEditingAccion]     = useState(null);
+  const [accionForm, setAccionForm]           = useState({ descripcion: '', responsable_id: '', fecha_vencimiento: '', avance: 0 });
+  const [accionPicker, setAccionPicker]       = useState(false);
+  const [seleccionarVerif, setSeleccionarVerif] = useState(null);
+
+  /* verificación de eficacia (paso 6) */
+  const [accionesVerif, setAccionesVerif]     = useState({});
+  const step6FileRefs                         = useRef({});
+  const [confirmRectif, setConfirmRectif]     = useState(null);
+  const [rectifForm, setRectifForm]           = useState({ responsable_id: '', fecha_vencimiento: '' });
+  const [rectifPicker, setRectifPicker]       = useState(false);
 
   const clasifColor = CLASIF_COLORS[form.clasificacion] || null;
 
@@ -267,6 +286,7 @@ export default function IncidenteDetalle() {
       .then(({ data, error }) => {
         if (error) { console.error(error); setLoading(false); return; }
         if (data) {
+          setIncEstado(data.estado || 'abierto');
           setPasoActual(data.paso_actual || 1);
           setCurrentStep(data.paso_actual || 1);
           setForm({
@@ -288,7 +308,13 @@ export default function IncidenteDetalle() {
             gerencia:                   data.gerencia                || '',
             sitio:                      data.sitio                   || '',
             emisor_id:                  data.emisor_id               || '',
+            responsable_verif:          Array.isArray(data.responsable_verif) ? data.responsable_verif : [],
           });
+          // Inicializar estado del picker de verificación
+          if (data.paso_actual >= 5) {
+            const rv = Array.isArray(data.responsable_verif) ? data.responsable_verif : [];
+            setSeleccionarVerif(rv.length > 0 ? true : false);
+          }
           setSavedFotos(
             [data.foto_1, data.foto_2, data.foto_3, data.foto_4, data.foto_5, data.foto_6].filter(Boolean)
           );
@@ -300,6 +326,7 @@ export default function IncidenteDetalle() {
             tecnica: data.acr_tecnica || '5_porques',
             porques: (() => { const raw = Array.isArray(data.acr_porques) ? data.acr_porques.map(p => p || '') : []; while (raw.length < 5) raw.push(''); return raw; })(),
             causa_raiz: data.acr_causa_raiz || '',
+            sistemico_causas: (() => { try { return Array.isArray(data.acr_sistemico_causas) ? data.acr_sistemico_causas : JSON.parse(data.acr_sistemico_causas || '[]'); } catch { return []; } })(),
           });
         }
         setLoading(false);
@@ -307,6 +334,39 @@ export default function IncidenteDetalle() {
   }, [id]);
 
   const showToast = useCallback((msg, type = 'success') => setToast({ message: msg, type }), []);
+
+  /* ── Fetch acciones (pasos 5 y 6) ── */
+  const fetchAcciones = useCallback(async () => {
+    if (!id) return;
+    setAccionesLoading(true);
+    const { data } = await supabase
+      .from('inc_acciones')
+      .select('*, responsable:profiles!responsable_id(full_name)')
+      .eq('incidente_id', id)
+      .order('fecha_vencimiento', { ascending: true, nullsFirst: false });
+    setAcciones(data || []);
+    const verif = {};
+    for (const a of data || []) {
+      verif[a.id] = {
+        eficaz:   a.verif_eficaz ?? null,
+        fecha:    a.verif_fecha || '',
+        detalle:  a.verif_detalle || '',
+        adjuntos: [a.verif_adjunto_1, a.verif_adjunto_2, a.verif_adjunto_3].filter(Boolean),
+        files:    [],
+        saving:   false,
+      };
+    }
+    setAccionesVerif(verif);
+    setAccionesLoading(false);
+  }, [id]);
+
+  useEffect(() => {
+    if ((currentStep === 5 || currentStep === 6) && !isNew) fetchAcciones();
+  }, [currentStep, fetchAcciones, isNew]);
+
+  const esResponsableCalidad = profiles.find(p => p.id === user?.id)?.job_title === 'Responsable de Calidad';
+  const canVerif = (form.responsable_verif || []).includes(user?.id) ||
+    ((form.responsable_verif || []).length === 0 && esResponsableCalidad);
 
   /* ── Save paso 1 ── */
   const handleSavePaso1 = async (advance = false) => {
@@ -416,10 +476,11 @@ export default function IncidenteDetalle() {
     try {
       const nextPaso = advance ? Math.max(pasoActual, 5) : pasoActual;
       const { error } = await supabase.from('inc_incidentes').update({
-        acr_tecnica:    tecnicaEfectiva,
-        acr_porques:    step3.porques,
-        acr_causa_raiz: step3.causa_raiz || null,
-        paso_actual:    nextPaso,
+        acr_tecnica:           tecnicaEfectiva,
+        acr_porques:           step3.porques,
+        acr_causa_raiz:        step3.causa_raiz || null,
+        acr_sistemico_causas:  step3.sistemico_causas,
+        paso_actual:           nextPaso,
       }).eq('id', id);
       if (error) throw error;
       if (advance) { setPasoActual(p => Math.max(p, 5)); setCurrentStep(5); }
@@ -429,6 +490,103 @@ export default function IncidenteDetalle() {
       showToast('Error al guardar el análisis', 'error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  /* ── Save Paso 5: Plan de Trabajo (responsable_verif + avanzar) ── */
+  const handleSavePaso5 = async (advance = false) => {
+    if (!id) return;
+    setSaving(true);
+    try {
+      const nextPaso = advance ? Math.max(pasoActual, 6) : pasoActual;
+      const { error } = await supabase.from('inc_incidentes').update({
+        responsable_verif: form.responsable_verif,
+        paso_actual: nextPaso,
+      }).eq('id', id);
+      if (error) throw error;
+      if (advance) { setPasoActual(p => Math.max(p, 6)); setCurrentStep(6); }
+      showToast(advance ? 'Paso 5 completado' : 'Plan de trabajo guardado');
+    } catch (err) {
+      console.error(err);
+      showToast('Error al guardar', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /* ── Save verificación de eficacia (paso 6) ── */
+  const setVerif = (accionId, patch) =>
+    setAccionesVerif(prev => ({ ...prev, [accionId]: { ...prev[accionId], ...patch } }));
+
+  const handleSaveVerif = async (accionId) => {
+    const v = accionesVerif[accionId];
+    if (!v) return;
+    setVerif(accionId, { saving: true });
+    try {
+      const newUrls = [];
+      for (const file of (v.files || []).slice(0, 3 - (v.adjuntos || []).length)) {
+        const ext = file.name.split('.').pop();
+        const path = `verif/${accionId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error } = await supabase.storage.from('inc-adjuntos').upload(path, file);
+        if (!error) newUrls.push(path);
+      }
+      const allAdj = [...(v.adjuntos || []), ...newUrls].slice(0, 3);
+      await supabase.from('inc_acciones').update({
+        verif_eficaz:    v.eficaz,
+        verif_fecha:     v.fecha || null,
+        verif_detalle:   v.detalle || null,
+        verif_adjunto_1: allAdj[0] || null,
+        verif_adjunto_2: allAdj[1] || null,
+        verif_adjunto_3: allAdj[2] || null,
+      }).eq('id', accionId);
+      setVerif(accionId, { adjuntos: allAdj, files: [], saving: false });
+
+      if (v.eficaz === false) {
+        // Buscar si ya existe una rectificativa para este incidente
+        // Buscar rectificativas que tengan como origen esta acción específica
+        const { data: existentes } = await supabase
+          .from('inc_acciones')
+          .select('id, verif_eficaz')
+          .eq('parent_accion_id', accionId);
+
+        const rectifEficaz   = (existentes || []).some(r => r.verif_eficaz === true);
+        const rectifPendiente = (existentes || []).some(r => r.verif_eficaz !== true);
+
+        if (rectifEficaz) {
+          // Ya hay una rectificativa eficaz para esta acción — guardar sin crear otra
+          showToast('Verificación guardada. La rectificativa previa fue eficaz.', 'success');
+        } else if (rectifPendiente) {
+          // Ya hay una rectificativa en curso para esta acción — no crear otra
+          showToast('Ya existe una acción rectificativa en curso para esta acción.', 'warning');
+        } else {
+          // No hay rectificativas — crear una nueva
+          const { count } = await supabase
+            .from('inc_acciones').select('id', { count: 'exact', head: true })
+            .eq('incidente_id', id);
+          const codigo = `ACC-${String((count || 0) + 1).padStart(4, '0')}`;
+          await supabase.from('inc_acciones').insert({
+            incidente_id:      id,
+            codigo,
+            descripcion:       `[RECTIFICATIVA] ${v.detalle || 'Acción no fue eficaz — requiere nueva acción correctiva.'}`,
+            responsable_id:    rectifForm.responsable_id || null,
+            fecha_vencimiento: rectifForm.fecha_vencimiento || null,
+            avance:            0,
+            estado:            'pendiente',
+            tipo:              'rectificativa',
+            parent_accion_id:  accionId,
+          });
+          setRectifForm({ responsable_id: '', fecha_vencimiento: '' });
+          await supabase.from('inc_incidentes').update({ paso_actual: 5 }).eq('id', id);
+          setPasoActual(5);
+          setCurrentStep(5);
+          await fetchAcciones();
+          showToast('Acción no eficaz: se creó una acción rectificativa y se regresó al Paso 5', 'error');
+        }
+      } else {
+        showToast('Verificación guardada', 'success');
+      }
+    } catch {
+      setVerif(accionId, { saving: false });
     }
   };
 
@@ -449,6 +607,369 @@ export default function IncidenteDetalle() {
     }
   };
 
+  /* ── Render Step 5: Plan de Trabajo ── */
+  const renderStep5 = () => (
+    <>
+      <div className="ncd-form-section">
+        <p className="ncd-section-title">Acciones del Plan de Trabajo</p>
+        {accionesLoading ? (
+          <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)' }}>
+            <Loader2 size={24} style={{ animation: 'spin 0.7s linear infinite' }} />
+          </div>
+        ) : (
+          <div className="ncd-acciones-list">
+            {acciones.length === 0 && (
+              <div className="ncd-acciones-empty">
+                <p>No hay acciones registradas aún</p>
+                <span>Agregá la primera acción con el botón de abajo</span>
+              </div>
+            )}
+            {acciones.map(a => {
+              const pct = a.avance || 0;
+              const estadoColor = { pendiente: '#F59E0B', en_proceso: '#3B82F6', cerrada: '#10B981' }[a.estado] || '#9ca3af';
+              const diasRestantes = (() => {
+                if (a.estado === 'cerrada' || !a.fecha_vencimiento) return null;
+                const hoy = new Date(); hoy.setHours(0,0,0,0);
+                const vence = new Date(a.fecha_vencimiento); vence.setHours(0,0,0,0);
+                return Math.ceil((vence - hoy) / (1000 * 60 * 60 * 24));
+              })();
+              return (
+                <div key={a.id} className="ncd-accion-card" onClick={() => { setEditingAccion(a); setAccionForm({ descripcion: a.descripcion, responsable_id: a.responsable_id || '', fecha_vencimiento: a.fecha_vencimiento || '', avance: a.avance || 0 }); setShowAccionModal(true); }}>
+                  <div className="ncd-accion-card-header">
+                    <span className="ncd-accion-codigo">{a.codigo}</span>
+                    {a.tipo === 'rectificativa' && <span className="ncd-accion-badge-rectif">RECTIFICATIVA</span>}
+                    <span className="ncd-accion-estado" style={{ background: estadoColor + '20', color: estadoColor }}>{a.estado?.replace('_', ' ')}</span>
+                    {a.tipo === 'rectificativa' && a.parent_accion_id && (() => {
+                      const padre = acciones.find(x => x.id === a.parent_accion_id);
+                      return padre ? <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 4 }}>↳ de <strong>{padre.codigo}</strong></span> : null;
+                    })()}
+                    {diasRestantes !== null && (
+                      <span className={`ncd-accion-dias${diasRestantes < 0 ? ' vencida' : diasRestantes === 0 ? ' hoy' : diasRestantes <= 7 ? ' urgente' : ' normal'}`}>
+                        {diasRestantes < 0 ? `Vencida hace ${Math.abs(diasRestantes)} día${Math.abs(diasRestantes) !== 1 ? 's' : ''}` : diasRestantes === 0 ? 'Vence hoy' : `${diasRestantes} día${diasRestantes !== 1 ? 's' : ''} restante${diasRestantes !== 1 ? 's' : ''}`}
+                      </span>
+                    )}
+                    {a.tipo !== 'rectificativa' && (
+                      <button className="ncd-accion-delete" title="Eliminar acción" onClick={async e => {
+                        e.stopPropagation();
+                        if (!window.confirm(`¿Eliminar ${a.codigo}?`)) return;
+                        await supabase.from('inc_acciones').delete().eq('id', a.id);
+                        fetchAcciones();
+                      }}><X size={14} /></button>
+                    )}
+                  </div>
+                  <p className="ncd-accion-desc">{a.descripcion}</p>
+                  <div className="ncd-accion-card-footer">
+                    <span className="ncd-accion-meta">{a.responsable?.full_name || '—'}</span>
+                    {a.fecha_vencimiento && <span className="ncd-accion-meta">Vence: {new Date(a.fecha_vencimiento).toLocaleDateString('es-AR')}</span>}
+                    <div className="ncd-accion-progress-wrap">
+                      <div className="ncd-accion-progress-bar">
+                        <div className="ncd-accion-progress-fill" style={{ width: `${pct}%`, background: pct === 100 ? '#10B981' : 'var(--primary-color)' }} />
+                      </div>
+                      <span className="ncd-accion-pct">{pct}%</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <button type="button" className="ncd-step2-add-btn" style={{ marginTop: 12 }}
+          onClick={() => { setEditingAccion(null); setAccionForm({ descripcion: '', responsable_id: '', fecha_vencimiento: '', avance: 0 }); setShowAccionModal(true); }}>
+          + Nueva acción
+        </button>
+      </div>
+
+      <div className="ncd-form-section">
+        <p className="ncd-section-title">Responsable de Verificar la Eficacia</p>
+        {seleccionarVerif === null && (
+          <div className="ncd-verif-pregunta">
+            <p className="ncd-verif-pregunta-texto">¿Deseás asignar responsable(s) de verificación?</p>
+            <p className="ncd-verif-pregunta-hint">Si no lo hacés, el/la Responsable de Calidad llevará a cabo esta verificación.</p>
+            <div className="ncd-verif-pregunta-btns">
+              <button type="button" className="ncd-verif-btn-si" onClick={() => setSeleccionarVerif(true)}>Sí, quiero asignar</button>
+              <button type="button" className="ncd-verif-btn-no" onClick={() => { setSeleccionarVerif(false); setForm(f => ({ ...f, responsable_verif: [] })); }}>No, dejar al Responsable de Calidad</button>
+            </div>
+          </div>
+        )}
+        {seleccionarVerif === false && (() => {
+          const responsablesCalidad = profiles.filter(p => p.job_title === 'Responsable de Calidad');
+          return (
+            <div className="ncd-verif-calidad">
+              <p className="ncd-verif-calidad-texto">La verificación de eficacia quedará a cargo de <strong>{responsablesCalidad.length > 0 ? responsablesCalidad.map(p => p.full_name).join(', ') : 'el/la Responsable de Calidad'}</strong>.</p>
+              <button type="button" className="ncd-verif-cambiar" onClick={() => setSeleccionarVerif(null)}>Cambiar respuesta</button>
+            </div>
+          );
+        })()}
+        {seleccionarVerif === true && (
+          <>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>El auditor, emisor, responsables del proceso, responsable de análisis y participantes del equipo no pueden ser seleccionados.</p>
+            <div className="ncd-form-group" style={{ maxWidth: 400 }}>
+              <button type="button" className="ncd-multi-person-btn" onClick={() => setRectifPicker('verif')}>
+                {(form.responsable_verif || []).length === 0 ? (
+                  <span className="ncd-multi-person-placeholder"><User size={14} /> — Seleccionar —</span>
+                ) : (
+                  <div className="ncd-multi-person-tags">
+                    {profiles.filter(p => (form.responsable_verif || []).includes(p.id)).map(p => (
+                      <span key={p.id} className="ncd-multi-person-tag">{p.full_name}</span>
+                    ))}
+                  </div>
+                )}
+              </button>
+            </div>
+            <button type="button" className="ncd-verif-cambiar" style={{ marginTop: 8 }} onClick={() => { setSeleccionarVerif(null); setForm(f => ({ ...f, responsable_verif: [] })); }}>Cambiar respuesta</button>
+          </>
+        )}
+      </div>
+
+      <div className="incd-step-actions">
+        <button type="button" className="incd-btn-secondary" onClick={() => setCurrentStep(4)} disabled={saving}>
+          ← Paso anterior
+        </button>
+        <button type="button" className="incd-btn-secondary" onClick={() => handleSavePaso5(false)} disabled={saving}>
+          {saving ? <Loader2 size={14} className="incd-spin" /> : null} Guardar borrador
+        </button>
+        <button type="button" className="incd-btn-primary" onClick={() => handleSavePaso5(true)} disabled={saving || acciones.length === 0 || seleccionarVerif === null}>
+          <Check size={14} /> Siguiente paso
+        </button>
+      </div>
+
+      {rectifPicker === 'verif' && (
+        <PersonPickerModal
+          profiles={profiles.filter(p => !form.responsable_verif.includes(p.id))}
+          title="Agregar Verificador"
+          multi
+          selectedIds={form.responsable_verif}
+          onSelect={ids => setForm(f => ({ ...f, responsable_verif: ids }))}
+          onClose={() => setRectifPicker(null)}
+        />
+      )}
+    </>
+  );
+
+  /* ── Render Step 6: Verificar la Eficacia ── */
+  const renderStep6 = () => {
+    if (accionesLoading) return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+        <Loader2 size={24} style={{ animation: 'spin 0.7s linear infinite', color: 'var(--text-muted)' }} />
+      </div>
+    );
+    if (acciones.length === 0) return (
+      <div className="ncd-form-section">
+        <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>No hay acciones registradas en el Plan de Trabajo.</p>
+      </div>
+    );
+    const verifResponsables = profiles.filter(p => (form.responsable_verif || []).includes(p.id));
+    return (
+      <div className="ncd-form-section" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        {!canVerif && (
+          <div className="ncd-verif-locked">
+            <div className="ncd-verif-locked-icon"><User size={20} /></div>
+            <div className="ncd-verif-locked-body">
+              <span className="ncd-verif-locked-title">Verificación restringida</span>
+              <span className="ncd-verif-locked-desc">
+                {verifResponsables.length > 0
+                  ? <>La verificación de eficacia está a cargo de: <strong>{verifResponsables.map(p => p.full_name).join(', ')}</strong></>
+                  : 'No hay responsables de verificación asignados. Editá el Paso 5 para asignarlos.'}
+              </span>
+            </div>
+          </div>
+        )}
+        {acciones.map(a => {
+          const v = accionesVerif[a.id] || { eficaz: null, fecha: '', detalle: '', adjuntos: [], files: [], saving: false };
+          const totalAdj = (v.adjuntos?.length || 0) + (v.files?.length || 0);
+          const estadoColor = { pendiente: '#F59E0B', en_proceso: '#3B82F6', cerrada: '#10B981' }[a.estado] || '#9ca3af';
+          const accionPadre = a.parent_accion_id ? acciones.find(x => x.id === a.parent_accion_id) : null;
+          return (
+            <div key={a.id} className="ncd-step5-accion-card">
+              <div className="ncd-step5-accion-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontWeight: 700, fontSize: 13 }}>{a.codigo}</span>
+                  {a.tipo === 'rectificativa' && <span style={{ background: '#FEE2E2', color: '#DC2626', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>RECTIFICATIVA</span>}
+                  <span style={{ background: estadoColor + '20', color: estadoColor, borderRadius: 4, padding: '2px 10px', fontSize: 11, fontWeight: 600 }}>{a.estado?.replace('_', ' ')}</span>
+                  {accionPadre && (
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                      ↳ originada por <strong>{accionPadre.codigo}</strong>
+                    </span>
+                  )}
+                </div>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Vence: {a.fecha_vencimiento ? new Date(a.fecha_vencimiento).toLocaleDateString('es-AR') : '—'}</span>
+              </div>
+              <div className="ncd-step5-accion-body">
+                <div className="ncd-step5-col-left">
+                  <p style={{ fontSize: 13, color: 'var(--text-main)', marginBottom: 10 }}>{a.descripcion}</p>
+                  <div style={{ display: 'flex', gap: 20, marginBottom: 10 }}>
+                    <div><span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Responsable </span><span style={{ fontSize: 12 }}>{a.responsable?.full_name || '—'}</span></div>
+                    <div><span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)' }}>Avance </span><span style={{ fontSize: 12, fontWeight: 700, color: a.avance === 100 ? '#10B981' : 'var(--text-main)' }}>{a.avance || 0}%</span></div>
+                  </div>
+                  <div className="ncd-accion-progress-bar" style={{ marginBottom: 12 }}>
+                    <div className="ncd-accion-progress-fill" style={{ width: `${a.avance || 0}%`, background: a.avance === 100 ? '#10B981' : 'var(--primary-color)' }} />
+                  </div>
+                  <IncStep6Hitos accionId={a.id} />
+                </div>
+                <div className="ncd-step5-col-right">
+                  {!canVerif && v.eficaz !== null && v.eficaz !== undefined ? (
+                    <div className="ncd-step5-verif-readonly">
+                      <span className="ncd-step5-verif-readonly-label">Resultado</span>
+                      <span className={`ncd-step5-verif-readonly-result${v.eficaz ? ' si' : ' no'}`}>{v.eficaz ? '✓ Eficaz' : '✗ No eficaz'}</span>
+                      {v.fecha && <span className="ncd-step5-verif-readonly-meta">Fecha: {new Date(v.fecha).toLocaleDateString('es-AR')}</span>}
+                      {v.detalle && <span className="ncd-step5-verif-readonly-meta">{v.detalle}</span>}
+                    </div>
+                  ) : !canVerif ? (
+                    <div className="ncd-step5-verif-readonly ncd-step5-verif-readonly--pending">
+                      <span className="ncd-step5-verif-readonly-label">Pendiente de verificación</span>
+                    </div>
+                  ) : null}
+                  {canVerif && (
+                    <div className="ncd-step5-verif-block">
+                      <div className="ncd-step5-header"><span className="ncd-step5-header-title">Verificación de Eficacia</span></div>
+                      <div className="ncd-step5-eficaz-row">
+                        <span className="ncd-step5-eficaz-label">¿Fué eficaz?</span>
+                        <label className="ncd-step5-radio"><input type="radio" name={`eficaz-${a.id}`} checked={v.eficaz === true} onChange={() => setVerif(a.id, { eficaz: true })} /> Sí</label>
+                        <label className="ncd-step5-radio"><input type="radio" name={`eficaz-${a.id}`} checked={v.eficaz === false} onChange={() => setVerif(a.id, { eficaz: false })} /> No</label>
+                      </div>
+                      <div className="ncd-step5-detalle">
+                        <label className="ncd-step5-detalle-label">Fecha de evaluación:
+                          <input type="date" className="ncd-step5-fecha" style={{ marginLeft: 8 }} value={v.fecha} onChange={e => setVerif(a.id, { fecha: e.target.value })} />
+                        </label>
+                        <label className="ncd-step5-detalle-label" style={{ marginTop: 10 }}>Detalle:</label>
+                        <textarea rows={3} placeholder="Indique las causas que justifican la decisión..." value={v.detalle} onChange={e => setVerif(a.id, { detalle: e.target.value })} />
+                      </div>
+                      <div className="ncd-step5-adjuntos">
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {(v.adjuntos || []).map((path, i) => {
+                            const name = decodeURIComponent(path.split('/').pop().replace(/^\d+-[a-z0-9]+\./, ''));
+                            return (
+                              <span key={i} className="ncd-hito-file-chip">
+                                <FileText size={11} />
+                                {name.length > 20 ? name.slice(0, 18) + '…' : name}
+                                <button onClick={() => {
+                                  const updated = v.adjuntos.filter((_, j) => j !== i);
+                                  setVerif(a.id, { adjuntos: updated });
+                                  supabase.from('inc_acciones').update({ verif_adjunto_1: updated[0] || null, verif_adjunto_2: updated[1] || null, verif_adjunto_3: updated[2] || null }).eq('id', a.id);
+                                }}><X size={10} /></button>
+                              </span>
+                            );
+                          })}
+                          {(v.files || []).map((f, i) => (
+                            <span key={i} className="ncd-hito-file-chip"><FileText size={11} />{f.name.length > 20 ? f.name.slice(0, 18) + '…' : f.name}<button onClick={() => setVerif(a.id, { files: v.files.filter((_, j) => j !== i) })}><X size={10} /></button></span>
+                          ))}
+                          {totalAdj < 3 && (
+                            <>
+                              <input ref={el => step6FileRefs.current[a.id] = el} type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" style={{ display: 'none' }}
+                                onChange={e => { const sel = Array.from(e.target.files || []).slice(0, 3 - totalAdj); setVerif(a.id, { files: [...(v.files || []), ...sel] }); e.target.value = ''; }} />
+                              <button className="ncd-adjunto-pick-btn" onClick={() => step6FileRefs.current[a.id]?.click()}>
+                                <Paperclip size={12} /> Adjuntar
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="ncd-step5-footer">
+                        <button className="ncd-btn-primary"
+                          onClick={() => { if (v.eficaz === false) setConfirmRectif(a.id); else handleSaveVerif(a.id); }}
+                          disabled={v.saving || v.eficaz === null}>
+                          {v.saving ? <Loader2 size={13} style={{ animation: 'spin 0.7s linear infinite' }} /> : <Check size={13} />}
+                          Guardar
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Botón de cierre del incidente */}
+        {(() => {
+          const accionesNormales = acciones.filter(a => a.tipo !== 'rectificativa');
+
+          // Pendientes = acciones normales sin verificación guardada aún
+          const accionesPendientes = accionesNormales.filter(a => {
+            const v = accionesVerif[a.id];
+            return v?.eficaz === null || v?.eficaz === undefined;
+          });
+          const todasResueltas = accionesNormales.length > 0 && accionesPendientes.length === 0;
+
+          return (
+            <div style={{ marginTop: 28, padding: '16px 20px', background: todasResueltas ? '#f0fdf4' : 'var(--bg-card)', border: `1px solid ${todasResueltas ? '#86efac' : 'var(--border-color)'}`, borderRadius: 10 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: todasResueltas ? '#15803d' : 'var(--text-main)', marginBottom: todasResueltas ? 12 : 6 }}>
+                {todasResueltas ? '✓ Todas las acciones han sido verificadas y resueltas.' : 'Acciones pendientes de verificación:'}
+              </p>
+              {!todasResueltas && (
+                <ul style={{ margin: '4px 0 0 0', padding: '0 0 0 18px', fontSize: 12, color: 'var(--text-muted)' }}>
+                  {accionesPendientes.map(a => (
+                    <li key={a.id}>{a.codigo} — {a.descripcion?.slice(0, 60)}{a.descripcion?.length > 60 ? '…' : ''}</li>
+                  ))}
+                </ul>
+              )}
+              {todasResueltas && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  {incEstado === 'cerrado' ? (
+                    <button className="ncd-btn-secondary"
+                      onClick={async () => {
+                        if (!window.confirm('¿Reabrir este incidente?')) return;
+                        await supabase.from('inc_incidentes').update({ estado: 'abierto' }).eq('id', id);
+                        setIncEstado('abierto');
+                        showToast('Incidente reabierto', 'success');
+                      }}>
+                      Reabrir incidente
+                    </button>
+                  ) : (
+                    <button className="ncd-btn-primary" style={{ background: '#16a34a', padding: '10px 24px', fontSize: 14, gap: 8 }}
+                      onClick={async () => {
+                        if (!window.confirm('¿Cerrar definitivamente este incidente? Esta acción no se puede deshacer.')) return;
+                        await supabase.from('inc_incidentes').update({ estado: 'cerrado', paso_actual: 6 }).eq('id', id);
+                        setIncEstado('cerrado');
+                        showToast('Incidente cerrado correctamente', 'success');
+                        setTimeout(() => navigate(-1), 1500);
+                      }}>
+                      <Check size={15} /> Cerrar Incidente
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Modal de confirmación rectificativa */}
+        {confirmRectif && (
+          <div className="ncd-picker-overlay" onMouseDown={e => { if (e.target === e.currentTarget) setConfirmRectif(null); }}>
+            <div className="ncd-accion-modal" style={{ maxWidth: 420 }}>
+              <div className="ncd-accion-modal-header">
+                <h4>Acción No Eficaz</h4>
+                <button className="ncd-picker-close" onClick={() => setConfirmRectif(null)}><X size={16} /></button>
+              </div>
+              <div className="ncd-accion-modal-body" style={{ padding: '16px 20px', flexDirection: 'column', gap: 12 }}>
+                <p style={{ fontSize: 13, color: 'var(--text-main)' }}>Se creará una acción rectificativa y el incidente volverá al Paso 5. Completá los datos para la nueva acción:</p>
+                <div className="ncd-form-group">
+                  <label>Responsable de la acción rectificativa</label>
+                  <button type="button" className="ncd-person-picker-btn" onClick={() => setRectifPicker('rectif')}>
+                    {rectifForm.responsable_id ? profiles.find(p => p.id === rectifForm.responsable_id)?.full_name || 'Seleccionar' : 'Seleccionar responsable'}
+                  </button>
+                </div>
+                <div className="ncd-form-group">
+                  <label>Fecha de vencimiento</label>
+                  <input type="date" value={rectifForm.fecha_vencimiento} onChange={e => setRectifForm(f => ({ ...f, fecha_vencimiento: e.target.value }))} />
+                </div>
+              </div>
+              <div className="ncd-accion-modal-footer">
+                <button className="ncd-btn-secondary" onClick={() => setConfirmRectif(null)}>Cancelar</button>
+                <button className="ncd-btn-primary" onClick={() => { handleSaveVerif(confirmRectif); setConfirmRectif(null); }}>Confirmar y crear acción</button>
+              </div>
+            </div>
+            {rectifPicker === 'rectif' && (
+              <PersonPickerModal profiles={profiles} title="Seleccionar Responsable"
+                onSelect={p => { setRectifForm(f => ({ ...f, responsable_id: p.id })); setRectifPicker(null); }}
+                onClose={() => setRectifPicker(null)} />
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="incd-container">
@@ -463,6 +984,20 @@ export default function IncidenteDetalle() {
     <div className="incd-container">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       {showPDF && <IncidenteInformePDF incidenteId={id} onClose={() => setShowPDF(false)} />}
+      {showAccionModal && (
+        <IncAccionModal
+          editingAccion={editingAccion}
+          accionForm={accionForm}
+          setAccionForm={setAccionForm}
+          profiles={profiles}
+          accionPicker={accionPicker}
+          setAccionPicker={setAccionPicker}
+          onClose={() => { setShowAccionModal(false); fetchAcciones(); }}
+          onSaved={() => { setShowAccionModal(false); fetchAcciones(); }}
+          onHitoSaved={() => fetchAcciones()}
+          incidenteId={id}
+        />
+      )}
 
       {/* Header */}
       <div className="incd-page-header">
@@ -477,6 +1012,26 @@ export default function IncidenteDetalle() {
         )}
         {!isNew && form.tipo_incidente && (
           <span className="incd-clasif-badge">{form.tipo_incidente}</span>
+        )}
+        {!isNew && (
+          <span style={{
+            padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+            background: incEstado === 'cerrado' ? '#dcfce7' : '#fef9c3',
+            color: incEstado === 'cerrado' ? '#15803d' : '#854d0e',
+          }}>
+            {incEstado === 'cerrado' ? 'CERRADO' : 'ABIERTO'}
+          </span>
+        )}
+        {!isNew && incEstado === 'cerrado' && isAdmin && (
+          <button className="incd-pdf-btn" style={{ background: '#fef3c7', color: '#92400e', borderColor: '#fcd34d' }}
+            onClick={async () => {
+              if (!window.confirm('¿Reabrir este incidente?')) return;
+              await supabase.from('inc_incidentes').update({ estado: 'abierto' }).eq('id', id);
+              setIncEstado('abierto');
+              showToast('Incidente reabierto', 'success');
+            }}>
+            Reabrir
+          </button>
         )}
         {!isNew && pasoActual >= 2 && (
           <button className="incd-pdf-btn" onClick={() => setShowPDF(true)}>
@@ -556,11 +1111,265 @@ export default function IncidenteDetalle() {
                 }}
               />
             )}
-            {currentStep > 4 && <StepPlaceholder step={step} />}
+            {currentStep === 5 && renderStep5()}
+            {currentStep === 6 && renderStep6()}
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+/* ── IncStep6Hitos ───────────────────────────────────────────────────────────── */
+function IncStep6Hitos({ accionId }) {
+  const [hitos, setHitos] = useState([]);
+  useEffect(() => {
+    supabase.from('inc_acciones_hitos').select('fecha, porcentaje, descripcion')
+      .eq('accion_id', accionId).order('fecha', { ascending: true })
+      .then(({ data }) => setHitos(data || []));
+  }, [accionId]);
+  if (hitos.length === 0) return <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Sin hitos registrados.</p>;
+  return (
+    <div>
+      <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6 }}>Historial de avance</p>
+      {hitos.map((h, i) => (
+        <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 5, paddingLeft: 8, borderLeft: '2px solid var(--border-color)' }}>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{new Date(h.fecha).toLocaleDateString('es-AR')}</span>
+          <span style={{ fontSize: 11, color: '#059669', fontWeight: 700, whiteSpace: 'nowrap' }}>+{h.porcentaje}%</span>
+          <span style={{ fontSize: 11, color: 'var(--text-main)' }}>{h.descripcion}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── IncAccionModal ───────────────────────────────────────────────────────────── */
+function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, accionPicker, setAccionPicker, onClose, onSaved, onHitoSaved, incidenteId }) {
+  const [saving, setSaving]           = useState(false);
+  const [hitos, setHitos]             = useState([]);
+  const [hitosLoading, setHitosLoading] = useState(false);
+  const [hitoForm, setHitoForm]       = useState({ descripcion: '', fecha: new Date().toISOString().split('T')[0], porcentaje: 10 });
+  const [hitoFiles, setHitoFiles]     = useState([]);
+  const [savingHito, setSavingHito]   = useState(false);
+  const hitoFileRef = useRef();
+
+  useEffect(() => {
+    if (!editingAccion?.id) return;
+    setHitosLoading(true);
+    supabase.from('inc_acciones_hitos').select('*').eq('accion_id', editingAccion.id).order('fecha', { ascending: true })
+      .then(({ data }) => { setHitos(data || []); setHitosLoading(false); });
+  }, [editingAccion?.id]);
+
+  const avanceCalculado = Math.min(100, hitos.reduce((sum, h) => sum + (h.porcentaje || 0), 0));
+  const maxProximoHito  = Math.max(5, 100 - avanceCalculado);
+
+  const handleGuardar = async () => {
+    if (!accionForm.descripcion.trim()) return;
+    if (editingAccion?.id && hitoForm.descripcion.trim() && hitoFiles.length === 0) return;
+    setSaving(true);
+    try {
+      let accionId = editingAccion?.id;
+      if (!accionId) {
+        const { count } = await supabase.from('inc_acciones').select('id', { count: 'exact', head: true }).eq('incidente_id', incidenteId);
+        const codigo = `ACC-${String((count || 0) + 1).padStart(4, '0')}`;
+        const { data: inserted } = await supabase.from('inc_acciones').insert({
+          incidente_id: incidenteId,
+          codigo,
+          descripcion: accionForm.descripcion,
+          responsable_id: accionForm.responsable_id || null,
+          fecha_vencimiento: accionForm.fecha_vencimiento || null,
+          avance: 0,
+          estado: 'pendiente',
+        }).select('id').single();
+        accionId = inserted?.id;
+      }
+
+      // Insertar hito primero para que el avance final sea correcto
+      let nuevoHitoPorc = 0;
+      if (accionId && hitoForm.descripcion.trim() && hitoFiles.length > 0) {
+        const adjuntoUrls = [];
+        for (const file of hitoFiles.slice(0, 3)) {
+          const ext = file.name.split('.').pop();
+          const path = `hitos/${accionId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+          const { error } = await supabase.storage.from('inc-adjuntos').upload(path, file);
+          if (!error) adjuntoUrls.push(path);
+        }
+        nuevoHitoPorc = parseInt(Math.min(hitoForm.porcentaje, maxProximoHito), 10);
+        await supabase.from('inc_acciones_hitos').insert({
+          accion_id: accionId,
+          descripcion: hitoForm.descripcion.trim(),
+          fecha: hitoForm.fecha,
+          porcentaje: nuevoHitoPorc,
+          adjunto_1: adjuntoUrls[0] || null,
+          adjunto_2: adjuntoUrls[1] || null,
+          adjunto_3: adjuntoUrls[2] || null,
+        });
+        setHitoForm({ descripcion: '', fecha: new Date().toISOString().split('T')[0], porcentaje: 10 });
+        setHitoFiles([]);
+        onHitoSaved?.();
+      }
+
+      if (accionId) {
+        // Recalcular avance desde BD para garantizar consistencia
+        const { data: todosHitos } = await supabase
+          .from('inc_acciones_hitos')
+          .select('porcentaje')
+          .eq('accion_id', accionId);
+        const avanceFinal = Math.min(100, (todosHitos || []).reduce((s, h) => s + (h.porcentaje || 0), 0));
+        const estado = avanceFinal === 100 ? 'cerrada' : avanceFinal > 0 ? 'en_proceso' : 'pendiente';
+        await supabase.from('inc_acciones').update({
+          descripcion: accionForm.descripcion,
+          responsable_id: accionForm.responsable_id || null,
+          fecha_vencimiento: accionForm.fecha_vencimiento || null,
+          avance: avanceFinal,
+          estado,
+        }).eq('id', accionId);
+      }
+      onSaved();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteHito = async (hitoId) => {
+    await supabase.from('inc_acciones_hitos').delete().eq('id', hitoId);
+    const { data } = await supabase.from('inc_acciones_hitos').select('*').eq('accion_id', editingAccion.id).order('fecha', { ascending: true });
+    setHitos(data || []);
+    onHitoSaved?.();
+  };
+
+  return createPortal(
+    <div className="ncd-picker-overlay" onMouseDown={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="ncd-accion-modal">
+        <div className="ncd-accion-modal-header">
+          <h4>{editingAccion ? editingAccion.codigo : 'Nueva Acción'}</h4>
+          <button className="ncd-picker-close" onClick={onClose}><X size={16} /></button>
+        </div>
+        <div className={`ncd-accion-modal-body${editingAccion ? ' ncd-accion-modal-split' : ''}`}>
+          <div className="ncd-accion-col-left">
+            <div className="ncd-accion-datos">
+              <div className="ncd-form-group">
+                <label>Descripción</label>
+                <textarea rows={2} placeholder="Describí la acción a tomar..." value={accionForm.descripcion} onChange={e => setAccionForm(f => ({ ...f, descripcion: e.target.value }))} />
+              </div>
+              <div className="ncd-form-grid cols-2">
+                <div className="ncd-form-group">
+                  <label>Responsable</label>
+                  <button type="button" className="ncd-person-picker-btn" onClick={() => setAccionPicker(true)}>
+                    {accionForm.responsable_id ? profiles.find(p => p.id === accionForm.responsable_id)?.full_name || 'Seleccionar' : 'Seleccionar responsable'}
+                  </button>
+                </div>
+                <div className="ncd-form-group">
+                  <label>Fecha de vencimiento</label>
+                  <input type="date" value={accionForm.fecha_vencimiento} onChange={e => setAccionForm(f => ({ ...f, fecha_vencimiento: e.target.value }))} />
+                </div>
+              </div>
+              {editingAccion && (
+                <div className="ncd-accion-avance-display">
+                  <div className="ncd-accion-avance-top">
+                    <span>Avance total</span>
+                    <strong style={{ color: avanceCalculado === 100 ? '#10B981' : 'var(--text-main)' }}>{avanceCalculado}%</strong>
+                  </div>
+                  <div className="ncd-accion-progress-bar" style={{ height: 6 }}>
+                    <div className="ncd-accion-progress-fill" style={{ width: `${avanceCalculado}%`, background: avanceCalculado === 100 ? '#10B981' : 'var(--primary-color)' }} />
+                  </div>
+                </div>
+              )}
+            </div>
+            {editingAccion && (
+              <div className="ncd-accion-avance-block">
+                <p className="ncd-section-title" style={{ marginBottom: 4 }}>Registrar avance</p>
+                <div className="ncd-form-group">
+                  <label>¿Qué se hizo?</label>
+                  <textarea rows={2} placeholder="Describí la acción realizada..." value={hitoForm.descripcion} onChange={e => setHitoForm(f => ({ ...f, descripcion: e.target.value }))} />
+                </div>
+                <div className="ncd-form-grid cols-2">
+                  <div className="ncd-form-group">
+                    <label>Fecha</label>
+                    <input type="date" value={hitoForm.fecha} onChange={e => setHitoForm(f => ({ ...f, fecha: e.target.value }))} />
+                  </div>
+                  <div className="ncd-form-group">
+                    <label>% que aporta: <strong>{Math.min(hitoForm.porcentaje, maxProximoHito)}%</strong> {avanceCalculado >= 100 && <span style={{ color: '#E71D36', fontSize: 11 }}>— acción al 100%</span>}</label>
+                    <input type="range" min={5} max={maxProximoHito} step={5} value={Math.min(hitoForm.porcentaje, maxProximoHito)} onChange={e => setHitoForm(f => ({ ...f, porcentaje: Number(e.target.value) }))} className="ncd-avance-slider" disabled={avanceCalculado >= 100} />
+                  </div>
+                </div>
+                <div className="ncd-hito-adjuntos-picker">
+                  <input ref={hitoFileRef} type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" style={{ display: 'none' }}
+                    onChange={e => { const selected = Array.from(e.target.files || []).slice(0, 3); setHitoFiles(selected); e.target.value = ''; }} />
+                  <button type="button" className="ncd-adjunto-pick-btn" onClick={() => hitoFileRef.current?.click()} disabled={avanceCalculado >= 100}>
+                    <Paperclip size={13} />
+                    {hitoFiles.length > 0 ? `${hitoFiles.length} archivo${hitoFiles.length > 1 ? 's' : ''} seleccionado${hitoFiles.length > 1 ? 's' : ''}` : 'Adjuntar archivos (máx. 3)'}
+                  </button>
+                  {hitoFiles.length > 0 && (
+                    <div className="ncd-hito-files-preview">
+                      {hitoFiles.map((f, i) => (
+                        <span key={i} className="ncd-hito-file-chip"><FileText size={11} />{f.name.length > 22 ? f.name.slice(0, 20) + '…' : f.name}<button onClick={() => setHitoFiles(prev => prev.filter((_, j) => j !== i))}><X size={10} /></button></span>
+                      ))}
+                    </div>
+                  )}
+                  {hitoForm.descripcion.trim() && hitoFiles.length === 0 && (
+                    <p className="ncd-hito-adjunto-hint">Este campo es obligatorio, por favor, dejá la evidencia de tu acción.</p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          {editingAccion && (
+            <div className="ncd-accion-col-right">
+              <p className="ncd-section-title" style={{ marginBottom: 14 }}>
+                Historial {hitos.length > 0 && <span style={{ fontWeight: 400, textTransform: 'none', fontSize: 12 }}>— {hitos.length} hito{hitos.length !== 1 ? 's' : ''}</span>}
+              </p>
+              <div className="ncd-hitos-list">
+                {hitosLoading ? (
+                  <div style={{ textAlign: 'center', padding: 16 }}><Loader2 size={18} style={{ animation: 'spin 0.7s linear infinite', color: 'var(--text-muted)' }} /></div>
+                ) : hitos.length === 0 ? (
+                  <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', padding: '20px 0' }}>Aún no hay hitos registrados</p>
+                ) : hitos.map(h => (
+                  <div key={h.id} className="ncd-hito-item">
+                    <div className="ncd-hito-dot" />
+                    <div className="ncd-hito-content">
+                      <div className="ncd-hito-header">
+                        <span className="ncd-hito-fecha">{new Date(h.fecha).toLocaleDateString('es-AR')}</span>
+                        <span className="ncd-hito-pct">+{h.porcentaje}%</span>
+                        <button className="ncd-adjunto-remove" onClick={() => handleDeleteHito(h.id)} title="Eliminar hito"><X size={13} /></button>
+                      </div>
+                      <p className="ncd-hito-desc">{h.descripcion}</p>
+                      {[h.adjunto_1, h.adjunto_2, h.adjunto_3].filter(Boolean).map((path, i) => {
+                        const name = decodeURIComponent(path.split('/').pop().replace(/^\d+-[a-z0-9]+\./, ''));
+                        return (
+                          <button key={i} className="ncd-hito-file-chip" style={{ marginTop: 4 }}
+                            onClick={async () => {
+                              const { data } = await supabase.storage.from('inc-adjuntos').createSignedUrl(path, 3600);
+                              if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+                            }}>
+                            <FileText size={11} />
+                            {name.length > 24 ? name.slice(0, 22) + '…' : name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="ncd-accion-modal-footer">
+          <button className="ncd-btn-secondary" onClick={onClose}>Cancelar</button>
+          <button className="ncd-btn-primary" onClick={handleGuardar}
+            disabled={saving || !accionForm.descripcion.trim() || (editingAccion?.id && hitoForm.descripcion.trim() && hitoFiles.length === 0)}>
+            {saving ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : <Check size={14} />}
+            {editingAccion ? 'Guardar cambios' : 'Agregar acción'}
+          </button>
+        </div>
+      </div>
+      {accionPicker && (
+        <PersonPickerModal profiles={profiles} title="Seleccionar Responsable"
+          onSelect={p => { setAccionForm(f => ({ ...f, responsable_id: p.id })); setAccionPicker(false); }}
+          onClose={() => setAccionPicker(false)} />
+      )}
+    </div>,
+    document.getElementById('portal-root')
   );
 }
 
@@ -881,17 +1690,11 @@ function Step3({ step3, setStep3, clasificacion, saving, pasoActual, onSave, onS
       {/* Sistémico */}
       {tecnicaEfectiva === 'sistemico' && (
         <div className="incd-form-section">
-          <p className="incd-section-title">Análisis Sistémico</p>
-          <div className="incd-form-group">
-            <label className="incd-form-label">Descripción del análisis</label>
-            <textarea
-              rows={6}
-              placeholder="Describe el análisis sistémico: factores organizacionales, humanos, técnicos y ambientales que contribuyeron al incidente..."
-              value={step3.sistemico || ''}
-              onChange={e => setStep3(s => ({ ...s, sistemico: e.target.value }))}
-              className="incd-textarea"
-            />
-          </div>
+          <p className="incd-section-title">Análisis Sistémico — Selección de Causas</p>
+          <SistemicoPicker
+            value={step3.sistemico_causas || []}
+            onChange={causas => setStep3(s => ({ ...s, sistemico_causas: causas }))}
+          />
         </div>
       )}
 

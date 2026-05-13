@@ -1,5 +1,5 @@
 .sidebar {
-  width: 260px;
+  width: 280px;
   height: 100vh;
   background: linear-gradient(180deg, #141414 0%, #0f0f0f 100%);
   border-right: 1px solid transparent;
@@ -325,7 +325,7 @@
 @media (max-width: 768px) {
   .sidebar {
     transform: translateX(-100%);
-    width: 260px !important; /* Mobile doesn't use collapsed state */
+    width: 280px !important; /* Mobile doesn't use collapsed state */
     animation: none;
   }
 

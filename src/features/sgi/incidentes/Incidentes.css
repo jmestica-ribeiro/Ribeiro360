@@ -416,11 +416,19 @@ body.dark-theme .inc-estado-btn.active {
 .inc-tipo-badge.Incidente       { background: rgba(245,158,11,0.12); color: #d97706; }
 .inc-tipo-badge.Casi-Accidente  { background: rgba(59,130,246,0.12); color: #2563eb; }
 .inc-tipo-badge.Enfermedad      { background: rgba(139,92,246,0.12); color: #7c3aed; }
+.inc-tipo-badge.Personal        { background: rgba(231,29,54,0.12);  color: #E71D36; }
+.inc-tipo-badge.Vehicular       { background: rgba(245,158,11,0.12); color: #d97706; }
+.inc-tipo-badge.Ambiental       { background: rgba(16,185,129,0.12); color: #047857; }
+.inc-tipo-badge.Industrial      { background: rgba(59,130,246,0.12); color: #2563eb; }
 
 body.dark-theme .inc-tipo-badge.Accidente      { background: rgba(231,29,54,0.2); }
 body.dark-theme .inc-tipo-badge.Incidente      { background: rgba(245,158,11,0.2); }
 body.dark-theme .inc-tipo-badge.Casi-Accidente { background: rgba(59,130,246,0.2); }
 body.dark-theme .inc-tipo-badge.Enfermedad     { background: rgba(139,92,246,0.2); }
+body.dark-theme .inc-tipo-badge.Personal       { background: rgba(231,29,54,0.2); }
+body.dark-theme .inc-tipo-badge.Vehicular      { background: rgba(245,158,11,0.2); }
+body.dark-theme .inc-tipo-badge.Ambiental      { background: rgba(16,185,129,0.2); }
+body.dark-theme .inc-tipo-badge.Industrial     { background: rgba(59,130,246,0.2); }
 
 .inc-numero {
   font-weight: 700;

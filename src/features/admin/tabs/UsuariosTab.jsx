@@ -84,9 +84,10 @@ const SyncPanel = ({ onSuccess }) => {
           </div>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             {[
-              { label: 'Creados', value: result.creados, color: '#16a34a' },
-              { label: 'Ya existían', value: result.ya_existian, color: '#2563eb' },
-              { label: 'Omitidos', value: result.omitidos, color: '#9ca3af' },
+              { label: 'Creados',     value: result.creados,      color: '#16a34a' },
+              { label: 'Ya existían', value: result.ya_existian,  color: '#2563eb' },
+              { label: 'Inactivados', value: result.inactivados,  color: '#f59e0b' },
+              { label: 'Omitidos',    value: result.omitidos,     color: '#9ca3af' },
             ].map(({ label, value, color }) => (
               <div key={label} style={{ textAlign: 'center' }}>
                 <p style={{ fontSize: 20, fontWeight: 800, color }}>{value}</p>
@@ -203,8 +204,9 @@ const UsuariosTab = () => {
                       </div>
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <p style={{ fontWeight: '700', fontSize: '14px' }}>{u.full_name}</p>
+                          <p style={{ fontWeight: '700', fontSize: '14px', color: u.is_active === false ? 'var(--text-muted)' : 'var(--text-main)' }}>{u.full_name}</p>
                           {isSelf && <span style={{ fontSize: '11px', background: 'var(--primary-color)', padding: '1px 7px', borderRadius: '10px', fontWeight: '700' }}>Tú</span>}
+                          {u.is_active === false && <span style={{ fontSize: '11px', background: '#fef3c7', color: '#b45309', padding: '1px 7px', borderRadius: '10px', fontWeight: '700' }}>Inactivo</span>}
                         </div>
                         <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{u.email}</p>
                       </div>
