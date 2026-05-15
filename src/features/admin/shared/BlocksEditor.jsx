@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Type, Image as ImageIcon, Video, Square, CreditCard } from 'lucide-react';
+import RichTextEditor from './RichTextEditor';
 
 /**
  * Editor de bloques de contenido compartido entre OnboardingTab y CapacitacionesTab.
@@ -29,12 +30,9 @@ const BlocksEditor = ({ blocks, onUpdate, onUpdateMeta, onRemove, onAdd }) => (
           </div>
 
           {block.tipo === 'texto' && (
-            <textarea
-              className="form-control"
-              rows="3"
-              placeholder="Texto..."
+            <RichTextEditor
               value={block.contenido}
-              onChange={e => onUpdate(block.id, 'contenido', e.target.value)}
+              onChange={html => onUpdate(block.id, 'contenido', html)}
             />
           )}
 

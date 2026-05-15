@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, ChevronLeft, Building2, Briefcase, FileText, CheckCircle, Clock, Users, Shield, GraduationCap, Award, Rocket, Heart, Coffee, HelpCircle, Bell, Star, Info, Loader2 } from 'lucide-react';
-import { fetchOnboardingContenido } from '../../services/onboardingService';
+import { ChevronRight, ChevronLeft, Building2, Briefcase, FileText, CheckCircle, Clock, Users, Shield, GraduationCap, Award, Rocket, Heart, Coffee, HelpCircle, Bell, Star, Info, PartyPopper } from 'lucide-react';
+import { fetchOnboardingContenido, marcarInduccionCompletada } from '../../services/onboardingService';
+import { useAuth } from '../../contexts/AuthContext';
 import './Onboarding.css';
 
 const iconMap = {
@@ -22,20 +23,158 @@ const iconMap = {
   default: <FileText size={48} />
 };
 
+// ── Confetti particle ────────────────────────────────────────────────────────
+const CONFETTI_COLORS = ['#F2DC00', '#1A1A1A', '#3B82F6', '#10B981', '#E71D36', '#F59E0B', '#8B5CF6'];
+
+function Confetti() {
+  const particles = Array.from({ length: 60 }, (_, i) => ({
+    id: i,
+    color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+    left: `${Math.random() * 100}%`,
+    delay: Math.random() * 1.2,
+    duration: 2.5 + Math.random() * 2,
+    size: 6 + Math.random() * 8,
+    rotate: Math.random() * 360,
+  }));
+
+  return (
+    <div className="onboarding-confetti-wrap" aria-hidden>
+      {particles.map(p => (
+        <motion.div
+          key={p.id}
+          className="onboarding-confetti-particle"
+          style={{ left: p.left, width: p.size, height: p.size, background: p.color, borderRadius: Math.random() > 0.5 ? '50%' : 2 }}
+          initial={{ y: -20, opacity: 1, rotate: p.rotate }}
+          animate={{ y: '100vh', opacity: [1, 1, 0], rotate: p.rotate + 360 }}
+          transition={{ duration: p.duration, delay: p.delay, ease: 'easeIn' }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ── Pantalla de Felicitaciones ───────────────────────────────────────────────
+function PantallaFelicitaciones({ nombre, yaCompletada, onRehacer }) {
+  const [showConfetti, setShowConfetti] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setShowConfetti(false), 4000);
+    return () => clearTimeout(t);
+  }, []);
+
+  const firstName = nombre?.split(' ')[0] || '';
+
+  return (
+    <motion.div
+      className="onboarding-felicitaciones"
+      initial={{ opacity: 0, scale: 0.92 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.5, ease: 'easeOut' }}
+    >
+      {showConfetti && !yaCompletada && <Confetti />}
+
+      <div className="onboarding-felicitaciones-inner">
+        {/* Logo / ícono central */}
+        <motion.div
+          className="onboarding-felicit-icon"
+          initial={{ scale: 0, rotate: -20 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ delay: 0.2, type: 'spring', stiffness: 200, damping: 12 }}
+        >
+          <PartyPopper size={40} color="#111827" />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.5 }}
+        >
+          <p className="onboarding-felicit-eyebrow">
+            {yaCompletada ? 'Inducción ya realizada' : '¡Inducción completada!'}
+          </p>
+          <h1 className="onboarding-felicit-title">
+            Bienvenido/a{firstName ? ` a Ribeiro,` : ' a Ribeiro'}
+            {firstName && <span className="onboarding-felicit-name"> {firstName}</span>}
+          </h1>
+          <p className="onboarding-felicit-sub">
+            {yaCompletada
+              ? 'Ya completaste tu proceso de inducción. Todo el contenido de la intranet está disponible para vos.'
+              : 'Ya sos parte del equipo. Estamos muy contentos de tenerte con nosotros.'}
+          </p>
+        </motion.div>
+
+        <motion.div
+          className="onboarding-felicit-badges"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.65, duration: 0.45 }}
+        >
+          {[
+            { icon: CheckCircle, label: 'Inducción completada', color: '#10B981' },
+            { icon: Shield,      label: 'Acceso habilitado',    color: '#3B82F6' },
+            { icon: Star,        label: 'Parte del equipo',     color: '#F59E0B' },
+          ].map(({ icon: Icon, label, color }) => (
+            <div key={label} className="onboarding-felicit-badge">
+              <Icon size={16} color={color} />
+              <span>{label}</span>
+            </div>
+          ))}
+        </motion.div>
+
+        <motion.div
+          style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.9 }}
+        >
+          <a href="/" className="onboarding-felicit-cta">
+            Ir al Inicio <ChevronRight size={17} />
+          </a>
+          {yaCompletada && (
+            <button className="onboarding-felicit-cta-secondary" onClick={onRehacer}>
+              Rehacer inducción
+            </button>
+          )}
+        </motion.div>
+      </div>
+    </motion.div>
+  );
+}
+
 const Onboarding = () => {
+  const { profile, isLoading: authLoading } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [steps, setSteps] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [completado, setCompletado] = useState(false);
 
   useEffect(() => {
-    fetchOnboardingContenido()
-      .then(({ data }) => setSteps(data))
-      .catch(err => console.error('Error al cargar el onboarding:', err))
-      .finally(() => setIsLoading(false));
-  }, []);
+    if (authLoading) return;
 
-  const handleNext = () => {
-    if (currentStep < steps.length - 1) setCurrentStep(currentStep + 1);
+    const load = async () => {
+      if (profile?.onboarding_completed) {
+        setCompletado(true);
+        setIsLoading(false);
+        return;
+      }
+      try {
+        const { data } = await fetchOnboardingContenido();
+        setSteps(data);
+      } catch (err) {
+        console.error('Error al cargar el onboarding:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, [authLoading, profile]);
+
+  const handleNext = async () => {
+    if (currentStep < steps.length - 1) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      if (profile?.id) await marcarInduccionCompletada(profile.id);
+      setCompletado(true);
+    }
   };
 
   const handlePrev = () => {
@@ -62,6 +201,27 @@ const Onboarding = () => {
            </div>
            <div className="skeleton" style={{ height: '200px', width: '100%', marginTop: '24px' }}></div>
         </div>
+      </div>
+    );
+  }
+
+  if (completado) {
+    const handleRehacer = async () => {
+      setCompletado(false);
+      setCurrentStep(0);
+      setIsLoading(true);
+      const { data } = await fetchOnboardingContenido();
+      setSteps(data);
+      setIsLoading(false);
+    };
+
+    return (
+      <div className="onboarding-container">
+        <PantallaFelicitaciones
+          nombre={profile?.full_name}
+          yaCompletada={!!profile?.onboarding_completed}
+          onRehacer={handleRehacer}
+        />
       </div>
     );
   }
@@ -102,13 +262,11 @@ const Onboarding = () => {
     switch (block.tipo) {
       case 'texto':
         return (
-          <p 
-            key={block.id} 
-            className="step-text-block"
-            style={{ fontWeight: metadata.is_bold ? 'bold' : 'normal' }}
-          >
-            {block.contenido}
-          </p>
+          <div
+            key={block.id}
+            className="step-text-block step-rich-text"
+            dangerouslySetInnerHTML={{ __html: block.contenido }}
+          />
         );
       case 'banner':
         return (
@@ -161,6 +319,31 @@ const Onboarding = () => {
             ))}
           </div>
         );
+      case 'servicios': {
+        let servicios = [];
+        try { servicios = JSON.parse(block.contenido || '[]'); } catch(e) {}
+        return (
+          <div key={block.id} className="step-servicios-wrap">
+            {metadata.intro && (
+              <p className="step-servicios-intro">{metadata.intro}</p>
+            )}
+            <div className="step-servicios-grid">
+              {servicios.map((s, idx) => (
+                <div key={idx} className="step-servicio-card">
+                  <h4 className="step-servicio-titulo">{s.titulo}</h4>
+                  {s.clientes && (
+                    <span className="step-servicio-clientes">{s.clientes}</span>
+                  )}
+                  <div className="step-servicio-sep" />
+                  {s.descripcion && (
+                    <p className="step-servicio-desc">{s.descripcion}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
       case 'video':
         return (
           <div key={block.id} className="step-video-block">
@@ -202,7 +385,9 @@ const Onboarding = () => {
               <span className="step-title-small">{step.titulo}</span>
             </div>
           ))}
-          <div className="progress-line" style={{ width: `${(currentStep / (steps.length - 1)) * 100}%` }}></div>
+          <div className="progress-line-track">
+            <div className="progress-line-fill" style={{ width: `${(currentStep / (steps.length - 1)) * 100}%` }} />
+          </div>
         </div>
 
         {/* Step Content with Animation */}

@@ -70,6 +70,18 @@ export async function reorderOnboardingSteps(stepsOrdenados) {
 }
 
 /**
+ * Marca onboarding_completed = true en el perfil del usuario.
+ */
+export async function marcarInduccionCompletada(userId) {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ onboarding_completed: true })
+    .eq('id', userId);
+  if (error) console.error('[onboardingService] marcarInduccionCompletada:', error.message);
+  return { error };
+}
+
+/**
  * Carga los steps activos con sus bloques ya mergeados.
  * Retorna un array de steps, cada uno con una propiedad `blocks`.
  */
