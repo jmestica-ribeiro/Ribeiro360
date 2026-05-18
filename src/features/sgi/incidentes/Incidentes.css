@@ -352,7 +352,7 @@ body.dark-theme .inc-estado-btn.active {
 .inc-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .inc-table thead {
@@ -361,9 +361,9 @@ body.dark-theme .inc-estado-btn.active {
 }
 
 .inc-table th {
-  padding: 12px 16px;
+  padding: 9px 12px;
   text-align: left;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.6px;
@@ -386,19 +386,20 @@ body.dark-theme .inc-estado-btn.active {
 }
 
 .inc-table td {
-  padding: 14px 16px;
+  padding: 10px 12px;
   vertical-align: middle;
   color: var(--text-main);
 }
 
-.inc-table th:nth-child(1), .inc-table td:nth-child(1) { width: 100px; }
-.inc-table th:nth-child(2), .inc-table td:nth-child(2) { width: 110px; white-space: nowrap; }
-.inc-table th:nth-child(3), .inc-table td:nth-child(3) { width: 110px; }
-.inc-table th:nth-child(4), .inc-table td:nth-child(4) { }
-.inc-table th:nth-child(5), .inc-table td:nth-child(5) { width: 160px; white-space: nowrap; }
-.inc-table th:nth-child(6), .inc-table td:nth-child(6) { width: 140px; white-space: nowrap; }
-.inc-table th:nth-child(7), .inc-table td:nth-child(7) { width: 120px; }
-.inc-table th:nth-child(8), .inc-table td:nth-child(8) { width: 90px; }
+.inc-table { table-layout: auto; }
+.inc-table th:nth-child(1), .inc-table td:nth-child(1) { width: 1%; white-space: nowrap; }
+.inc-table th:nth-child(2), .inc-table td:nth-child(2) { width: 1%; white-space: nowrap; }
+.inc-table th:nth-child(3), .inc-table td:nth-child(3) { width: 1%; white-space: nowrap; }
+.inc-table th:nth-child(4), .inc-table td:nth-child(4) { width: 1%; white-space: nowrap; }
+.inc-table th:nth-child(5), .inc-table td:nth-child(5) { }
+.inc-table th:nth-child(6), .inc-table td:nth-child(6) { width: 1%; white-space: nowrap; }
+.inc-table th:nth-child(7), .inc-table td:nth-child(7) { width: 1%; white-space: nowrap; }
+.inc-table th:nth-child(8), .inc-table td:nth-child(8) { width: 1%; white-space: nowrap; }
 
 /* Tipo badge */
 .inc-tipo-badge {
@@ -433,14 +434,14 @@ body.dark-theme .inc-tipo-badge.Industrial     { background: rgba(59,130,246,0.2
 .inc-numero {
   font-weight: 700;
   font-family: monospace;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-main);
   white-space: nowrap;
 }
 
 .inc-fecha {
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -456,34 +457,41 @@ body.dark-theme .inc-tipo-badge.Industrial     { background: rgba(59,130,246,0.2
 
 .inc-gerencia,
 .inc-emisor {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-muted);
   white-space: nowrap;
 }
 
 .inc-paso-cell {
-  min-width: 110px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inc-paso-ring {
+  flex-shrink: 0;
+  transform: rotate(-90deg);
+}
+
+.inc-paso-ring-bg {
+  fill: none;
+  stroke: var(--border-color);
+  stroke-width: 3.5;
+}
+
+.inc-paso-ring-fill {
+  fill: none;
+  stroke: #E71D36;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.4s ease;
 }
 
 .inc-paso-label {
   font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
-  margin-bottom: 5px;
-}
-
-.inc-paso-bar-bg {
-  height: 5px;
-  background: var(--border-color);
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.inc-paso-bar-fill {
-  height: 100%;
-  background: #E71D36;
-  border-radius: 3px;
-  transition: width 0.4s ease;
+  white-space: nowrap;
 }
 
 .inc-estado-badge {
@@ -552,7 +560,7 @@ body.dark-theme .inc-estado-badge.cerrado {
 
 /* ── Skeleton ───────────────────────────────────────────────────────────────── */
 .inc-skeleton-row td {
-  padding: 16px;
+  padding: 10px 12px;
 }
 
 .inc-skeleton-cell {

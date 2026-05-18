@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { getNovedadPublicUrl } from '../../services/novedadesService';
 import './BannerNovedades.css';
 
 const AUTO_PLAY_MS = 5000;
@@ -8,8 +8,7 @@ const AUTO_PLAY_MS = 5000;
 const getPublicUrl = (path) => {
   if (!path) return null;
   if (path.startsWith('http')) return path;
-  const { data } = supabase.storage.from('novedades').getPublicUrl(path);
-  return data?.publicUrl || null;
+  return getNovedadPublicUrl(path);
 };
 
 const BannerNovedades = ({ novedades }) => {

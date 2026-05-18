@@ -85,16 +85,16 @@ const AdminPanel = () => {
         </div>
 
         <div className="admin-workarea">
-          {activeTab === 'capacitaciones' && <CapacitacionesTab />}
-          {activeTab === 'paf'            && <PAFTab />}
-          {activeTab === 'onboarding'     && <OnboardingTab />}
-          {activeTab === 'eventos'        && <EventosTab />}
-          {activeTab === 'faq'            && <FAQTab />}
-          {activeTab === 'organigrama'    && <OrganigramaTab />}
-          {activeTab === 'sgi'            && <SGITab />}
-          {activeTab === 'novedades'      && <NovedadesTab />}
-          {activeTab === 'multimedia'     && <MultimediaTab />}
-          {activeTab === 'herramientas'  && <HerramientasTab />}
+          {activeTab === 'capacitaciones' && allowedTabs.includes('capacitaciones') && <CapacitacionesTab />}
+          {activeTab === 'paf'            && allowedTabs.includes('paf')            && <PAFTab />}
+          {activeTab === 'onboarding'     && allowedTabs.includes('onboarding')     && <OnboardingTab />}
+          {activeTab === 'eventos'        && allowedTabs.includes('eventos')        && <EventosTab />}
+          {activeTab === 'faq'            && allowedTabs.includes('faq')            && <FAQTab />}
+          {activeTab === 'organigrama'    && allowedTabs.includes('organigrama')    && <OrganigramaTab />}
+          {activeTab === 'sgi'            && allowedTabs.includes('sgi')            && <SGITab />}
+          {activeTab === 'novedades'      && allowedTabs.includes('novedades')      && <NovedadesTab />}
+          {activeTab === 'multimedia'     && allowedTabs.includes('multimedia')     && <MultimediaTab />}
+          {activeTab === 'herramientas'   && allowedTabs.includes('herramientas')   && <HerramientasTab />}
           {activeTab === 'portales' && isSuperAdmin && <PortalesTab />}
           {activeTab === 'nav'      && isSuperAdmin && <NavTab />}
           {activeTab === 'usuarios' && isSuperAdmin && <UsuariosTab />}

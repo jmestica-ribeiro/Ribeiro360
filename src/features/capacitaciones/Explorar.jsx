@@ -97,10 +97,13 @@ const Explorar = () => {
   }, [loadingVis]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleToggleVisibilidad = async (dept) => {
+    if (!isAdmin) return;
     const actual = visibilidadMap[dept] ?? false;
     setTogglingDept(dept);
     const { error } = await updatePortalVisibilidad(dept, !actual);
-    if (!error) {
+    if (error) {
+      alert('No tenés permisos para cambiar la visibilidad de este portal.');
+    } else {
       setVisibilidadMap(prev => ({ ...prev, [dept]: !actual }));
     }
     setTogglingDept(null);

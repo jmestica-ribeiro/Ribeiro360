@@ -267,10 +267,13 @@ export default function NoConformidades() {
                     </td>
                     <td>
                       <div className="nc-paso-cell">
-                        <div className="nc-paso-label">Paso {paso}/5</div>
-                        <div className="nc-paso-bar-bg">
-                          <div className="nc-paso-bar-fill" style={{ width: `${pct}%` }} />
-                        </div>
+                        <svg width="32" height="32" viewBox="0 0 36 36" className="nc-paso-ring">
+                          <circle cx="18" cy="18" r="14" className="nc-paso-ring-bg" />
+                          <circle cx="18" cy="18" r="14" className="nc-paso-ring-fill"
+                            strokeDasharray={`${(pct * 87.96 / 100).toFixed(1)} 87.96`}
+                          />
+                        </svg>
+                        <span className="nc-paso-label">Paso {paso}/5</span>
                       </div>
                     </td>
                     <td>

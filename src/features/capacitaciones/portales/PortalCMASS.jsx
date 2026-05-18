@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { CheckCircle, Clock, TrendingUp, Calendar, Users } from 'lucide-react';
-import { supabase } from '../../../lib/supabase';
+import { fetchPortalCMASS } from '../../../services/pafService';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   RadialBarChart, RadialBar, Cell, Legend, ReferenceLine, LabelList
@@ -111,21 +111,16 @@ const PortalCMASS = () => {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const [planesRes, itemsRes, coursesRes, cumplimientoRes] = await Promise.all([
-        supabase.from('paf_planes').select('*').order('anio'),
-        supabase.from('paf_items').select('*, categoria:cursos_categorias(nombre, color)').order('mes').order('orden'),
-        supabase.from('cursos').select('id, titulo, es_paf, paf_item_id, categoria:cursos_categorias(nombre, color)'),
-        supabase.from('paf_cumplimiento').select('*'),
-      ]);
-      if (planesRes.data) {
-        setPlanes(planesRes.data);
+      const { planes: planesData, items: itemsData, courses: coursesData, cumplimiento: cumplimientoData } = await fetchPortalCMASS();
+      if (planesData.length > 0) {
+        setPlanes(planesData);
         const anioActual = new Date().getFullYear();
-        const tieneActual = planesRes.data.find(p => p.anio === anioActual);
-        if (!tieneActual && planesRes.data.length > 0) setSelectedAnio(planesRes.data[planesRes.data.length - 1].anio);
+        const tieneActual = planesData.find(p => p.anio === anioActual);
+        if (!tieneActual) setSelectedAnio(planesData[planesData.length - 1].anio);
       }
-      if (itemsRes.data) setItems(itemsRes.data);
-      if (coursesRes.data) setCourses(coursesRes.data);
-      if (cumplimientoRes.data) setCumplimiento(cumplimientoRes.data);
+      setItems(itemsData);
+      setCourses(coursesData);
+      setCumplimiento(cumplimientoData);
       setLoading(false);
     };
     fetchData();

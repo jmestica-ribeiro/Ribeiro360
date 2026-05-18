@@ -6,7 +6,14 @@ import NCExportarPDF from './NCInformePDF';
 import NormaMultiSelector from './NormaMultiSelector';
 import DocInternoSelector from './DocInternoSelector';
 import './NormaPuntoSelector.css';
-import { supabase } from '../../../lib/supabase';
+import {
+  fetchNcProfiles, fetchNcCentrosDeCostos, fetchNcDocumentosInternos,
+  countHallazgosByTipoAndYear, fetchHallazgo, insertHallazgo, updateHallazgo,
+  fetchAdjuntosByHallazgo, insertAdjuntos,
+  fetchAccionesNc, countAccionesByHallazgo, insertAccionNc, updateAccionNc, deleteAccionNc,
+  fetchHitosNc, fetchHitosNcResumen, insertHitoNc, deleteHitoNc,
+  uploadNcAdjunto, getNcPublicUrl, getNcSignedUrls,
+} from '../../../services/ncService';
 import { notificarAsignacion } from '../../../lib/ncNotificaciones';
 import { useAuth } from '../../../contexts/AuthContext';
 import './NCDetalle.css';
@@ -253,19 +260,14 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
   useEffect(() => {
     if (!editingAccion?.id) return;
     setHitosLoading(true);
-    supabase.from('nc_accion_hitos')
-      .select('*')
-      .eq('accion_id', editingAccion.id)
-      .order('fecha', { ascending: true })
+    fetchHitosNc(editingAccion.id)
       .then(async ({ data }) => {
         const rows = data || [];
         // Generar signed URLs para todos los adjuntos
         const withUrls = await Promise.all(rows.map(async h => {
           const paths = [h.adjunto_1, h.adjunto_2, h.adjunto_3].filter(Boolean);
           if (paths.length === 0) return h;
-          const { data: signed } = await supabase.storage
-            .from('nc-adjuntos')
-            .createSignedUrls(paths, 3600); // 1 hora
+          const { data: signed } = await getNcSignedUrls(paths, 3600);
           const urlMap = {};
           (signed || []).forEach(s => { urlMap[s.path] = s.signedUrl; });
           return {
@@ -297,17 +299,17 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
 
       if (accionId) {
         const estado = avanceCalculado === 100 ? 'cerrada' : avanceCalculado > 0 ? 'en_proceso' : 'pendiente';
-        await supabase.from('nc_acciones').update({
+        await updateAccionNc(accionId, {
           descripcion: accionForm.descripcion,
           responsable_id: accionForm.responsable_id || null,
           fecha_vencimiento: accionForm.fecha_vencimiento || null,
           avance: avanceCalculado,
           estado,
-        }).eq('id', accionId);
+        });
       } else {
-        const { count } = await supabase.from('nc_acciones').select('id', { count: 'exact', head: true }).eq('hallazgo_id', hallazgoId);
+        const { count } = await countAccionesByHallazgo(hallazgoId);
         const codigo = `ACC-${String((count || 0) + 1).padStart(4, '0')}`;
-        const { data: inserted } = await supabase.from('nc_acciones').insert({
+        const { data: inserted } = await insertAccionNc({
           hallazgo_id: hallazgoId,
           codigo,
           descripcion: accionForm.descripcion,
@@ -315,7 +317,7 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
           fecha_vencimiento: accionForm.fecha_vencimiento || null,
           avance: 0,
           estado: 'pendiente',
-        }).select('id').single();
+        });
         accionId = inserted?.id;
       }
 
@@ -335,11 +337,11 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
         for (const file of hitoFiles.slice(0, 3)) {
           const ext = file.name.split('.').pop();
           const path = `hitos/${accionId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-          const { error: uploadError } = await supabase.storage.from('nc-adjuntos').upload(path, file);
+          const { error: uploadError } = await uploadNcAdjunto(path, file);
           if (uploadError) { console.error('Error upload:', uploadError); continue; }
           adjuntoUrls.push(path);
         }
-        const { error: hitoError } = await supabase.from('nc_accion_hitos').insert({
+        const { error: hitoError } = await insertHitoNc({
           accion_id: accionId,
           descripcion: hitoForm.descripcion.trim(),
           fecha: hitoForm.fecha,
@@ -361,13 +363,13 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
   };
 
   const handleDeleteHito = async (hitoId) => {
-    await supabase.from('nc_accion_hitos').delete().eq('id', hitoId);
-    const { data } = await supabase.from('nc_accion_hitos').select('*').eq('accion_id', editingAccion.id).order('fecha', { ascending: true });
+    await deleteHitoNc(hitoId);
+    const { data } = await fetchHitosNc(editingAccion.id);
     const rows = data || [];
     const withUrls = await Promise.all(rows.map(async h => {
       const paths = [h.adjunto_1, h.adjunto_2, h.adjunto_3].filter(Boolean);
       if (paths.length === 0) return h;
-      const { data: signed } = await supabase.storage.from('nc-adjuntos').createSignedUrls(paths, 3600);
+      const { data: signed } = await getNcSignedUrls(paths, 3600);
       const urlMap = {};
       (signed || []).forEach(s => { urlMap[s.path] = s.signedUrl; });
       return {
@@ -575,9 +577,7 @@ function formatDate(str) {
 function Step5Hitos({ accionId }) {
   const [hitos, setHitos] = useState([]);
   useEffect(() => {
-    supabase.from('nc_accion_hitos').select('fecha, porcentaje, descripcion')
-      .eq('accion_id', accionId).order('fecha', { ascending: true })
-      .then(({ data }) => setHitos(data || []));
+    fetchHitosNcResumen(accionId).then(({ data }) => setHitos(data || []));
   }, [accionId]);
   if (hitos.length === 0) return <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Sin hitos registrados.</p>;
   return (
@@ -598,7 +598,7 @@ function Step5Hitos({ accionId }) {
 export default function NCDetalle() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin, isSgiWriter } = useAuth();
   const isNew = !id;
 
   /* ── State ── */
@@ -608,7 +608,6 @@ export default function NCDetalle() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
   const [pickerTarget, setPickerTarget] = useState(null); // 'auditor' | 'emisor' | 'responsable' | 'verif' | null
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
 
   // Lookup data
   const [gerencias, setGerencias] = useState([]); // distinct strings from profiles.department
@@ -701,9 +700,9 @@ export default function NCDetalle() {
   useEffect(() => {
     const fetchLookups = async () => {
       const [c, p, d] = await Promise.all([
-        supabase.from('centros_de_costos').select('id, nombre, categoria').eq('activo', true).order('codigo'),
-        supabase.from('profiles').select('id, full_name, job_title, department, office_location, avatar_url').order('full_name'),
-        supabase.from('sgi_documentos').select('id, titulo, codigo, tipo_documento').eq('activo', true).order('titulo'),
+        fetchNcCentrosDeCostos(),
+        fetchNcProfiles(),
+        fetchNcDocumentosInternos(),
       ]);
       if (c.data) setClientes(c.data);
       if (p.data) {
@@ -734,12 +733,7 @@ export default function NCDetalle() {
     const generateNumero = async () => {
       const year = new Date().getFullYear();
       const prefix = TIPO_PREFIX[form.tipo] || form.tipo;
-      const { count } = await supabase
-        .from('nc_hallazgos')
-        .select('id', { count: 'exact', head: true })
-        .eq('tipo', form.tipo)
-        .gte('created_at', `${year}-01-01`)
-        .lt('created_at', `${year + 1}-01-01`);
+      const { count } = await countHallazgosByTipoAndYear(form.tipo, year);
       const seq = String((count || 0) + 1).padStart(3, '0');
       setForm(f => ({ ...f, numero: `${prefix}-${year}-${seq}` }));
     };
@@ -749,14 +743,10 @@ export default function NCDetalle() {
   /* ── Load existing hallazgo ── */
   useEffect(() => {
     if (!id) return;
-    const fetchHallazgo = async () => {
+    const loadHallazgo = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('nc_hallazgos')
-          .select('*')
-          .eq('id', id)
-          .single();
+        const { data, error } = await fetchHallazgo(id);
 
         if (error) throw error;
         if (data) {
@@ -842,11 +832,7 @@ export default function NCDetalle() {
           else if (data.responsable_verif !== undefined) setSeleccionarVerif(false);
 
           // Load adjuntos paso 1
-          const { data: adj } = await supabase
-            .from('nc_adjuntos')
-            .select('*')
-            .eq('hallazgo_id', id)
-            .eq('paso', 1);
+          const { data: adj } = await fetchAdjuntosByHallazgo(id, 1);
           if (adj) setSavedAdjuntos(adj);
 
         }
@@ -857,7 +843,7 @@ export default function NCDetalle() {
         setLoading(false);
       }
     };
-    fetchHallazgo();
+    loadHallazgo();
   }, [id]);
 
   /* ── Toast helper ── */
@@ -869,11 +855,7 @@ export default function NCDetalle() {
   const fetchAcciones = useCallback(async () => {
     if (!id) return;
     setAccionesLoading(true);
-    const { data } = await supabase
-      .from('nc_acciones')
-      .select('*, responsable:profiles!responsable_id(full_name)')
-      .eq('hallazgo_id', id)
-      .order('fecha_vencimiento', { ascending: true, nullsFirst: false });
+    const { data } = await fetchAccionesNc(id);
     setAcciones(data || []);
     // Inicializar estado de verificación por acción
     const verif = {};
@@ -899,9 +881,7 @@ export default function NCDetalle() {
   const canVerif = form.responsable_verif.includes(user?.id) ||
     (form.responsable_verif.length === 0 && esResponsableCalidad);
 
-  // canEdit: admins with 'sgi' tab, or people directly involved in the hallazgo
-  const isSgiAdmin = isAdmin || (profile?.admin_tabs ?? []).includes('sgi');
-  const canEdit = isNew || isSgiAdmin
+  const canEdit = isNew || isSgiWriter
     || form.emisor_id === user?.id
     || form.auditor_id === user?.id
     || form.responsable_proceso.includes(user?.id)
@@ -937,20 +917,18 @@ export default function NCDetalle() {
       const { file, name } = pendingFiles[i];
       const ext = name.split('.').pop();
       const path = `${hallazgoId}/paso1/${Date.now()}_${name}`;
-      const { error: upErr } = await supabase.storage
-        .from('nc-adjuntos')
-        .upload(path, file, { upsert: false });
+      const { error: upErr } = await uploadNcAdjunto(path, file);
 
       if (upErr) {
         console.error('Upload error:', upErr);
         continue;
       }
-      const { data: urlData } = supabase.storage.from('nc-adjuntos').getPublicUrl(path);
-      uploaded.push({ hallazgo_id: hallazgoId, nombre: name, url: urlData?.publicUrl || '', paso: 1 });
+      const publicUrl = getNcPublicUrl(path);
+      uploaded.push({ hallazgo_id: hallazgoId, nombre: name, url: publicUrl || '', paso: 1 });
       setUploadProgress(Math.round(((i + 1) / pendingFiles.length) * 100));
     }
     if (uploaded.length > 0) {
-      await supabase.from('nc_adjuntos').insert(uploaded);
+      await insertAdjuntos(uploaded);
     }
     setPendingFiles([]);
     setUploadProgress(null);
@@ -1029,11 +1007,7 @@ export default function NCDetalle() {
 
       if (isNew) {
         const newPaso = advance ? 2 : 1;
-        const { data, error } = await supabase
-          .from('nc_hallazgos')
-          .insert({ ...payload, paso_actual: newPaso, estado: 'abierto', created_by: user?.id })
-          .select('id')
-          .single();
+        const { data, error } = await insertHallazgo({ ...payload, paso_actual: newPaso, estado: 'abierto', created_by: user?.id });
         if (error) throw error;
         hallazgoId = data.id;
         await uploadPendingFiles(hallazgoId);
@@ -1048,10 +1022,7 @@ export default function NCDetalle() {
       } else {
         const closing = advance && currentStep === 5;
         const newPaso = closing ? 5 : advance ? Math.max(pasoActual, currentStep + 1) : pasoActual;
-        const { error } = await supabase
-          .from('nc_hallazgos')
-          .update({ ...payload, paso_actual: newPaso, ...(closing ? { estado: 'cerrado' } : {}) })
-          .eq('id', id);
+        const { error } = await updateHallazgo(id, { ...payload, paso_actual: newPaso, ...(closing ? { estado: 'cerrado' } : {}) });
         if (error) throw error;
         await uploadPendingFiles(hallazgoId);
         // Notificar nuevas asignaciones
@@ -1650,7 +1621,7 @@ export default function NCDetalle() {
                         onClick={async e => {
                           e.stopPropagation();
                           if (!window.confirm(`¿Eliminar ${a.codigo}?`)) return;
-                          await supabase.from('nc_acciones').delete().eq('id', a.id);
+                          await deleteAccionNc(a.id);
                           fetchAcciones();
                         }}
                       >
@@ -1775,27 +1746,25 @@ export default function NCDetalle() {
       for (const file of (v.files || []).slice(0, 3 - (v.adjuntos || []).length)) {
         const ext = file.name.split('.').pop();
         const path = `verif/${accionId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error } = await supabase.storage.from('nc-adjuntos').upload(path, file);
+        const { error } = await uploadNcAdjunto(path, file);
         if (!error) newUrls.push(path);
       }
       const allAdj = [...(v.adjuntos || []), ...newUrls].slice(0, 3);
-      await supabase.from('nc_acciones').update({
+      await updateAccionNc(accionId, {
         verif_eficaz: v.eficaz,
         verif_fecha: v.fecha || null,
         verif_detalle: v.detalle || null,
         verif_adjunto_1: allAdj[0] || null,
         verif_adjunto_2: allAdj[1] || null,
         verif_adjunto_3: allAdj[2] || null,
-      }).eq('id', accionId);
+      });
       setVerif(accionId, { adjuntos: allAdj, files: [], saving: false });
 
       // Si no fue eficaz → crear acción rectificativa y volver al paso 4
       if (v.eficaz === false) {
-        const { count } = await supabase
-          .from('nc_acciones').select('id', { count: 'exact', head: true })
-          .eq('hallazgo_id', id);
+        const { count } = await countAccionesByHallazgo(id);
         const codigo = `ACC-${String((count || 0) + 1).padStart(4, '0')}`;
-        const { data: inserted } = await supabase.from('nc_acciones').insert({
+        const { data: inserted } = await insertAccionNc({
           hallazgo_id: id,
           codigo,
           descripcion: `[RECTIFICATIVA] ${v.detalle || 'Acción no fue eficaz — requiere nueva acción correctiva.'}`,
@@ -1804,7 +1773,7 @@ export default function NCDetalle() {
           avance: 0,
           estado: 'pendiente',
           tipo: 'rectificativa',
-        }).select('id').single();
+        });
         if (rectifForm.responsable_id && inserted?.id) {
           await notificarAsignacion({
             hallazgoId: id,
@@ -1815,7 +1784,7 @@ export default function NCDetalle() {
           });
         }
         setRectifForm({ responsable_id: '', fecha_vencimiento: '' });
-        await supabase.from('nc_hallazgos').update({ paso_actual: 4 }).eq('id', id);
+        await updateHallazgo(id, { paso_actual: 4 });
         setPasoActual(4);
         setCurrentStep(4);
         await fetchAcciones();
@@ -1956,11 +1925,11 @@ export default function NCDetalle() {
                               <button onClick={() => {
                                 const updated = v.adjuntos.filter((_, j) => j !== i);
                                 setVerif(a.id, { adjuntos: updated });
-                                supabase.from('nc_acciones').update({
+                                updateAccionNc(a.id, {
                                   verif_adjunto_1: updated[0] || null,
                                   verif_adjunto_2: updated[1] || null,
                                   verif_adjunto_3: updated[2] || null,
-                                }).eq('id', a.id);
+                                });
                               }}><X size={10} /></button>
                             </span>
                           );

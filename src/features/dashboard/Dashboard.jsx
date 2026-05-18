@@ -5,8 +5,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { PlayCircle, Clock, Award, ArrowRight, BarChart2, BookOpen, Folder, Monitor, FileText, Link as LinkIcon, ExternalLink, Globe, CheckCircle2, XCircle, Trophy, Calendar, Users, GraduationCap } from 'lucide-react';
 import BannerNovedades from './BannerNovedades';
 import * as LucideIcons from 'lucide-react';
-import { supabase } from '../../lib/supabase';
-import { visMatchesProfile, courseIsVisible, eventoIsVisible } from '../../lib/visibilidad';
+import { eventoIsVisible } from '../../lib/visibilidad';
+import { fetchCursosVisibles, fetchResultadosByUser, fetchCursosAprobadosByUser, fetchProgresoByUser, fetchGlobalStats, fetchAccesosRapidos } from '../../services/cursosService';
+import { fetchEventosProximos } from '../../services/eventosService';
+import { fetchNovedadesActivas } from '../../services/novedadesService';
 import './Dashboard.css';
 
 const DashboardChart = lazy(() => import('./DashboardChart'));
@@ -59,48 +61,29 @@ const Dashboard = () => {
 
     const now = Date.now();
 
-    const fetchAccesos = async () => {
-      if (cache.accesos.data && (now - cache.accesos.time < CACHE_TTL)) {
-        setAccesos(cache.accesos.data);
-        return;
-      }
-      const { data } = await supabase.from('accesos_rapidos').select('*').eq('activo', true).order('numero_orden', { ascending: true });
-      const finalData = data || [];
-      cache.accesos = { data: finalData, time: Date.now() };
-      setAccesos(finalData);
+    const loadAccesos = async () => {
+      if (cache.accesos.data && (now - cache.accesos.time < CACHE_TTL)) { setAccesos(cache.accesos.data); return; }
+      const { data } = await fetchAccesosRapidos();
+      cache.accesos = { data, time: Date.now() };
+      setAccesos(data);
     };
 
-    const fetchResultados = async () => {
-      if (cache.resultados.data && (now - cache.resultados.time < CACHE_TTL)) {
-        setResultados(cache.resultados.data);
-        return;
-      }
-      const { data } = await supabase.from('cursos_resultados')
-        .select('*, curso:cursos(titulo, categoria:cursos_categorias(color))')
-        .eq('user_email', userEmail)
-        .order('created_at', { ascending: false })
-        .limit(5);
-      const finalData = data || [];
-      cache.resultados = { data: finalData, time: Date.now() };
-      setResultados(finalData);
+    const loadResultados = async () => {
+      if (cache.resultados.data && (now - cache.resultados.time < CACHE_TTL)) { setResultados(cache.resultados.data); return; }
+      const { data } = await fetchResultadosByUser(userEmail, 5);
+      cache.resultados = { data, time: Date.now() };
+      setResultados(data);
     };
 
-    const fetchEventos = async () => {
-      if (cache.eventos.data && (now - cache.eventos.time < CACHE_TTL)) {
-        setProximosEventos(cache.eventos.data);
-        return;
-      }
-      const today = new Date().toISOString().split('T')[0];
-      const [eventosRes, eventosVisRes] = await Promise.all([
-        supabase.from('eventos').select('*, categoria:eventos_categorias(nombre, color), area:areas(nombre, color)').gte('fecha', today).order('fecha', { ascending: true }).limit(10),
-        supabase.from('eventos_visibilidad').select('*'),
-      ]);
-      const filteredEventos = (eventosRes.data || []).filter(e => eventoIsVisible(e.id, eventosVisRes.data, profile)).slice(0, 3);
-      cache.eventos = { data: filteredEventos, time: Date.now() };
-      setProximosEventos(filteredEventos);
+    const loadEventos = async () => {
+      if (cache.eventos.data && (now - cache.eventos.time < CACHE_TTL)) { setProximosEventos(cache.eventos.data); return; }
+      const { data, visibilidad } = await fetchEventosProximos(10);
+      const filtered = data.filter(e => eventoIsVisible(e.id, visibilidad, profile)).slice(0, 3);
+      cache.eventos = { data: filtered, time: Date.now() };
+      setProximosEventos(filtered);
     };
 
-    const fetchCursos = async () => {
+    const loadCursos = async () => {
       if (cache.cursos.data && (now - cache.cursos.time < CACHE_TTL)) {
         setStats(cache.cursos.data.stats);
         setEnrichedCourses(cache.cursos.data.enrichedCourses);
@@ -108,94 +91,52 @@ const Dashboard = () => {
         setCursosLoaded(true);
         return;
       }
-      const [coursesRes, certsRes, progressRes, cursosVisRes, cursosDestRes] = await Promise.all([
-        supabase.from('cursos').select('*, categoria:cursos_categorias(nombre, color), modulos:cursos_modulos(count)'),
-        supabase.from('cursos_resultados').select('id, curso_id').eq('user_email', userEmail).eq('aprobado', true),
-        supabase.from('cursos_progreso').select('curso_id').eq('user_email', userEmail).eq('completado', true),
-        supabase.from('cursos_visibilidad').select('*'),
-        supabase.from('cursos_destinatarios').select('curso_id').eq('user_id', user?.id),
+      const [{ data: allCourses }, { data: certsData }, { data: progressData }] = await Promise.all([
+        fetchCursosVisibles(),
+        fetchCursosAprobadosByUser(userEmail),
+        fetchProgresoByUser(userEmail),
       ]);
-
-      const destCursoIds = new Set((cursosDestRes.data || []).map(d => d.curso_id));
-      const allCourses = (coursesRes.data || []).filter(c => courseIsVisible(c.id, destCursoIds, cursosVisRes.data, profile));
-      const certificados = certsRes.data?.length || 0;
-      const completedCourseIds = new Set((certsRes.data || []).map(r => r.curso_id));
-      const minutosCompletados = allCourses
+      const certificados = certsData?.length || 0;
+      const completedCourseIds = new Set((certsData || []).map(r => r.curso_id));
+      const minutosCompletados = (allCourses || [])
         .filter(c => completedCourseIds.has(c.id))
         .reduce((acc, c) => acc + (parseInt(c.duracion_estimada) || 0), 0);
       const horasRaw = parseFloat((minutosCompletados / 60).toFixed(2));
-      setStats({ cursos: allCourses.length, certificados, horas: horasRaw });
-
       const progressMap = {};
-      (progressRes.data || []).forEach(p => {
-        progressMap[p.curso_id] = (progressMap[p.curso_id] || 0) + 1;
-      });
-
-      const enriched = allCourses.map(course => {
+      (progressData || []).forEach(p => { progressMap[p.curso_id] = (progressMap[p.curso_id] || 0) + 1; });
+      const enriched = (allCourses || []).map(course => {
         const totalModulos = course.modulos?.[0]?.count || 0;
         const completados = progressMap[course.id] || 0;
         const progressPct = totalModulos > 0 ? Math.round((completados / totalModulos) * 100) : 0;
         return { ...course, totalModulos, progressPct };
       });
-
-      const recentFive = [...enriched]
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-        .slice(0, 5);
-      setEnrichedCourses(recentFive);
-
+      const recentFive = [...enriched].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
       const inProgress = enriched.find(c => c.progressPct > 0 && c.progressPct < 100);
       const notStarted = enriched.find(c => c.progressPct === 0);
       const resCursoPendiente = inProgress || notStarted || false;
-      const resStats = { cursos: allCourses.length, certificados, horas: horasRaw };
-
-      cache.cursos = {
-        data: { stats: resStats, enrichedCourses: recentFive, cursoPendiente: resCursoPendiente },
-        time: Date.now()
-      };
-
+      const resStats = { cursos: allCourses?.length || 0, certificados, horas: horasRaw };
+      cache.cursos = { data: { stats: resStats, enrichedCourses: recentFive, cursoPendiente: resCursoPendiente }, time: Date.now() };
       setStats(resStats);
       setEnrichedCourses(recentFive);
       setCursoPendiente(resCursoPendiente);
       setCursosLoaded(true);
     };
 
-    const fetchGlobalStats = async () => {
-      if (cache.globalStats.data && (now - cache.globalStats.time < CACHE_TTL)) {
-        setGlobalStats(cache.globalStats.data);
-        return;
-      }
-      const [usuariosRes, cursosRes, certsRes] = await Promise.all([
-        supabase.from('profiles').select('id', { count: 'exact', head: true }),
-        supabase.from('cursos').select('id', { count: 'exact', head: true }),
-        supabase.from('cursos_resultados').select('id', { count: 'exact', head: true }).eq('aprobado', true),
-      ]);
-      const data = {
-        usuarios: usuariosRes.count || 0,
-        cursos: cursosRes.count || 0,
-        certificados: certsRes.count || 0,
-      };
+    const loadGlobalStats = async () => {
+      if (cache.globalStats.data && (now - cache.globalStats.time < CACHE_TTL)) { setGlobalStats(cache.globalStats.data); return; }
+      const { data } = await fetchGlobalStats();
       cache.globalStats = { data, time: Date.now() };
       setGlobalStats(data);
     };
 
-    fetchAccesos();
-    fetchResultados();
-    fetchEventos();
-    fetchCursos();
-    fetchGlobalStats();
+    loadAccesos();
+    loadResultados();
+    loadEventos();
+    loadCursos();
+    loadGlobalStats();
 
     // Novedades (sin cache — cambian frecuentemente)
-    const today = new Date().toISOString().split('T')[0];
-    supabase
-      .from('novedades')
-      .select('id, titulo, imagen_url, link_url, orden, fecha_hasta')
-      .eq('activo', true)
-      .order('orden', { ascending: true })
-      .then(({ data, error }) => {
-        if (error) { console.error('[novedades]', error.message); return; }
-        const visibles = (data || []).filter(n => !n.fecha_hasta || n.fecha_hasta >= today);
-        setNovedades(visibles);
-      });
+    fetchNovedadesActivas().then(({ data }) => setNovedades(data));
 
   }, [userEmail, profile]);
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { User, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { fetchOrgNodos } from '../../services/organigramaService';
 import './Organigrama.css';
 
 const OrgCard = ({ node }) => (
@@ -65,11 +65,7 @@ const Organigrama = () => {
 
   const fetchNodos = async () => {
     setIsLoading(true);
-    const { data } = await supabase
-      .from('organigrama_nodos')
-      .select('*')
-      .eq('activo', true)
-      .order('numero_orden');
+    const { data } = await fetchOrgNodos();
     if (data) setNodos(data);
     setIsLoading(false);
   };

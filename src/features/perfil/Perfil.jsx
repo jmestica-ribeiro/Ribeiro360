@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { User, Mail, Phone, Briefcase, Building2, MapPin, Linkedin, Save, CheckCircle, MessageCircle } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { updateMiPerfil } from '../../services/usuariosService';
 import { useAuth } from '../../contexts/AuthContext';
 import './Perfil.css';
 
@@ -35,12 +35,7 @@ const Perfil = () => {
     e.preventDefault();
     setSaving(true);
     setError(null);
-    const { data, error: err } = await supabase
-      .from('profiles')
-      .update(form)
-      .eq('id', user.id)
-      .select()
-      .single();
+    const { data, error: err } = await updateMiPerfil(user.id, form);
     setSaving(false);
     if (err) { setError('Error al guardar. Intentá de nuevo.'); return; }
     if (data && setProfile) setProfile(data);

@@ -25,19 +25,22 @@ const SGIDocument     = lazy(() => import('./features/sgi/SGIDocument'));
 const NoConformidades = lazy(() => import('./features/sgi/nc/NoConformidades'));
 const NCDetalle       = lazy(() => import('./features/sgi/nc/NCDetalle'));
 const SGIEstadisticas = lazy(() => import('./features/sgi/SGIEstadisticas'));
-const Incidentes      = lazy(() => import('./features/sgi/incidentes/Incidentes'));
-const IncidenteDetalle = lazy(() => import('./features/sgi/incidentes/IncidenteDetalle'));
+const Incidentes       = lazy(() => import('./features/sgi/incidentes/Incidentes'));
+const IncidenteNuevo    = lazy(() => import('./features/sgi/incidentes/IncidenteNuevo'));
+const IncidenteDetalle  = lazy(() => import('./features/sgi/incidentes/IncidenteDetalle'));
+const IncidenteEventoWIP = lazy(() => import('./features/sgi/incidentes/IncidenteEventoWIP'));
 const Multimedia      = lazy(() => import('./features/multimedia/Multimedia'));
 const Herramientas    = lazy(() => import('./features/herramientas/HerramientasHub'));
 const Perfil          = lazy(() => import('./features/perfil/Perfil'));
 const Login           = lazy(() => import('./pages/Login'));
 const NotFound        = lazy(() => import('./pages/NotFound'));
 
-const ProtectedRoute = ({ children, requireAdmin = false }) => {
-  const { session, profile, isLoading } = useAuth();
+const ProtectedRoute = ({ children, requireAdmin = false, requireSgiWrite = false }) => {
+  const { session, isAdmin, isSgiWriter, isLoading } = useAuth();
   if (isLoading) return <div className="app-loading"><span>Cargando...</span></div>;
   if (!session) return <Navigate to="/login" replace />;
-  if (requireAdmin && profile?.role !== 'admin' && profile?.role !== 'superadmin') return <Navigate to="/" replace />;
+  if (requireAdmin && !isAdmin) return <Navigate to="/" replace />;
+  if (requireSgiWrite && !isSgiWriter) return <Navigate to="/sgi" replace />;
   return children;
 };
 
@@ -65,11 +68,13 @@ function AnimatedRoutes() {
       <Route path="/sgi/documento/:docId"  element={<W><SGIDocument /></W>} />
       <Route path="/sgi/estadisticas"      element={<W><SGIEstadisticas /></W>} />
       <Route path="/sgi/nc"                element={<W><NoConformidades /></W>} />
-      <Route path="/sgi/nc/nuevo"          element={<W><NCDetalle /></W>} />
-      <Route path="/sgi/nc/:id"            element={<W><NCDetalle /></W>} />
-      <Route path="/sgi/incidentes"        element={<W><Incidentes /></W>} />
-      <Route path="/sgi/incidentes/nuevo"  element={<W><IncidenteDetalle /></W>} />
-      <Route path="/sgi/incidentes/:id"    element={<W><IncidenteDetalle /></W>} />
+      <Route path="/sgi/nc/nuevo"          element={<ProtectedRoute requireSgiWrite><W><NCDetalle /></W></ProtectedRoute>} />
+      <Route path="/sgi/nc/:id"            element={<ProtectedRoute requireSgiWrite><W><NCDetalle /></W></ProtectedRoute>} />
+      <Route path="/sgi/incidentes"             element={<W><Incidentes /></W>} />
+      <Route path="/sgi/incidentes/nuevo"        element={<ProtectedRoute requireSgiWrite><W><IncidenteNuevo /></W></ProtectedRoute>} />
+      <Route path="/sgi/incidentes/nuevo/form"  element={<ProtectedRoute requireSgiWrite><W><IncidenteDetalle /></W></ProtectedRoute>} />
+      <Route path="/sgi/incidentes/nuevo/evento" element={<ProtectedRoute requireSgiWrite><W><IncidenteEventoWIP /></W></ProtectedRoute>} />
+      <Route path="/sgi/incidentes/:id"         element={<ProtectedRoute requireSgiWrite><W><IncidenteDetalle /></W></ProtectedRoute>} />
       <Route path="/sgi/:categoria"        element={<W><SGI /></W>} />
       <Route path="/multimedia"            element={<W><Multimedia /></W>} />
       <Route path="/herramientas"          element={<W><Herramientas /></W>} />

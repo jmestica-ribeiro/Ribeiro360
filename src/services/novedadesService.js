@@ -73,3 +73,15 @@ export function getNovedadPublicUrl(path) {
   const { data } = supabase.storage.from('novedades').getPublicUrl(path);
   return data?.publicUrl ?? null;
 }
+
+export async function fetchNovedadesActivas() {
+  const today = new Date().toISOString().split('T')[0];
+  const { data, error } = await supabase
+    .from('novedades')
+    .select('id, titulo, imagen_url, link_url, orden, fecha_hasta')
+    .eq('activo', true)
+    .order('orden', { ascending: true });
+  if (error) console.error('[novedadesService] fetchNovedadesActivas:', error.message);
+  const visibles = (data ?? []).filter(n => !n.fecha_hasta || n.fecha_hasta >= today);
+  return { data: visibles, error };
+}

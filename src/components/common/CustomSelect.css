@@ -1,0 +1,118 @@
+.cselect-root {
+  position: relative;
+  display: inline-flex;
+}
+
+.cselect-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s, box-shadow 0.15s;
+  white-space: nowrap;
+  min-width: 90px;
+}
+
+.cselect-trigger:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 12%, transparent);
+}
+
+.cselect-open .cselect-trigger {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 12%, transparent);
+}
+
+.cselect-active .cselect-trigger {
+  background: var(--primary-color);
+  color: #141414;
+  border-color: var(--primary-color);
+}
+
+.cselect-active .cselect-trigger:hover {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 25%, transparent);
+}
+
+.cselect-icon {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.cselect-active .cselect-icon {
+  opacity: 1;
+}
+
+.cselect-value {
+  flex: 1;
+  text-align: left;
+}
+
+.cselect-chevron {
+  flex-shrink: 0;
+  transition: transform 0.18s ease;
+  opacity: 0.6;
+}
+
+.cselect-open .cselect-chevron {
+  transform: rotate(180deg);
+  opacity: 1;
+}
+
+/* Panel */
+.cselect-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 100%;
+  background: var(--bg-secondary);
+  border: 1.5px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  z-index: 200;
+  padding: 5px;
+}
+
+.cselect-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+  gap: 20px;
+  white-space: nowrap;
+}
+
+.cselect-item:hover {
+  background: var(--bg-secondary);
+}
+
+.cselect-item-active {
+  color: var(--primary-color);
+  font-weight: 700;
+}
+
+.cselect-item-active:hover {
+  background: color-mix(in srgb, var(--primary-color) 8%, transparent);
+}
+
+.cselect-check {
+  flex-shrink: 0;
+  color: var(--primary-color);
+}

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Save, ChevronLeft, ChevronRight, ChevronDown, FileText, FolderPlus, FilePlus, Download } from 'lucide-react';
-import { supabase } from '../../../lib/supabase';
 import {
   fetchSGI,
   fetchVersionVigente,
@@ -10,6 +9,8 @@ import {
   softDeleteSgiDocumento,
   saveSgiVersion,
   deleteSgiVersion,
+  uploadSgiArchivo,
+  getSgiSignedUrl,
 } from '../../../services/sgiService';
 import { EmptyState, useToast } from '../../../components/common';
 
@@ -101,7 +102,7 @@ const SGITab = () => {
     if (editingVer._archivo) {
       const ext = editingVer._archivo.name.split('.').pop();
       const fileName = `${editingVer.documento_id}/rev${editingVer.numero_version}_${Date.now()}.${ext}`;
-      const { error: uploadError } = await supabase.storage.from('sgi-documentos').upload(fileName, editingVer._archivo, { upsert: true });
+      const { error: uploadError } = await uploadSgiArchivo(editingVer.documento_id, editingVer.numero_version, editingVer._archivo);
       if (uploadError) { showToast('Error al subir el archivo: ' + uploadError.message, 'error'); return; }
       archivoPath = fileName;
     }
@@ -205,7 +206,7 @@ const SGITab = () => {
                             <div className="sgi-tree-actions">
                               {ver.archivo_url && (
                                 <button className="btn-icon-admin" title="Descargar" onClick={async () => {
-                                  const { data } = await supabase.storage.from('sgi-documentos').createSignedUrl(ver.archivo_url, 60);
+                                  const { data } = await getSgiSignedUrl(ver.archivo_url, 60);
                                   if (data?.signedUrl) window.open(data.signedUrl, '_blank');
                                 }}><Download size={13} /></button>
                               )}

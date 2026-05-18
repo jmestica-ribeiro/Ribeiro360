@@ -86,8 +86,11 @@ export const AuthProvider = ({ children }) => {
     await supabase.auth.signOut();
   };
 
+  const isAdmin    = profile?.role === 'admin' || profile?.role === 'superadmin';
+  const isSgiWriter = isAdmin || (profile?.admin_tabs ?? []).includes('sgi');
+
   return (
-    <AuthContext.Provider value={{ session, user, profile, setProfile, isLoading, signOut, navConfig, refreshNavConfig }}>
+    <AuthContext.Provider value={{ session, user, profile, setProfile, isLoading, signOut, navConfig, refreshNavConfig, isAdmin, isSgiWriter }}>
       {children}
     </AuthContext.Provider>
   );

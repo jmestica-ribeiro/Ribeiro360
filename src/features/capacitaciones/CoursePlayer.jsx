@@ -16,7 +16,7 @@ import {
   HelpCircle,
   XCircle
 } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { fetchModulosByCurso, fetchProgresoByCurso, fetchUltimoResultado, upsertProgreso, insertResultado } from '../../services/cursosService';
 import { useAuth } from '../../contexts/AuthContext';
 import Certificado from './Certificado';
 import './CoursePlayer.css';
@@ -46,70 +46,34 @@ const CoursePlayer = ({ course, onBack }) => {
   }, [course.id]);
 
   const fetchModules = async () => {
-    const { data } = await supabase
-      .from('cursos_modulos')
-      .select('*')
-      .eq('curso_id', course.id)
-      .order('numero_orden', { ascending: true });
-    
-    if (data) {
-      setModules(data);
-      if (data.length > 0) setActiveModule(data[0]);
-    }
+    const { data } = await fetchModulosByCurso(course.id);
+    if (data.length > 0) { setModules(data); setActiveModule(data[0]); }
   };
 
   const fetchProgress = async () => {
-    const [progressRes, resultRes] = await Promise.all([
-      supabase
-        .from('cursos_progreso')
-        .select('modulo_id')
-        .eq('curso_id', course.id)
-        .eq('user_email', userEmail)
-        .eq('completado', true),
-      supabase
-        .from('cursos_resultados')
-        .select('*')
-        .eq('curso_id', course.id)
-        .eq('user_email', userEmail)
-        .order('created_at', { ascending: false })
-        .limit(1)
+    const [{ data: progressData }, { data: resultado }] = await Promise.all([
+      fetchProgresoByCurso(course.id, userEmail),
+      fetchUltimoResultado(course.id, userEmail),
     ]);
-
-    if (progressRes.data) {
-      setCompletedModules(progressRes.data.map(p => p.modulo_id));
-    }
-
-    if (resultRes.data && resultRes.data.length > 0) {
-      const r = resultRes.data[0];
-      setQuizResult({ correct: r.correctas, total: r.total, score: r.puntaje, passed: r.aprobado, date: r.created_at });
+    if (progressData) setCompletedModules(progressData.map(p => p.modulo_id));
+    if (resultado) {
+      setQuizResult({ correct: resultado.correctas, total: resultado.total, score: resultado.puntaje, passed: resultado.aprobado, date: resultado.created_at });
       setPlayerView('result');
     }
-
     setIsLoading(false);
   };
 
   const handleComplete = async () => {
     if (!activeModule) return;
     try {
-      const { error } = await supabase
-        .from('cursos_progreso')
-        .upsert([{
-          curso_id: course.id,
-          modulo_id: activeModule.id,
-          user_email: userEmail,
-          completado: true,
-          updated_at: new Date()
-        }], { onConflict: 'modulo_id, user_email' });
-
+      const { error } = await upsertProgreso(course.id, activeModule.id, userEmail);
       if (!error) {
         const newCompleted = [...completedModules, activeModule.id];
         setCompletedModules(newCompleted);
         const currentIndex = modules.findIndex(m => m.id === activeModule.id);
         const allDone = newCompleted.length === modules.length;
-        if (allDone && hasQuiz) {
-          // stay on module but quiz button will appear
-        } else if (currentIndex < modules.length - 1) {
-          setActiveModule(modules[currentIndex + 1]);
+        if (!allDone || !hasQuiz) {
+          if (currentIndex < modules.length - 1) setActiveModule(modules[currentIndex + 1]);
         }
       }
     } catch (err) { console.error(err); }
@@ -134,14 +98,7 @@ const CoursePlayer = ({ course, onBack }) => {
     setQuizResult(result);
     setPlayerView('result');
 
-    await supabase.from('cursos_resultados').insert([{
-      curso_id: course.id,
-      user_email: userEmail,
-      puntaje: score,
-      correctas: correct,
-      total,
-      aprobado: passed,
-    }]);
+    await insertResultado({ curso_id: course.id, user_email: userEmail, puntaje: score, correctas: correct, total, aprobado: passed });
   };
 
   const renderQuizView = () => (

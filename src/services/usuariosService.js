@@ -70,3 +70,22 @@ export async function updateUserRoleAndTabs(userId, newRole, adminTabs) {
   if (error) console.error('[usuariosService] updateUserRoleAndTabs:', error.message);
   return { error };
 }
+
+export async function fetchDirectorioProfiles() {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, email, job_title, department, office_location, avatar_url, phone, whatsapp_consent')
+    .order('full_name', { ascending: true });
+  if (error) console.error('[usuariosService] fetchDirectorioProfiles:', error.message);
+  return { data: data ?? [], error };
+}
+
+export async function updateMiPerfil(userId, payload) {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update(payload)
+    .eq('id', userId)
+    .select();
+  if (error) console.error('[usuariosService] updateMiPerfil:', error.message);
+  return { data: data?.[0] ?? null, error };
+}

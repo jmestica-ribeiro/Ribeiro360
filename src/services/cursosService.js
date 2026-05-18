@@ -9,6 +9,17 @@ export async function fetchCursos() {
   return { data: data ?? [], error };
 }
 
+/**
+ * Devuelve únicamente los cursos que el usuario autenticado tiene permitido ver.
+ * El filtro de visibilidad corre server-side via RPC — nunca viajan cursos
+ * ocultos por la red. Reemplaza el patrón fetchCursos + courseIsVisible en el cliente.
+ */
+export async function fetchCursosVisibles() {
+  const { data, error } = await supabase.rpc('get_cursos_visibles');
+  if (error) console.error('[cursosService] fetchCursosVisibles:', error.message);
+  return { data: data ?? [], error };
+}
+
 export async function fetchCursosCategorias() {
   const { data, error } = await supabase.from('cursos_categorias').select('*');
   if (error) console.error('[cursosService] fetchCursosCategorias:', error.message);
@@ -110,4 +121,124 @@ export async function deleteCurso(id) {
   const { error } = await supabase.from('cursos').delete().eq('id', id);
   if (error) console.error('[cursosService] deleteCurso:', error.message);
   return { error };
+}
+
+// ── Módulos ───────────────────────────────────────────────────────────────────
+
+export async function fetchModulosByCurso(cursoId) {
+  const { data, error } = await supabase
+    .from('cursos_modulos')
+    .select('*')
+    .eq('curso_id', cursoId)
+    .order('numero_orden', { ascending: true });
+  if (error) console.error('[cursosService] fetchModulosByCurso:', error.message);
+  return { data: data ?? [], error };
+}
+
+// ── Progreso ──────────────────────────────────────────────────────────────────
+
+export async function fetchProgresoByCurso(cursoId, userEmail) {
+  const { data, error } = await supabase
+    .from('cursos_progreso')
+    .select('modulo_id')
+    .eq('curso_id', cursoId)
+    .eq('user_email', userEmail)
+    .eq('completado', true);
+  if (error) console.error('[cursosService] fetchProgresoByCurso:', error.message);
+  return { data: data ?? [], error };
+}
+
+export async function fetchProgresoByUser(userEmail) {
+  const { data, error } = await supabase
+    .from('cursos_progreso')
+    .select('curso_id')
+    .eq('user_email', userEmail)
+    .eq('completado', true);
+  if (error) console.error('[cursosService] fetchProgresoByUser:', error.message);
+  return { data: data ?? [], error };
+}
+
+export async function upsertProgreso(cursoId, moduloId, userEmail) {
+  const { error } = await supabase
+    .from('cursos_progreso')
+    .upsert([{
+      curso_id: cursoId,
+      modulo_id: moduloId,
+      user_email: userEmail,
+      completado: true,
+      updated_at: new Date(),
+    }], { onConflict: 'modulo_id, user_email' });
+  if (error) console.error('[cursosService] upsertProgreso:', error.message);
+  return { error };
+}
+
+// ── Resultados / Quiz ─────────────────────────────────────────────────────────
+
+export async function fetchUltimoResultado(cursoId, userEmail) {
+  const { data, error } = await supabase
+    .from('cursos_resultados')
+    .select('*')
+    .eq('curso_id', cursoId)
+    .eq('user_email', userEmail)
+    .order('created_at', { ascending: false })
+    .limit(1);
+  if (error) console.error('[cursosService] fetchUltimoResultado:', error.message);
+  return { data: data?.[0] ?? null, error };
+}
+
+export async function fetchResultadosByUser(userEmail, limit = 5) {
+  const { data, error } = await supabase
+    .from('cursos_resultados')
+    .select('*, curso:cursos(titulo, categoria:cursos_categorias(color))')
+    .eq('user_email', userEmail)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) console.error('[cursosService] fetchResultadosByUser:', error.message);
+  return { data: data ?? [], error };
+}
+
+export async function fetchCursosAprobadosByUser(userEmail) {
+  const { data, error } = await supabase
+    .from('cursos_resultados')
+    .select('id, curso_id')
+    .eq('user_email', userEmail)
+    .eq('aprobado', true);
+  if (error) console.error('[cursosService] fetchCursosAprobadosByUser:', error.message);
+  return { data: data ?? [], error };
+}
+
+export async function insertResultado(payload) {
+  const { error } = await supabase.from('cursos_resultados').insert([payload]);
+  if (error) console.error('[cursosService] insertResultado:', error.message);
+  return { error };
+}
+
+// ── Stats globales ────────────────────────────────────────────────────────────
+
+export async function fetchGlobalStats() {
+  const [usuariosRes, cursosRes, certsRes] = await Promise.all([
+    supabase.from('profiles').select('id', { count: 'exact', head: true }),
+    supabase.from('cursos').select('id', { count: 'exact', head: true }),
+    supabase.from('cursos_resultados').select('id', { count: 'exact', head: true }).eq('aprobado', true),
+  ]);
+  return {
+    data: {
+      usuarios: usuariosRes.count ?? 0,
+      cursos: cursosRes.count ?? 0,
+      certificados: certsRes.count ?? 0,
+    },
+    error: usuariosRes.error || cursosRes.error || certsRes.error || null,
+  };
+}
+
+// ── Accesos rápidos ───────────────────────────────────────────────────────────
+
+export async function fetchAccesosRapidos() {
+  const { data, error } = await supabase
+    .from('accesos_rapidos')
+    .select('*')
+    .eq('activo', true)
+    .order('numero_orden', { ascending: true });
+  if (error) console.error('[cursosService] fetchAccesosRapidos:', error.message);
+  return { data: data ?? [], error };
 }

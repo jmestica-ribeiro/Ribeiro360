@@ -1,5 +1,23 @@
 import { supabase } from '../lib/supabase';
 
+export async function fetchPortalCMASS() {
+  const [planesRes, itemsRes, coursesRes, cumplimientoRes] = await Promise.all([
+    supabase.from('paf_planes').select('*').order('anio'),
+    supabase.from('paf_items').select('*, categoria:cursos_categorias(nombre, color)').order('mes').order('orden'),
+    supabase.from('cursos').select('id, titulo, es_paf, paf_item_id, categoria:cursos_categorias(nombre, color)'),
+    supabase.from('paf_cumplimiento').select('*'),
+  ]);
+  const error = planesRes.error || itemsRes.error || coursesRes.error || cumplimientoRes.error || null;
+  if (error) console.error('[pafService] fetchPortalCMASS:', error.message);
+  return {
+    planes: planesRes.data ?? [],
+    items: itemsRes.data ?? [],
+    courses: coursesRes.data ?? [],
+    cumplimiento: cumplimientoRes.data ?? [],
+    error,
+  };
+}
+
 export async function fetchPAF() {
   const [planesRes, itemsRes] = await Promise.all([
     supabase.from('paf_planes').select('*').order('anio', { ascending: false }),

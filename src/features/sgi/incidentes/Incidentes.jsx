@@ -284,10 +284,13 @@ export default function Incidentes() {
                     </td>
                     <td>
                       <div className="inc-paso-cell">
-                        <div className="inc-paso-label">Paso {paso}/{PASOS.length}</div>
-                        <div className="inc-paso-bar-bg">
-                          <div className="inc-paso-bar-fill" style={{ width: `${pct}%` }} />
-                        </div>
+                        <svg width="34" height="34" viewBox="0 0 36 36" className="inc-paso-ring">
+                          <circle cx="18" cy="18" r="14" className="inc-paso-ring-bg" />
+                          <circle cx="18" cy="18" r="14" className="inc-paso-ring-fill"
+                            strokeDasharray={`${(pct * 87.96 / 100).toFixed(1)} 87.96`}
+                          />
+                        </svg>
+                        <span className="inc-paso-label">Paso {paso}/{PASOS.length}</span>
                       </div>
                     </td>
                     <td>

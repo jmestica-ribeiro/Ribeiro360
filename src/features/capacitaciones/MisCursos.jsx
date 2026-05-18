@@ -3,8 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, Clock, ChevronRight, Award, Play, Filter, Search, CheckCircle2, ChevronLeft } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
-import { courseIsVisible } from '../../lib/visibilidad';
+import { fetchCursosVisibles, fetchProgresoByUser, fetchCursosCategorias } from '../../services/cursosService';
 import CoursePlayer from './CoursePlayer';
 import './MisCursos.css';
 
@@ -38,41 +37,27 @@ const MisCursos = () => {
   const fetchCourses = async () => {
     setIsLoading(true);
     try {
-      const [coursesRes, progressRes, visRes, destRes] = await Promise.all([
-        supabase
-          .from('cursos')
-          .select('*, categoria:cursos_categorias(nombre, color, icono), modulos:cursos_modulos(count)'),
-        supabase
-          .from('cursos_progreso')
-          .select('curso_id')
-          .eq('user_email', userEmail)
-          .eq('completado', true),
-        supabase.from('cursos_visibilidad').select('*'),
-        supabase.from('cursos_destinatarios').select('curso_id').eq('user_id', user?.id),
+      const [{ data: cursosData, error: cursosError }, { data: progressData }, { data: categData }] = await Promise.all([
+        fetchCursosVisibles(),
+        fetchProgresoByUser(userEmail),
+        fetchCursosCategorias(),
       ]);
 
-      if (coursesRes.data) {
-        const visRules = visRes.data || [];
-        const destCursoIds = new Set((destRes.data || []).map(d => d.curso_id));
+      if (cursosError) throw cursosError;
 
-        const progressMap = {};
-        (progressRes.data || []).forEach(p => {
-          progressMap[p.curso_id] = (progressMap[p.curso_id] || 0) + 1;
-        });
+      const progressMap = {};
+      (progressData || []).forEach(p => { progressMap[p.curso_id] = (progressMap[p.curso_id] || 0) + 1; });
 
-        const enriched = coursesRes.data
-          .filter(course => courseIsVisible(course.id, destCursoIds, visRules, profile))
-          .map(course => {
-            const totalModulos = course.modulos?.[0]?.count || 0;
-            const completados = progressMap[course.id] || 0;
-            const progressPct = totalModulos > 0 ? Math.round((completados / totalModulos) * 100) : 0;
-            return { ...course, totalModulos, progressPct };
-          });
+      const categMap = Object.fromEntries((categData || []).map(c => [c.id, c]));
 
-        setCourses(enriched);
-        const uniqueCats = ['Todas', ...new Set(enriched.map(c => c.categoria?.nombre).filter(Boolean))];
-        setCategories(uniqueCats);
-      }
+      const enriched = cursosData.map(course => {
+        const completados = progressMap[course.id] || 0;
+        return { ...course, totalModulos: 0, progressPct: completados > 0 ? 50 : 0, categoria: categMap[course.categoria_id] || null };
+      });
+
+      setCourses(enriched);
+      const uniqueCats = ['Todas', ...new Set(enriched.map(c => c.categoria?.nombre).filter(Boolean))];
+      setCategories(uniqueCats);
     } catch (err) {
       console.error(err);
     } finally {

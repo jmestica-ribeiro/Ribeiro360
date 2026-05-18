@@ -9,6 +9,21 @@ export async function fetchEventos() {
   return { data: data ?? [], error };
 }
 
+export async function fetchEventosProximos(limit = 10) {
+  const today = new Date().toISOString().split('T')[0];
+  const [eventosRes, visRes] = await Promise.all([
+    supabase
+      .from('eventos')
+      .select('*, categoria:eventos_categorias(nombre, color), area:areas(nombre, color)')
+      .gte('fecha', today)
+      .order('fecha', { ascending: true })
+      .limit(limit),
+    supabase.from('eventos_visibilidad').select('*'),
+  ]);
+  if (eventosRes.error) console.error('[eventosService] fetchEventosProximos:', eventosRes.error.message);
+  return { data: eventosRes.data ?? [], visibilidad: visRes.data ?? [], error: eventosRes.error };
+}
+
 export async function fetchEventosCategorias() {
   const { data, error } = await supabase.from('eventos_categorias').select('*');
   if (error) console.error('[eventosService] fetchEventosCategorias:', error.message);

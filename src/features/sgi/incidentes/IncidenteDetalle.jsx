@@ -1,11 +1,20 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Check, Clock, ChevronRight, Loader2, Search, User, Upload, X, Camera, HelpCircle, GitBranch, FileText, Paperclip } from 'lucide-react';
 import IncidenteInformePDF from './IncidenteInformePDF';
 import SistemicoPicker from './SistemicoPicker';
 import { useAuth } from '../../../contexts/AuthContext';
-import { supabase } from '../../../lib/supabase';
+import {
+  fetchIncidentesProfiles, fetchCentrosDeCostos,
+  countIncidentesByYear, fetchIncidente, insertIncidente, updateIncidente,
+  fetchAcciones, countAccionesByIncidente, insertAccion, updateAccion, deleteAccion,
+  fetchAccionesRectificativas, updateVerifAccion,
+  fetchHitos, fetchHitosResumen, insertHito, deleteHito,
+  fetch5P, insert5P, delete5P,
+  fetchTimeline, insertTimeline, updateTimeline, deleteTimeline,
+  uploadIncAdjunto, getSignedUrl, getSignedUrls,
+} from '../../../services/incidentesService';
 import './IncidenteDetalle.css';
 
 /* ── Constants ──────────────────────────────────────────────────────────────── */
@@ -188,10 +197,9 @@ function PersonPickerModal({ profiles, onSelect, onClose, title, multi = false, 
 export default function IncidenteDetalle() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const isNew = !id;
-  const { user, profile } = useAuth();
-
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
+  const { user, profile, isAdmin, isSgiWriter } = useAuth();
 
   const [loading, setLoading]       = useState(!isNew);
   const [saving, setSaving]         = useState(false);
@@ -201,7 +209,8 @@ export default function IncidenteDetalle() {
   const [currentStep, setCurrentStep] = useState(1);
   const [pasoActual, setPasoActual] = useState(1);
 
-  const [form, setForm]         = useState({ ...EMPTY_FORM });
+  const tipoFromQuery = searchParams.get('tipo');
+  const [form, setForm]         = useState({ ...EMPTY_FORM, ...(tipoFromQuery ? { tipo: tipoFromQuery } : {}) });
   const [step2, setStep2]       = useState({ responsable_analisis_id: '', participantes: [] });
   const [step2Picker, setStep2Picker] = useState(null); // 'responsable' | 'participante'
   const [step3, setStep3]       = useState({
@@ -242,8 +251,8 @@ export default function IncidenteDetalle() {
   /* ── Lookups ── */
   useEffect(() => {
     Promise.all([
-      supabase.from('profiles').select('id, full_name, job_title, department, office_location, avatar_url').order('full_name'),
-      supabase.from('centros_de_costos').select('id, nombre').eq('activo', true).order('nombre'),
+      fetchIncidentesProfiles(),
+      fetchCentrosDeCostos(),
     ]).then(([p, c]) => {
       if (p.data) {
         setProfiles(p.data);
@@ -270,9 +279,7 @@ export default function IncidenteDetalle() {
     if (!isNew) return;
     const gen = async () => {
       const year   = new Date().getFullYear();
-      const { count } = await supabase
-        .from('inc_incidentes').select('id', { count: 'exact', head: true })
-        .gte('created_at', `${year}-01-01`).lt('created_at', `${year + 1}-01-01`);
+      const { count } = await countIncidentesByYear(year);
       setForm(f => ({ ...f, numero: `INC-${year}-${String((count || 0) + 1).padStart(3, '0')}` }));
     };
     gen();
@@ -282,7 +289,7 @@ export default function IncidenteDetalle() {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    supabase.from('inc_incidentes').select('*').eq('id', id).single()
+    fetchIncidente(id)
       .then(({ data, error }) => {
         if (error) { console.error(error); setLoading(false); return; }
         if (data) {
@@ -336,14 +343,10 @@ export default function IncidenteDetalle() {
   const showToast = useCallback((msg, type = 'success') => setToast({ message: msg, type }), []);
 
   /* ── Fetch acciones (pasos 5 y 6) ── */
-  const fetchAcciones = useCallback(async () => {
+  const loadAcciones = useCallback(async () => {
     if (!id) return;
     setAccionesLoading(true);
-    const { data } = await supabase
-      .from('inc_acciones')
-      .select('*, responsable:profiles!responsable_id(full_name)')
-      .eq('incidente_id', id)
-      .order('fecha_vencimiento', { ascending: true, nullsFirst: false });
+    const { data } = await fetchAcciones(id);
     setAcciones(data || []);
     const verif = {};
     for (const a of data || []) {
@@ -361,8 +364,8 @@ export default function IncidenteDetalle() {
   }, [id]);
 
   useEffect(() => {
-    if ((currentStep === 5 || currentStep === 6) && !isNew) fetchAcciones();
-  }, [currentStep, fetchAcciones, isNew]);
+    if ((currentStep === 5 || currentStep === 6) && !isNew) loadAcciones();
+  }, [currentStep, loadAcciones, isNew]);
 
   const esResponsableCalidad = profiles.find(p => p.id === user?.id)?.job_title === 'Responsable de Calidad';
   const canVerif = (form.responsable_verif || []).includes(user?.id) ||
@@ -379,7 +382,7 @@ export default function IncidenteDetalle() {
         if (fotoPaths.length >= MAX_FOTOS) break;
         const ext  = file.name.split('.').pop();
         const path = `incidentes/${id || 'nuevo'}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error: upErr } = await supabase.storage.from('inc-adjuntos').upload(path, file);
+        const { error: upErr } = await uploadIncAdjunto(path, file);
         if (!upErr) fotoPaths.push(path);
       }
       setPendingFotos([]);
@@ -411,12 +414,12 @@ export default function IncidenteDetalle() {
       };
 
       if (isNew) {
-        const { data, error } = await supabase.from('inc_incidentes').insert(payload).select('id').single();
+        const { data, error } = await insertIncidente(payload);
         if (error) throw error;
         showToast('Incidente creado correctamente');
         navigate(`/sgi/incidentes/${data.id}`, { replace: true });
       } else {
-        const { error } = await supabase.from('inc_incidentes').update(payload).eq('id', id);
+        const { error } = await updateIncidente(id, payload);
         if (error) throw error;
         if (advance) { setPasoActual(2); setCurrentStep(2); }
         showToast(advance ? 'Paso 1 completado' : 'Guardado correctamente');
@@ -435,7 +438,7 @@ export default function IncidenteDetalle() {
     setSaving(true);
     try {
       const nextPaso = advance ? Math.max(pasoActual, 3) : pasoActual;
-      const { error } = await supabase.from('inc_incidentes').update({ paso_actual: nextPaso }).eq('id', id);
+      const { error } = await updateIncidente(id, { paso_actual: nextPaso });
       if (error) throw error;
       if (advance) { setPasoActual(p => Math.max(p, 3)); setCurrentStep(3); }
       showToast(advance ? 'Paso 2 completado' : 'Evidencias guardadas');
@@ -453,11 +456,11 @@ export default function IncidenteDetalle() {
     setSaving(true);
     try {
       const nextPaso = advance ? 4 : 3;
-      const { error } = await supabase.from('inc_incidentes').update({
+      const { error } = await updateIncidente(id, {
         responsable_analisis_id:  step2.responsable_analisis_id,
         participantes_analisis:   JSON.stringify(step2.participantes),
         paso_actual:              Math.max(pasoActual, nextPaso),
-      }).eq('id', id);
+      });
       if (error) throw error;
       if (advance) { setPasoActual(p => Math.max(p, 4)); setCurrentStep(4); }
       showToast(advance ? 'Paso 3 completado' : 'Equipo guardado');
@@ -475,13 +478,13 @@ export default function IncidenteDetalle() {
     setSaving(true);
     try {
       const nextPaso = advance ? Math.max(pasoActual, 5) : pasoActual;
-      const { error } = await supabase.from('inc_incidentes').update({
+      const { error } = await updateIncidente(id, {
         acr_tecnica:           tecnicaEfectiva,
         acr_porques:           step3.porques,
         acr_causa_raiz:        step3.causa_raiz || null,
         acr_sistemico_causas:  step3.sistemico_causas,
         paso_actual:           nextPaso,
-      }).eq('id', id);
+      });
       if (error) throw error;
       if (advance) { setPasoActual(p => Math.max(p, 5)); setCurrentStep(5); }
       showToast(advance ? 'Paso 4 completado' : 'Análisis guardado');
@@ -499,10 +502,10 @@ export default function IncidenteDetalle() {
     setSaving(true);
     try {
       const nextPaso = advance ? Math.max(pasoActual, 6) : pasoActual;
-      const { error } = await supabase.from('inc_incidentes').update({
+      const { error } = await updateIncidente(id, {
         responsable_verif: form.responsable_verif,
         paso_actual: nextPaso,
-      }).eq('id', id);
+      });
       if (error) throw error;
       if (advance) { setPasoActual(p => Math.max(p, 6)); setCurrentStep(6); }
       showToast(advance ? 'Paso 5 completado' : 'Plan de trabajo guardado');
@@ -527,27 +530,24 @@ export default function IncidenteDetalle() {
       for (const file of (v.files || []).slice(0, 3 - (v.adjuntos || []).length)) {
         const ext = file.name.split('.').pop();
         const path = `verif/${accionId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error } = await supabase.storage.from('inc-adjuntos').upload(path, file);
+        const { error } = await uploadIncAdjunto(path, file);
         if (!error) newUrls.push(path);
       }
       const allAdj = [...(v.adjuntos || []), ...newUrls].slice(0, 3);
-      await supabase.from('inc_acciones').update({
+      await updateVerifAccion(accionId, {
         verif_eficaz:    v.eficaz,
         verif_fecha:     v.fecha || null,
         verif_detalle:   v.detalle || null,
         verif_adjunto_1: allAdj[0] || null,
         verif_adjunto_2: allAdj[1] || null,
         verif_adjunto_3: allAdj[2] || null,
-      }).eq('id', accionId);
+      });
       setVerif(accionId, { adjuntos: allAdj, files: [], saving: false });
 
       if (v.eficaz === false) {
         // Buscar si ya existe una rectificativa para este incidente
         // Buscar rectificativas que tengan como origen esta acción específica
-        const { data: existentes } = await supabase
-          .from('inc_acciones')
-          .select('id, verif_eficaz')
-          .eq('parent_accion_id', accionId);
+        const { data: existentes } = await fetchAccionesRectificativas(accionId);
 
         const rectifEficaz   = (existentes || []).some(r => r.verif_eficaz === true);
         const rectifPendiente = (existentes || []).some(r => r.verif_eficaz !== true);
@@ -560,11 +560,9 @@ export default function IncidenteDetalle() {
           showToast('Ya existe una acción rectificativa en curso para esta acción.', 'warning');
         } else {
           // No hay rectificativas — crear una nueva
-          const { count } = await supabase
-            .from('inc_acciones').select('id', { count: 'exact', head: true })
-            .eq('incidente_id', id);
+          const { count } = await countAccionesByIncidente(id);
           const codigo = `ACC-${String((count || 0) + 1).padStart(4, '0')}`;
-          await supabase.from('inc_acciones').insert({
+          await insertAccion({
             incidente_id:      id,
             codigo,
             descripcion:       `[RECTIFICATIVA] ${v.detalle || 'Acción no fue eficaz — requiere nueva acción correctiva.'}`,
@@ -576,10 +574,10 @@ export default function IncidenteDetalle() {
             parent_accion_id:  accionId,
           });
           setRectifForm({ responsable_id: '', fecha_vencimiento: '' });
-          await supabase.from('inc_incidentes').update({ paso_actual: 5 }).eq('id', id);
+          await updateIncidente(id, { paso_actual: 5 });
           setPasoActual(5);
           setCurrentStep(5);
-          await fetchAcciones();
+          await loadAcciones();
           showToast('Acción no eficaz: se creó una acción rectificativa y se regresó al Paso 5', 'error');
         }
       } else {
@@ -595,7 +593,7 @@ export default function IncidenteDetalle() {
     if (!id) return;
     setSaving(true);
     try {
-      const { error } = await supabase.from('inc_incidentes').update({ paso_actual: nextStep }).eq('id', id);
+      const { error } = await updateIncidente(id, { paso_actual: nextStep });
       if (error) throw error;
       setPasoActual(nextStep);
       setCurrentStep(nextStep);
@@ -648,12 +646,13 @@ export default function IncidenteDetalle() {
                         {diasRestantes < 0 ? `Vencida hace ${Math.abs(diasRestantes)} día${Math.abs(diasRestantes) !== 1 ? 's' : ''}` : diasRestantes === 0 ? 'Vence hoy' : `${diasRestantes} día${diasRestantes !== 1 ? 's' : ''} restante${diasRestantes !== 1 ? 's' : ''}`}
                       </span>
                     )}
-                    {a.tipo !== 'rectificativa' && (
+                    {a.tipo !== 'rectificativa' && (isAdmin || user?.id === form.emisor_id || user?.id === step2.responsable_analisis_id) && (
                       <button className="ncd-accion-delete" title="Eliminar acción" onClick={async e => {
                         e.stopPropagation();
-                        if (!window.confirm(`¿Eliminar ${a.codigo}?`)) return;
-                        await supabase.from('inc_acciones').delete().eq('id', a.id);
-                        fetchAcciones();
+                        if (!window.confirm(`¿Eliminar ${a.codigo}? Esta operación no se puede deshacer.`)) return;
+                        const { error } = await deleteAccion(a.id);
+                        if (error) { showToast('Error al eliminar la acción', 'error'); return; }
+                        loadAcciones();
                       }}><X size={14} /></button>
                     )}
                   </div>
@@ -845,7 +844,7 @@ export default function IncidenteDetalle() {
                                 <button onClick={() => {
                                   const updated = v.adjuntos.filter((_, j) => j !== i);
                                   setVerif(a.id, { adjuntos: updated });
-                                  supabase.from('inc_acciones').update({ verif_adjunto_1: updated[0] || null, verif_adjunto_2: updated[1] || null, verif_adjunto_3: updated[2] || null }).eq('id', a.id);
+                                  updateVerifAccion(a.id, { verif_adjunto_1: updated[0] || null, verif_adjunto_2: updated[1] || null, verif_adjunto_3: updated[2] || null });
                                 }}><X size={10} /></button>
                               </span>
                             );
@@ -909,7 +908,7 @@ export default function IncidenteDetalle() {
                     <button className="ncd-btn-secondary"
                       onClick={async () => {
                         if (!window.confirm('¿Reabrir este incidente?')) return;
-                        await supabase.from('inc_incidentes').update({ estado: 'abierto' }).eq('id', id);
+                        await updateIncidente(id, { estado: 'abierto' });
                         setIncEstado('abierto');
                         showToast('Incidente reabierto', 'success');
                       }}>
@@ -919,7 +918,7 @@ export default function IncidenteDetalle() {
                     <button className="ncd-btn-primary" style={{ background: '#16a34a', padding: '10px 24px', fontSize: 14, gap: 8 }}
                       onClick={async () => {
                         if (!window.confirm('¿Cerrar definitivamente este incidente? Esta acción no se puede deshacer.')) return;
-                        await supabase.from('inc_incidentes').update({ estado: 'cerrado', paso_actual: 6 }).eq('id', id);
+                        await updateIncidente(id, { estado: 'cerrado', paso_actual: 6 });
                         setIncEstado('cerrado');
                         showToast('Incidente cerrado correctamente', 'success');
                         setTimeout(() => navigate(-1), 1500);
@@ -992,10 +991,12 @@ export default function IncidenteDetalle() {
           profiles={profiles}
           accionPicker={accionPicker}
           setAccionPicker={setAccionPicker}
-          onClose={() => { setShowAccionModal(false); fetchAcciones(); }}
-          onSaved={() => { setShowAccionModal(false); fetchAcciones(); }}
-          onHitoSaved={() => fetchAcciones()}
+          onClose={() => { setShowAccionModal(false); loadAcciones(); }}
+          onSaved={() => { setShowAccionModal(false); loadAcciones(); }}
+          onHitoSaved={() => loadAcciones()}
           incidenteId={id}
+          isAdmin={isAdmin}
+          currentUserId={user?.id}
         />
       )}
 
@@ -1026,7 +1027,7 @@ export default function IncidenteDetalle() {
           <button className="incd-pdf-btn" style={{ background: '#fef3c7', color: '#92400e', borderColor: '#fcd34d' }}
             onClick={async () => {
               if (!window.confirm('¿Reabrir este incidente?')) return;
-              await supabase.from('inc_incidentes').update({ estado: 'abierto' }).eq('id', id);
+              await updateIncidente(id, { estado: 'abierto' });
               setIncEstado('abierto');
               showToast('Incidente reabierto', 'success');
             }}>
@@ -1124,9 +1125,7 @@ export default function IncidenteDetalle() {
 function IncStep6Hitos({ accionId }) {
   const [hitos, setHitos] = useState([]);
   useEffect(() => {
-    supabase.from('inc_acciones_hitos').select('fecha, porcentaje, descripcion')
-      .eq('accion_id', accionId).order('fecha', { ascending: true })
-      .then(({ data }) => setHitos(data || []));
+    fetchHitosResumen(accionId).then(({ data }) => setHitos(data || []));
   }, [accionId]);
   if (hitos.length === 0) return <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Sin hitos registrados.</p>;
   return (
@@ -1144,7 +1143,7 @@ function IncStep6Hitos({ accionId }) {
 }
 
 /* ── IncAccionModal ───────────────────────────────────────────────────────────── */
-function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, accionPicker, setAccionPicker, onClose, onSaved, onHitoSaved, incidenteId }) {
+function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, accionPicker, setAccionPicker, onClose, onSaved, onHitoSaved, incidenteId, isAdmin, currentUserId }) {
   const [saving, setSaving]           = useState(false);
   const [hitos, setHitos]             = useState([]);
   const [hitosLoading, setHitosLoading] = useState(false);
@@ -1156,7 +1155,7 @@ function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, ac
   useEffect(() => {
     if (!editingAccion?.id) return;
     setHitosLoading(true);
-    supabase.from('inc_acciones_hitos').select('*').eq('accion_id', editingAccion.id).order('fecha', { ascending: true })
+    fetchHitos(editingAccion.id)
       .then(({ data }) => { setHitos(data || []); setHitosLoading(false); });
   }, [editingAccion?.id]);
 
@@ -1170,9 +1169,9 @@ function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, ac
     try {
       let accionId = editingAccion?.id;
       if (!accionId) {
-        const { count } = await supabase.from('inc_acciones').select('id', { count: 'exact', head: true }).eq('incidente_id', incidenteId);
+        const { count } = await countAccionesByIncidente(incidenteId);
         const codigo = `ACC-${String((count || 0) + 1).padStart(4, '0')}`;
-        const { data: inserted } = await supabase.from('inc_acciones').insert({
+        const { data: inserted } = await insertAccion({
           incidente_id: incidenteId,
           codigo,
           descripcion: accionForm.descripcion,
@@ -1180,7 +1179,7 @@ function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, ac
           fecha_vencimiento: accionForm.fecha_vencimiento || null,
           avance: 0,
           estado: 'pendiente',
-        }).select('id').single();
+        });
         accionId = inserted?.id;
       }
 
@@ -1191,11 +1190,11 @@ function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, ac
         for (const file of hitoFiles.slice(0, 3)) {
           const ext = file.name.split('.').pop();
           const path = `hitos/${accionId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-          const { error } = await supabase.storage.from('inc-adjuntos').upload(path, file);
+          const { error } = await uploadIncAdjunto(path, file);
           if (!error) adjuntoUrls.push(path);
         }
         nuevoHitoPorc = parseInt(Math.min(hitoForm.porcentaje, maxProximoHito), 10);
-        await supabase.from('inc_acciones_hitos').insert({
+        await insertHito({
           accion_id: accionId,
           descripcion: hitoForm.descripcion.trim(),
           fecha: hitoForm.fecha,
@@ -1211,19 +1210,16 @@ function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, ac
 
       if (accionId) {
         // Recalcular avance desde BD para garantizar consistencia
-        const { data: todosHitos } = await supabase
-          .from('inc_acciones_hitos')
-          .select('porcentaje')
-          .eq('accion_id', accionId);
+        const { data: todosHitos } = await fetchHitosResumen(accionId);
         const avanceFinal = Math.min(100, (todosHitos || []).reduce((s, h) => s + (h.porcentaje || 0), 0));
         const estado = avanceFinal === 100 ? 'cerrada' : avanceFinal > 0 ? 'en_proceso' : 'pendiente';
-        await supabase.from('inc_acciones').update({
+        await updateAccion(accionId, {
           descripcion: accionForm.descripcion,
           responsable_id: accionForm.responsable_id || null,
           fecha_vencimiento: accionForm.fecha_vencimiento || null,
           avance: avanceFinal,
           estado,
-        }).eq('id', accionId);
+        });
       }
       onSaved();
     } finally {
@@ -1232,8 +1228,12 @@ function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, ac
   };
 
   const handleDeleteHito = async (hitoId) => {
-    await supabase.from('inc_acciones_hitos').delete().eq('id', hitoId);
-    const { data } = await supabase.from('inc_acciones_hitos').select('*').eq('accion_id', editingAccion.id).order('fecha', { ascending: true });
+    const canDelete = isAdmin || currentUserId === editingAccion?.responsable_id;
+    if (!canDelete) { alert('No tenés permisos para eliminar este hito.'); return; }
+    if (!window.confirm('¿Eliminar este hito? Esta operación no se puede deshacer.')) return;
+    const { error } = await deleteHito(hitoId);
+    if (error) { alert('Error al eliminar el hito.'); return; }
+    const { data } = await fetchHitos(editingAccion.id);
     setHitos(data || []);
     onHitoSaved?.();
   };
@@ -1339,7 +1339,7 @@ function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, ac
                         return (
                           <button key={i} className="ncd-hito-file-chip" style={{ marginTop: 4 }}
                             onClick={async () => {
-                              const { data } = await supabase.storage.from('inc-adjuntos').createSignedUrl(path, 3600);
+                              const { data } = await getSignedUrl(path, 3600);
                               if (data?.signedUrl) window.open(data.signedUrl, '_blank');
                             }}>
                             <FileText size={11} />
@@ -1385,7 +1385,7 @@ function Step1({ form, setForm, profiles, clientes, gerencias, sitios, pendingFo
   /* Generar signed URLs para fotos guardadas */
   useEffect(() => {
     if (savedFotos.length === 0) return;
-    supabase.storage.from('inc-adjuntos').createSignedUrls(savedFotos, 3600).then(({ data }) => {
+    getSignedUrls(savedFotos, 3600).then(({ data }) => {
       const map = {};
       (data || []).forEach(s => { map[s.path] = s.signedUrl; });
       setFotoUrls(map);
@@ -1619,8 +1619,9 @@ function Step1({ form, setForm, profiles, clientes, gerencias, sitios, pendingFo
 /* ── Step 2: Equipo de Análisis ─────────────────────────────────────────────── */
 /* ── Step 3 ─────────────────────────────────────────────────────────────────── */
 const TECNICAS_INC = [
-  { key: '5_porques',  icon: <HelpCircle size={20} />, title: '5 Por qués',    desc: 'Pregunta "¿Por qué?" de forma sucesiva para llegar a la causa raíz.' },
-  { key: 'sistemico',  icon: <GitBranch size={20} />,  title: 'Método Sistémico', desc: 'Análisis sistémico de factores organizacionales, humanos y técnicos.' },
+  { key: '5_porques',  icon: <HelpCircle size={20} />, title: '5 Por qués',       desc: 'Pregunta "¿Por qué?" de forma sucesiva para llegar a la causa raíz.' },
+  { key: 'sistemico',  icon: <GitBranch size={20} />,  title: 'Método Sistémico',  desc: 'Análisis sistémico de factores organizacionales, humanos y técnicos.' },
+  { key: 'otra',       icon: <FileText  size={20} />,  title: 'Otra técnica',      desc: 'Describí libremente la técnica de análisis utilizada.' },
 ];
 
 function Step3({ step3, setStep3, clasificacion, saving, pasoActual, onSave, onSaveAndAdvance }) {
@@ -1947,15 +1948,14 @@ function Cinco5PSection({ incidenteId, onCountChange }) {
   const load = useCallback(async () => {
     if (!incidenteId) return;
     setLoading(true);
-    const { data } = await supabase.from('inc_5p').select('*')
-      .eq('incidente_id', incidenteId).order('created_at', { ascending: true });
+    const { data } = await fetch5P(incidenteId);
     const rows = data || [];
     setEvidencias(rows);
     onCountChange?.(rows.length);
     // Generar signed URLs para adjuntos
     const paths = rows.map(r => r.adjunto_path).filter(Boolean);
     if (paths.length > 0) {
-      const { data: signed } = await supabase.storage.from('inc-adjuntos').createSignedUrls(paths, 3600);
+      const { data: signed } = await getSignedUrls(paths, 3600);
       const map = {};
       (signed || []).forEach(s => { map[s.path] = s.signedUrl; });
       setSignedUrls(map);
@@ -1979,10 +1979,10 @@ function Cinco5PSection({ incidenteId, onCountChange }) {
       if (newFile) {
         const ext  = newFile.name.split('.').pop();
         const path = `incidentes/${incidenteId}/5p/${activeCategoria}/${Date.now()}.${ext}`;
-        const { error: upErr } = await supabase.storage.from('inc-adjuntos').upload(path, newFile);
+        const { error: upErr } = await uploadIncAdjunto(path, newFile);
         if (!upErr) adjunto_path = path;
       }
-      await supabase.from('inc_5p').insert({
+      await insert5P({
         incidente_id: incidenteId,
         categoria:    activeCategoria,
         descripcion:  newDesc.trim() || null,
@@ -1997,9 +1997,13 @@ function Cinco5PSection({ incidenteId, onCountChange }) {
     }
   };
 
-  const handleDelete = async (id) => {
-    await supabase.from('inc_5p').delete().eq('id', id);
-    setEvidencias(prev => prev.filter(r => r.id !== id));
+  const handleDelete = async (ev) => {
+    if (ev.created_by && ev.created_by !== user?.id) {
+      alert('Solo podés eliminar registros que vos mismo creaste.'); return;
+    }
+    if (!window.confirm('¿Eliminar este registro? Esta operación no se puede deshacer.')) return;
+    const { error } = await delete5P(ev.id);
+    if (!error) setEvidencias(prev => prev.filter(r => r.id !== ev.id));
   };
 
   const countFor = (label) => evidencias.filter(r => r.categoria === label).length;
@@ -2065,7 +2069,7 @@ function Cinco5PSection({ incidenteId, onCountChange }) {
                           ) : null
                         )}
                       </div>
-                      <button className="incd-tl-btn del" onClick={() => handleDelete(ev.id)} title="Eliminar"><X size={13} /></button>
+                      <button className="incd-tl-btn del" onClick={() => handleDelete(ev)} title="Eliminar"><X size={13} /></button>
                     </div>
                   ))}
                 </div>
@@ -2130,11 +2134,7 @@ function TimelineSection({ incidenteId, onCountChange }) {
   const load = useCallback(async () => {
     if (!incidenteId) return;
     setLoading(true);
-    const { data } = await supabase
-      .from('inc_timeline').select('*')
-      .eq('incidente_id', incidenteId)
-      .order('fecha', { ascending: true })
-      .order('hora', { ascending: true, nullsFirst: true });
+    const { data } = await fetchTimeline(incidenteId);
     const rows = data || [];
     setRows(rows);
     onCountChange?.(rows.length);
@@ -2152,16 +2152,20 @@ function TimelineSection({ incidenteId, onCountChange }) {
     const entry = { fecha: newRow.fecha, hora: newRow.hora || null, actividad: newRow.actividad.trim() };
 
     setSaving(true);
-    await supabase.from('inc_timeline').insert({ ...entry, incidente_id: incidenteId, created_by: user?.id || null });
+    await insertTimeline({ ...entry, incidente_id: incidenteId, created_by: user?.id || null });
     setNewRow({ fecha: today, hora: '', actividad: '' });
     await load();
     setSaving(false);
   };
 
   /* ── Eliminar ── */
-  const handleDelete = async (rowId) => {
-    await supabase.from('inc_timeline').delete().eq('id', rowId);
-    setRows(r => r.filter(x => x.id !== rowId));
+  const handleDelete = async (row) => {
+    if (row.created_by && row.created_by !== user?.id) {
+      alert('Solo podés eliminar entradas que vos mismo creaste.'); return;
+    }
+    if (!window.confirm('¿Eliminar esta entrada del timeline?')) return;
+    const { error } = await deleteTimeline(row.id);
+    if (!error) setRows(r => r.filter(x => x.id !== row.id));
   };
 
   /* ── Editar (solo filas DB) ── */
@@ -2169,7 +2173,7 @@ function TimelineSection({ incidenteId, onCountChange }) {
 
   const handleSaveEdit = async () => {
     if (!editForm.actividad.trim()) return;
-    await supabase.from('inc_timeline').update({ fecha: editForm.fecha, hora: editForm.hora || null, actividad: editForm.actividad.trim() }).eq('id', editingId);
+    await updateTimeline(editingId, { fecha: editForm.fecha, hora: editForm.hora || null, actividad: editForm.actividad.trim() });
     setEditingId(null);
     await load();
   };
@@ -2221,7 +2225,7 @@ function TimelineSection({ incidenteId, onCountChange }) {
                   <td>
                     <div className="incd-tl-actions">
                       <button className="incd-tl-btn edit" onClick={() => startEdit(row)} title="Editar"><Clock size={13} /></button>
-                      <button className="incd-tl-btn del"  onClick={() => handleDelete(row.id)} title="Eliminar"><X size={13} /></button>
+                      <button className="incd-tl-btn del"  onClick={() => handleDelete(row)} title="Eliminar"><X size={13} /></button>
                     </div>
                   </td>
                 </tr>

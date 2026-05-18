@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Mail, MapPin, User, MessageCircle, Send, X, Filter, ChevronLeft, ChevronRight, ChevronDown, Building2, LayoutGrid, List } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { Search, Mail, MapPin, User, MessageCircle, Send, X, Filter, ChevronLeft, ChevronRight, Building2, LayoutGrid, List } from 'lucide-react';
+import { CustomSelect } from '../../components/common';
+import { fetchDirectorioProfiles } from '../../services/usuariosService';
 import { useAuth } from '../../contexts/AuthContext';
 import './Directorio.css';
 
@@ -103,10 +104,7 @@ const Directorio = () => {
 
   const fetchProfiles = async () => {
     setIsLoading(true);
-    const { data } = await supabase
-      .from('profiles')
-      .select('id, full_name, email, job_title, department, office_location, avatar_url, phone, whatsapp_consent')
-      .order('full_name', { ascending: true });
+    const { data } = await fetchDirectorioProfiles();
     if (data) setProfiles(data);
     setIsLoading(false);
   };
@@ -171,34 +169,20 @@ const Directorio = () => {
         {(departments.length > 1 || locations.length > 1) && (
           <div className="filters-inline-row">
             {departments.length > 1 && (
-              <div className={`filter-select-wrap${activeDept !== 'Todos' ? ' is-active' : ''}`}>
-                <Filter size={13} />
-                <select
-                  className="filter-select"
-                  value={activeDept}
-                  onChange={e => setActiveDept(e.target.value)}
-                >
-                  {departments.map(dept => (
-                    <option key={dept} value={dept}>{dept}</option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="select-chevron" />
-              </div>
+              <CustomSelect
+                options={departments}
+                value={activeDept}
+                onChange={setActiveDept}
+                icon={Filter}
+              />
             )}
             {locations.length > 1 && (
-              <div className={`filter-select-wrap${activeLocation !== 'Cualquiera' ? ' is-active' : ''}`}>
-                <MapPin size={13} />
-                <select
-                  className="filter-select"
-                  value={activeLocation}
-                  onChange={e => setActiveLocation(e.target.value)}
-                >
-                  {locations.map(loc => (
-                    <option key={loc} value={loc}>{loc}</option>
-                  ))}
-                </select>
-                <ChevronDown size={14} className="select-chevron" />
-              </div>
+              <CustomSelect
+                options={locations}
+                value={activeLocation}
+                onChange={setActiveLocation}
+                icon={MapPin}
+              />
             )}
             {(activeDept !== 'Todos' || activeLocation !== 'Cualquiera' || searchTerm !== '') && (
               <button className="btn-clear-filters-inline" onClick={() => { setActiveDept('Todos'); setActiveLocation('Cualquiera'); setSearchTerm(''); }}>
