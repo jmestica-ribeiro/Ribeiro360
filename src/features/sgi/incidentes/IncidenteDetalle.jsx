@@ -39,6 +39,9 @@ const TIPOS_INCIDENTE = ['Personal', 'Vehicular', 'Ambiental', 'Industrial'];
 const CLASIFICACIONES = ['Ninguna', 'Menor', 'Relevante', 'Crítica', 'Mayor'];
 const MAX_FOTOS = 6;
 
+const TIPOS_LESION = ['Corte / Laceración', 'Golpe / Contusión', 'Quemadura', 'Caída', 'Aplastamiento', 'Fractura', 'Torcedura / Esguince', 'Inhalación / Intoxicación', 'Proyección', 'Atrapamiento', 'Salpicadura', 'Otro'];
+const PARTES_CUERPO = ['Cabeza', 'Cuello', 'Hombro', 'Brazo', 'Codo', 'Antebrazo', 'Muñeca', 'Mano / Dedos', 'Tórax / Pecho', 'Espalda / Columna', 'Abdomen', 'Cadera', 'Muslo / Pierna', 'Rodilla', 'Tobillo', 'Pie / Dedos', 'Ojos / Cara', 'Múltiples'];
+
 const EMPTY_FORM = {
   tipo:                     'Incidente',
   numero:                   '',
@@ -59,6 +62,10 @@ const EMPTY_FORM = {
   emisor_id:                '',
   responsable_verif:        [],
   lecciones_aprendidas:     '',
+  lesionado_id:             '',
+  tipo_lesion:              '',
+  parte_cuerpo:             [],
+  atencion_medica:          false,
 };
 
 /* ── Toast ──────────────────────────────────────────────────────────────────── */
@@ -321,6 +328,10 @@ export default function IncidenteDetalle() {
             emisor_id:                  data.emisor_id               || '',
             responsable_verif:          Array.isArray(data.responsable_verif) ? data.responsable_verif : [],
             lecciones_aprendidas:       data.lecciones_aprendidas || '',
+            lesionado_id:               data.lesionado_id             || '',
+            tipo_lesion:                data.tipo_lesion              || '',
+            parte_cuerpo:               Array.isArray(data.parte_cuerpo) ? data.parte_cuerpo : (data.parte_cuerpo ? [data.parte_cuerpo] : []),
+            atencion_medica:            data.atencion_medica          || false,
           });
           // Inicializar estado del picker de verificación
           if (data.paso_actual >= 5) {
@@ -408,6 +419,10 @@ export default function IncidenteDetalle() {
         gerencia:                   form.gerencia        || null,
         sitio:                      form.sitio           || null,
         emisor_id:                  form.emisor_id       || null,
+        lesionado_id:               form.lesionado_id    || null,
+        tipo_lesion:                form.tipo_lesion     || null,
+        parte_cuerpo:               form.parte_cuerpo    || null,
+        atencion_medica:            form.atencion_medica || false,
         foto_1: fotoPaths[0] || null,
         foto_2: fotoPaths[1] || null,
         foto_3: fotoPaths[2] || null,
@@ -1580,6 +1595,76 @@ function Step1({ form, setForm, profiles, clientes, gerencias, sitios, pendingFo
 
       </div>
 
+      {/* Datos del lesionado */}
+      <div className="incd-form-section">
+        <div className="incd-section-title">Datos del lesionado</div>
+
+        <div className="incd-form-row">
+          <div className="incd-form-group">
+            <label className="incd-form-label">Persona lesionada</label>
+            <button type="button" className="incd-person-btn" onClick={() => setPicker('lesionado')}>
+              <User size={14} />
+              {profiles.find(p => p.id === form.lesionado_id)?.full_name || '— Sin lesionado —'}
+              {form.lesionado_id && (
+                <span className="incd-person-clear" onClick={e => { e.stopPropagation(); set('lesionado_id', ''); }}><X size={12} /></span>
+              )}
+            </button>
+          </div>
+          <div className="incd-form-group">
+            <label className="incd-form-label">Requirió atención médica</label>
+            <label className="incd-check-inline" style={{ marginTop: 8 }}>
+              <input
+                type="checkbox"
+                checked={!!form.atencion_medica}
+                onChange={e => set('atencion_medica', e.target.checked)}
+              />
+              Sí, requirió atención médica
+            </label>
+          </div>
+        </div>
+
+        <div className="incd-form-row">
+          <div className="incd-form-group">
+            <label className="incd-form-label">Tipo de lesión</label>
+            <select className="incd-form-input" value={form.tipo_lesion} onChange={e => set('tipo_lesion', e.target.value)}>
+              <option value="">— Sin lesión / No aplica —</option>
+              {TIPOS_LESION.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div className="incd-form-group">
+            <label className="incd-form-label">
+              Parte del cuerpo afectada
+              {form.parte_cuerpo.length > 0 && !form.parte_cuerpo.includes('N/A') && (
+                <span className="incd-form-label-count"> ({form.parte_cuerpo.length})</span>
+              )}
+            </label>
+            <div className="incd-chip-group incd-chip-group--wrap">
+              {/* Chip N/A — exclusivo */}
+              <button type="button"
+                className={`incd-chip incd-chip--sm${form.parte_cuerpo.includes('N/A') ? ' active' : ''}`}
+                style={form.parte_cuerpo.includes('N/A') ? { borderColor: '#6B7280', background: 'rgba(107,114,128,0.12)', color: '#6B7280' } : {}}
+                onClick={() => set('parte_cuerpo', form.parte_cuerpo.includes('N/A') ? [] : ['N/A'])}>
+                N/A
+              </button>
+              <span style={{ width: 1, height: 20, background: 'var(--border-color)', alignSelf: 'center', margin: '0 2px' }} />
+              {PARTES_CUERPO.map(p => {
+                const selected = form.parte_cuerpo.includes(p);
+                return (
+                  <button key={p} type="button"
+                    className={`incd-chip incd-chip--sm${selected ? ' active' : ''}`}
+                    onClick={() => {
+                      const sinNA = form.parte_cuerpo.filter(x => x !== 'N/A');
+                      set('parte_cuerpo', selected ? sinNA.filter(x => x !== p) : [...sinNA, p]);
+                    }}>
+                    {p}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Descripción y Fotos — layout 2 columnas */}
       <div className="incd-form-section">
         <div className="incd-section-title">Descripción del evento y registros</div>
@@ -1645,6 +1730,14 @@ function Step1({ form, setForm, profiles, clientes, gerencias, sitios, pendingFo
           profiles={profiles}
           title="Responsable de seguimiento"
           onSelect={p => { set('responsable_seguimiento_id', p.id); setPicker(null); }}
+          onClose={() => setPicker(null)}
+        />
+      )}
+      {picker === 'lesionado' && (
+        <PersonPickerModal
+          profiles={profiles}
+          title="Persona lesionada"
+          onSelect={p => { set('lesionado_id', p.id); setPicker(null); }}
           onClose={() => setPicker(null)}
         />
       )}

@@ -977,6 +977,22 @@ body.dark-theme .incd-toast.warning {
   color: #E71D36;
 }
 
+.incd-chip--sm {
+  padding: 4px 11px;
+  font-size: 12px;
+  border-radius: 14px;
+}
+
+.incd-chip-group--wrap {
+  flex-wrap: wrap;
+}
+
+.incd-form-label-count {
+  font-weight: 400;
+  color: #E71D36;
+  font-size: 12px;
+}
+
 /* clasificacion chips con colores propios */
 .incd-chip-clasif.active[data-val='Relevante'] { border-color: #F59E0B; background: rgba(245,158,11,0.1); color: #d97706; }
 .incd-chip-clasif.active[data-val='Crítica']   { border-color: #E71D36; background: rgba(231,29,54,0.1);  color: #E71D36; }

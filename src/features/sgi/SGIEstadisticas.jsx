@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { fetchSgiEstadisticasData } from '../../services/sgiService';
+import BodyHeatmap from './BodyHeatmap';
 import './SGIEstadisticas.css';
 
 // ── Paleta ────────────────────────────────────────────────────────────────────
@@ -310,6 +311,48 @@ export default function SGIEstadisticas() {
     name: `Paso ${p}`, value: incidentesFiltrados.filter(h => h.estado === 'abierto' && h.paso_actual === p).length,
   }));
 
+  const incPorTipoLesion = useMemo(() => Object.entries(
+    incidentesFiltrados.reduce((acc, h) => {
+      const t = h.tipo_lesion || 'Sin registro';
+      acc[t] = (acc[t] || 0) + 1;
+      return acc;
+    }, {})
+  ).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value), [incidentesFiltrados]);
+
+  const incPorParteCuerpo = useMemo(() => Object.entries(
+    incidentesFiltrados.reduce((acc, h) => {
+      const partes = Array.isArray(h.parte_cuerpo) ? h.parte_cuerpo : (h.parte_cuerpo ? [h.parte_cuerpo] : []);
+      partes.forEach(p => { if (p && p !== 'N/A') acc[p] = (acc[p] || 0) + 1; });
+      return acc;
+    }, {})
+  ).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value).slice(0, 10), [incidentesFiltrados]);
+
+  const incParteCuerpoMap = useMemo(() =>
+    incidentesFiltrados.reduce((acc, h) => {
+      const partes = Array.isArray(h.parte_cuerpo) ? h.parte_cuerpo : (h.parte_cuerpo ? [h.parte_cuerpo] : []);
+      partes.forEach(p => { if (p && p !== 'N/A') acc[p] = (acc[p] || 0) + 1; });
+      return acc;
+    }, {}),
+  [incidentesFiltrados]);
+
+  const incAtencionMedica = useMemo(() => [
+    { name: 'Con atención médica', value: incidentesFiltrados.filter(h => h.atencion_medica).length, color: '#E71D36' },
+    { name: 'Sin atención médica', value: incidentesFiltrados.filter(h => !h.atencion_medica).length, color: '#10B981' },
+  ].filter(d => d.value > 0), [incidentesFiltrados]);
+
+  const ChartSection = ({ title, subtitle }) => (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 12,
+      margin: '28px 0 18px', padding: '0 0 12px',
+      borderBottom: '2px solid var(--border-color)',
+    }}>
+      <div style={{ flex: 1 }}>
+        <h4 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: 'var(--text-main)', letterSpacing: -0.3 }}>{title}</h4>
+        {subtitle && <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>{subtitle}</p>}
+      </div>
+    </div>
+  );
+
   return (
     <div className="sgi-container">
 
@@ -476,6 +519,7 @@ export default function SGIEstadisticas() {
           )}
         </div>
 
+        <ChartSection title="Tendencia y estado" subtitle="Evolución en el tiempo y proporción abiertos / cerrados" />
         {/* Fila 2a: Evolución mensual + Estado (pie) */}
         <div className="sgi-stat-row">
           <div className="sgi-stat-panel sgi-stat-panel--wide">
@@ -524,6 +568,7 @@ export default function SGIEstadisticas() {
           </div>
         </div>
 
+        <ChartSection title="Distribución por tipo y flujo" subtitle="Clasificación de hallazgos y avance en el pipeline" />
         {/* Fila 2b: Por tipo (stacked) + Por paso */}
         <div className="sgi-stat-row">
           <div className="sgi-stat-panel sgi-stat-panel--wide">
@@ -561,6 +606,7 @@ export default function SGIEstadisticas() {
           </div>
         </div>
 
+        <ChartSection title="Distribución por área y acciones" subtitle="Gerencias involucradas y estado de las acciones correctivas" />
         {/* Fila 2c: Por gerencia + Acciones correctivas */}
         <div className="sgi-stat-row">
           <div className="sgi-stat-panel sgi-stat-panel--wide">
@@ -682,6 +728,7 @@ export default function SGIEstadisticas() {
           </div>
         </div>
 
+        <ChartSection title="Resumen general" subtitle="Totales, abiertos, cerrados y acciones correctivas" />
         {/* KPIs */}
         <div className="sgi-stat-kpis">
           <StatCard icon={AlertCircle} label="Total incidentes"  value={loading ? null : incidentesFiltrados.length} color="#8B5CF6" />
@@ -692,6 +739,7 @@ export default function SGIEstadisticas() {
           <StatCard icon={TrendingUp}  label="Rectificativas"    value={loading ? null : accionesInc.filter(a=>a.tipo==='rectificativa').length} color="#3B82F6" />
         </div>
 
+        <ChartSection title="Tendencia y estado" subtitle="Evolución mensual y proporción abiertos / cerrados" />
         {/* Evolución + Estado */}
         <div className="sgi-stat-row">
           <div className="sgi-stat-panel sgi-stat-panel--wide">
@@ -730,6 +778,7 @@ export default function SGIEstadisticas() {
           </div>
         </div>
 
+        <ChartSection title="Tipo y criticidad" subtitle="Categorías de incidente y nivel de severidad registrado" />
         {/* Por tipo + Por criticidad */}
         <div className="sgi-stat-row">
           <div className="sgi-stat-panel sgi-stat-panel--wide">
@@ -770,6 +819,7 @@ export default function SGIEstadisticas() {
           </div>
         </div>
 
+        <ChartSection title="Distribución organizacional" subtitle="Gerencias con mayor incidencia y posición en el flujo de gestión" />
         {/* Por gerencia + Por paso */}
         <div className="sgi-stat-row">
           <div className="sgi-stat-panel sgi-stat-panel--wide">
@@ -802,6 +852,84 @@ export default function SGIEstadisticas() {
                   <Bar dataKey="value" name="Incidentes" fill="#8B5CF6" radius={[0,4,4,0]} />
                 </BarChart>
               </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        <ChartSection title="Análisis de lesiones" subtitle="Tipo de lesión, zona del cuerpo afectada y requerimiento de atención médica" />
+        {/* Tipo de lesión + Parte del cuerpo */}
+        <div className="sgi-stat-row">
+          <div className="sgi-stat-panel sgi-stat-panel--wide">
+            <h3 className="sgi-stat-panel-title">Por tipo de lesión</h3>
+            <p className="sgi-stat-panel-sub">Distribución de lesiones registradas en incidentes</p>
+            {loading ? <ChartSkeleton /> : incPorTipoLesion.length === 0 ? <div className="sgi-stat-empty">Sin datos de lesiones</div> : (
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={incPorTipoLesion} layout="vertical" margin={{ top:4, right:20, bottom:4, left:10 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" horizontal={false} />
+                  <XAxis type="number" allowDecimals={false} tick={{ fontSize:12, fill:'var(--text-muted)' }} />
+                  <YAxis type="category" dataKey="name" width={160} tick={{ fontSize:11, fill:'var(--text-muted)' }} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="value" name="Incidentes" radius={[0,4,4,0]}>
+                    {incPorTipoLesion.map((_,i) => <Cell key={i} fill={PIE_PALETTE[i % PIE_PALETTE.length]} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        </div>
+
+        {/* Mapa de calor — fila completa */}
+        <div className="sgi-stat-panel" style={{ marginTop: 0 }}>
+          <h3 className="sgi-stat-panel-title">Parte del cuerpo afectada</h3>
+          <p className="sgi-stat-panel-sub">Mapa de calor de zonas lesionadas</p>
+          {loading ? <ChartSkeleton height={300} /> : incPorParteCuerpo.length === 0 ? <div className="sgi-stat-empty">Sin datos registrados</div> : (
+            <div style={{ display: 'flex', gap: 40, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', padding: '12px 0' }}>
+              <BodyHeatmap data={incParteCuerpoMap} />
+              <div style={{ flex: 1, maxWidth: 420, minWidth: 200 }}>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ranking de zonas</p>
+                {incPorParteCuerpo.map((d, i) => (
+                  <div key={d.name} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', width: 18, textAlign: 'right', flexShrink: 0 }}>{i + 1}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{ fontSize: 13, color: 'var(--text-main)', fontWeight: 500 }}>{d.name}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#EC4899' }}>{d.value}</span>
+                      </div>
+                      <div style={{ height: 6, borderRadius: 3, background: 'var(--bg-hover)', overflow: 'hidden' }}>
+                        <div style={{ height: '100%', borderRadius: 3, background: '#EC4899', width: `${Math.round(d.value / incPorParteCuerpo[0].value * 100)}%`, transition: 'width 0.4s' }} />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Atención médica */}
+        <div className="sgi-stat-row">
+          <div className="sgi-stat-panel">
+            <h3 className="sgi-stat-panel-title">Atención médica requerida</h3>
+            <p className="sgi-stat-panel-sub">Incidentes que requirieron vs no requirieron atención</p>
+            {loading ? <ChartSkeleton height={200} /> : incAtencionMedica.length === 0 ? <div className="sgi-stat-empty">Sin datos</div> : (
+              <>
+                <ResponsiveContainer width="100%" height={190}>
+                  <PieChart>
+                    <Pie data={incAtencionMedica} cx="50%" cy="50%" innerRadius={55} outerRadius={80} paddingAngle={3} dataKey="value" animationDuration={700}>
+                      {incAtencionMedica.map((e,i) => <Cell key={i} fill={e.color} />)}
+                    </Pie>
+                    <Tooltip content={<CustomTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="sgi-stat-legend">
+                  {incAtencionMedica.map(e => (
+                    <span key={e.name} className="sgi-stat-legend-item">
+                      <span className="sgi-stat-legend-dot" style={{ background: e.color }} />
+                      {e.name}: <strong>{e.value}</strong>
+                    </span>
+                  ))}
+                </div>
+              </>
             )}
           </div>
         </div>

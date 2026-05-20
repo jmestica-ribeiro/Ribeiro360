@@ -358,7 +358,7 @@ export async function fetchSgiEstadisticasData() {
     supabase.from('nc_acciones').select('id, estado, hallazgo_id, fecha_vencimiento, avance, descripcion, responsable_id, responsable:profiles!responsable_id(full_name), hallazgo:nc_hallazgos!hallazgo_id(numero, gerencia, tipo)'),
     supabase.from('sgi_categorias').select('id, nombre, color, parent_id').eq('activo', true),
     supabase.from('inc_acciones').select('id, estado, incidente_id, fecha_vencimiento, avance, descripcion, responsable_id, tipo, verif_eficaz, codigo, responsable:profiles!responsable_id(full_name), incidente:inc_incidentes!incidente_id(numero, gerencia, tipo_incidente)'),
-    supabase.from('inc_incidentes').select('id, numero, estado, gerencia, tipo_incidente, clasificacion, paso_actual, fecha, created_at'),
+    supabase.from('inc_incidentes').select('id, numero, estado, gerencia, tipo_incidente, clasificacion, paso_actual, fecha, created_at, tipo_lesion, parte_cuerpo, atencion_medica, lesionado_id'),
   ]);
   const error = e1 || e2 || e3 || e4;
   if (error) console.error('[sgiService] fetchSgiEstadisticasData:', error.message);
