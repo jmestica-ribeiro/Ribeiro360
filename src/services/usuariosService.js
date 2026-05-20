@@ -61,6 +61,25 @@ export async function deleteUser(userId) {
   return { data, error };
 }
 
+export async function fetchSgiUploaders() {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, email, can_upload_sgi')
+    .not('full_name', 'is', null)
+    .order('full_name');
+  if (error) console.error('[usuariosService] fetchSgiUploaders:', error.message);
+  return { data: data ?? [], error };
+}
+
+export async function updateCanUploadSgi(userId, value) {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ can_upload_sgi: value })
+    .eq('id', userId);
+  if (error) console.error('[usuariosService] updateCanUploadSgi:', error.message);
+  return { error };
+}
+
 export async function updateUserRoleAndTabs(userId, newRole, adminTabs) {
   const { error } = await supabase.rpc('admin_update_user_role', {
     target_user_id: userId,

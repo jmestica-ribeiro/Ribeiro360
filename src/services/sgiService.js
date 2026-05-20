@@ -40,6 +40,7 @@ export async function saveSgiCategoria(payload) {
     orden: parseInt(fields.orden) || 0,
     activo: fields.activo ?? true,
     parent_id: fields.parent_id || null,
+    nivel_piramide: fields.nivel_piramide != null && fields.nivel_piramide !== '' ? parseInt(fields.nivel_piramide) : null,
   };
   const query = id
     ? supabase.from('sgi_categorias').update(normalized).eq('id', id).select()
@@ -210,10 +211,21 @@ export async function searchSgiDocumentos(query, { isAdmin = false } = {}) {
 
 // ── Consultas de lectura para SGIDocument.jsx ─────────────────────────────────
 
+export async function fetchGerentes() {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, full_name, department')
+    .eq('job_title', 'Gerente')
+    .not('full_name', 'is', null)
+    .order('full_name');
+  if (error) console.error('[sgiService] fetchGerentes:', error.message);
+  return { data: data ?? [], error };
+}
+
 export async function fetchSgiDocumentoById(docId) {
   const { data, error } = await supabase
     .from('sgi_documentos')
-    .select('*, categoria:sgi_categorias(nombre, color, icono)')
+    .select('*, categoria:sgi_categorias(nombre, color, icono), aprobador_perfil:profiles!aprobador_id(id, full_name, department)')
     .eq('id', docId)
     .single();
   if (error) {
@@ -265,6 +277,15 @@ export async function fetchSgiVersionesPendientes() {
 }
 
 // ── Circuito de Aprobación ─────────────────────────────────────────────────────
+
+export async function updateSgiDocumentoAprobador(documentoId, aprobadorId) {
+  const { error } = await supabase
+    .from('sgi_documentos')
+    .update({ aprobador_id: aprobadorId })
+    .eq('id', documentoId);
+  if (error) console.error('[sgiService] updateSgiDocumentoAprobador:', error.message);
+  return { error };
+}
 
 export async function reviewSgiVersion(versionId, reviewerProfile, comentario = null) {
   const { data, error } = await supabase

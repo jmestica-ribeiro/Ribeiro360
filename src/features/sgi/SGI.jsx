@@ -18,6 +18,7 @@ import {
   getSgiSignedUrl,
   fetchSgiVersionesPendientes,
   searchSgiDocumentos,
+  fetchGerentes,
 } from '../../services/sgiService';
 import './SGI.css';
 
@@ -30,7 +31,7 @@ const EMPTY_DOC_FORM = {
   titulo: '', codigo: '', descripcion: '', categoria_id: '',
   tipo_documento: 'Otro', acceso: 'No Confidencial',
   lugar_ubicacion: '', periodo_retencion: '', etiquetas: [],
-  documento_controlado: false,
+  documento_controlado: false, aprobador_id: '',
   numero_version: '0', fecha_emision: '', notas_cambios: '',
   _archivo: null,
 };
@@ -41,6 +42,7 @@ const SGI = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
+  const canUploadSgi = isAdmin || profile?.can_upload_sgi === true;
 
   const [categories, setCategories] = useState([]);
   const [documents, setDocuments] = useState([]);
@@ -49,6 +51,7 @@ const SGI = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const [pendientesRaw, setPendientesRaw] = useState([]);
+  const [gerentes, setGerentes] = useState([]);
 
   const [globalSearch, setGlobalSearch] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -98,12 +101,14 @@ const SGI = () => {
   // ── Fetch ─────────────────────────────────────────────────────────────────
   const fetchCategories = async () => {
     setIsLoading(true);
-    const [{ data }, { data: docList }, { data: pendData }] = await Promise.all([
+    const [{ data }, { data: docList }, { data: pendData }, { data: gerentesData }] = await Promise.all([
       fetchSgiCategoriasActivas(),
       fetchSgiDocsCounts(),
       fetchSgiVersionesPendientes(),
+      fetchGerentes(),
     ]);
     setPendientesRaw(pendData ?? []);
+    setGerentes(gerentesData ?? []);
 
     setCategories(data);
 
@@ -159,6 +164,7 @@ const SGI = () => {
       acceso: doc.acceso || 'No Confidencial', lugar_ubicacion: doc.lugar_ubicacion || '',
       periodo_retencion: doc.periodo_retencion || '', etiquetas: Array.isArray(doc.etiquetas) ? doc.etiquetas : [],
       documento_controlado: doc.documento_controlado || false,
+      aprobador_id: doc.aprobador_id || '',
       _ver_id: refVersion?.id || null,
       numero_version: refVersion?.numero_version || '0',
       fecha_emision: refVersion?.fecha_emision || '',
@@ -169,13 +175,16 @@ const SGI = () => {
 
   const handleSaveDoc = async () => {
     if (!docForm.titulo || !docForm.categoria_id) return;
+    if (docForm.documento_controlado && !docForm.aprobador_id) return;
     setIsSaving(true);
     const docPayload = {
       titulo: docForm.titulo, codigo: docForm.codigo || null, descripcion: docForm.descripcion || null,
       categoria_id: docForm.categoria_id, tipo_documento: docForm.tipo_documento || 'Otro',
       acceso: docForm.acceso || 'No Confidencial', lugar_ubicacion: docForm.lugar_ubicacion || null,
       periodo_retencion: docForm.periodo_retencion || null, etiquetas: docForm.etiquetas.length ? docForm.etiquetas : null,
-      documento_controlado: docForm.documento_controlado ?? false, activo: true,
+      documento_controlado: docForm.documento_controlado ?? false,
+      aprobador_id: docForm.documento_controlado && docForm.aprobador_id ? docForm.aprobador_id : null,
+      activo: true,
     };
 
     let archivoPath = null;
@@ -356,11 +365,60 @@ const SGI = () => {
 
         {isLoading ? (
           <div className="sgi-loading">Cargando carpetas...</div>
-        ) : (
-          <div className="sgi-categories-grid">
-            {categories.filter(c => !c.parent_id).map(renderCategoryCard)}
-          </div>
-        )}
+        ) : (() => {
+          const hasPiramide = categories.some(c => c.nivel_piramide != null);
+
+          if (!hasPiramide) {
+            return (
+              <div className="sgi-categories-grid">
+                {categories.filter(c => !c.parent_id).map(renderCategoryCard)}
+              </div>
+            );
+          }
+
+          // Agrupar por nivel, categorías sin nivel van al final
+          const nivelMap = {};
+          categories.filter(c => !c.parent_id).forEach(c => {
+            const n = c.nivel_piramide ?? 999;
+            if (!nivelMap[n]) nivelMap[n] = [];
+            nivelMap[n].push(c);
+          });
+          const niveles = Object.keys(nivelMap).map(Number).sort((a, b) => a - b);
+
+          return (
+            <div className="sgi-tree-pyramid">
+              {niveles.map((nivel, idx) => (
+                <div key={nivel} className="sgi-pyramid-level">
+                  {idx > 0 && <div className="sgi-pyramid-hconnector-row"><div className="sgi-pyramid-hline" /></div>}
+                  <div className="sgi-pyramid-row" style={{ '--nivel': idx }}>
+                    {nivelMap[nivel].map(cat => {
+                      const IconComp = ICON_MAP[cat.icono] || Folder;
+                      return (
+                        <motion.div
+                          key={cat.id}
+                          className="sgi-pyramid-card"
+                          style={{ '--cat-color': cat.color }}
+                          whileHover={{ y: -3, boxShadow: '0 8px 24px rgba(0,0,0,0.10)' }}
+                          transition={{ duration: 0.15 }}
+                          onClick={() => navigate(`/sgi/${getCatSlug(cat.nombre)}`)}
+                        >
+                          <div className="sgi-pyramid-card-icon" style={{ background: cat.color + '18', color: cat.color }}>
+                            <IconComp size={20} />
+                          </div>
+                          <div className="sgi-pyramid-card-body">
+                            <span className="sgi-pyramid-card-name">{cat.nombre}</span>
+                            <span className="sgi-pyramid-card-count">{docCounts[cat.id] || 0} doc{docCounts[cat.id] !== 1 ? 's' : ''}</span>
+                          </div>
+                          <ChevronRight size={13} className="sgi-pyramid-card-arrow" />
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
       </div>
     );
   }
@@ -383,7 +441,7 @@ const SGI = () => {
           <h2>{currentCategory?.nombre || categoriaSlug}</h2>
           {currentCategory?.descripcion && <p>{currentCategory.descripcion}</p>}
         </div>
-        {isAdmin && (
+        {canUploadSgi && (
           <button className="btn-sgi-primary" onClick={openNewDoc}>
             <Plus size={16} /> Nuevo documento
           </button>
@@ -462,7 +520,7 @@ const SGI = () => {
                     ) : (
                       <span className="sgi-version-chip none">Sin versión</span>
                     )}
-                    {isAdmin && (
+                    {canUploadSgi && (
                       <div className="sgi-doc-actions" onClick={e => e.stopPropagation()}>
                         <button className="sgi-icon-btn" title="Editar" onClick={() => openEditDoc(doc)}><Edit2 size={14} /></button>
                         <button className="sgi-icon-btn danger" title="Eliminar" onClick={() => handleDeleteDoc(doc.id)}><Trash2 size={14} /></button>
@@ -604,12 +662,34 @@ const SGI = () => {
                     </div>
                   </div>
                   {docForm.documento_controlado && (
-                    <div className="sgi-approval-notice">
-                      <CheckCircle size={15} />
-                      <div>
-                        <strong>Este documento pasará a revisión.</strong> Al guardar, quedará en estado <em>en revisión</em> hasta que un responsable lo apruebe antes de publicarse como vigente.
+                    <>
+                      <div className="sgi-form-group" style={{ marginTop: 12 }}>
+                        <label>Gerente aprobador <span style={{ color: '#E71D36' }}>*</span></label>
+                        <select
+                          value={docForm.aprobador_id}
+                          onChange={e => setDocForm(f => ({ ...f, aprobador_id: e.target.value }))}
+                          style={{ borderColor: !docForm.aprobador_id ? '#E71D36' : undefined }}
+                        >
+                          <option value="">— Seleccionar gerente —</option>
+                          {gerentes.map(g => (
+                            <option key={g.id} value={g.id}>
+                              {g.full_name}{g.department ? ` (${g.department})` : ''}
+                            </option>
+                          ))}
+                        </select>
+                        {!docForm.aprobador_id && (
+                          <span style={{ fontSize: 11, color: '#E71D36', marginTop: 4, display: 'block' }}>
+                            Requerido para documentos controlados
+                          </span>
+                        )}
                       </div>
-                    </div>
+                      <div className="sgi-approval-notice">
+                        <CheckCircle size={15} />
+                        <div>
+                          <strong>Este documento pasará a revisión.</strong> Al guardar, quedará en estado <em>en revisión</em> hasta que CMASS lo revise y lo derive al gerente seleccionado para su aprobación.
+                        </div>
+                      </div>
+                    </>
                   )}
                 </div>
 

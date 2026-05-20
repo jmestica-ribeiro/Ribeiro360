@@ -58,6 +58,7 @@ const EMPTY_FORM = {
   sitio:                    '',
   emisor_id:                '',
   responsable_verif:        [],
+  lecciones_aprendidas:     '',
 };
 
 /* ── Toast ──────────────────────────────────────────────────────────────────── */
@@ -86,29 +87,30 @@ function StepPlaceholder({ step }) {
 }
 
 /* ── Stepper ────────────────────────────────────────────────────────────────── */
-function Stepper({ steps, currentStep, pasoActual, isNew, onStepClick }) {
+function Stepper({ steps, currentStep, pasoActual, isNew, sinInvestigacion, onStepClick }) {
   return (
     <div className="incd-stepper">
       {steps.map((s, i) => {
-        const isCompleted = s.num < pasoActual;
+        const isNaStep    = sinInvestigacion && s.num > 2;
+        const isCompleted = !isNaStep && s.num < pasoActual;
         const isCurrent   = s.num === currentStep;
-        const isDisabled  = isNew ? s.num > 1 : s.num > pasoActual;
+        const isDisabled  = isNaStep || (isNew ? s.num > 1 : s.num > pasoActual);
         return (
           <React.Fragment key={s.num}>
             <div
-              className={`incd-step-item${isCompleted ? ' completed' : ''}${isCurrent ? ' current' : ''}${isDisabled ? ' disabled' : ''}`}
+              className={`incd-step-item${isCompleted ? ' completed' : ''}${isCurrent ? ' current' : ''}${isDisabled ? ' disabled' : ''}${isNaStep ? ' na' : ''}`}
               onClick={() => !isDisabled && onStepClick(s.num)}
-              title={isDisabled ? 'Completa los pasos anteriores primero' : s.label}
+              title={isNaStep ? 'No aplica — incidente cerrado sin investigación' : isDisabled ? 'Completa los pasos anteriores primero' : s.label}
             >
               <div className="incd-step-indicator">
-                {isCompleted ? <Check size={13} /> : s.num}
+                {isNaStep ? '—' : isCompleted ? <Check size={13} /> : s.num}
               </div>
               <div className="incd-step-info">
                 <div className="incd-step-num">Paso {s.num}</div>
                 <div className="incd-step-label">{s.label}</div>
               </div>
             </div>
-            {i < steps.length - 1 && <div className={`incd-step-connector${s.num < pasoActual ? ' done' : ''}`} />}
+            {i < steps.length - 1 && <div className={`incd-step-connector${s.num < pasoActual && !sinInvestigacion ? ' done' : ''}`} />}
           </React.Fragment>
         );
       })}
@@ -205,6 +207,7 @@ export default function IncidenteDetalle() {
   const [saving, setSaving]         = useState(false);
   const [toast, setToast]           = useState(null);
   const [incEstado, setIncEstado]   = useState('abierto');
+  const [sinInvestigacion, setSinInvestigacion] = useState(false);
   const [showPDF, setShowPDF]       = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [pasoActual, setPasoActual] = useState(1);
@@ -294,6 +297,7 @@ export default function IncidenteDetalle() {
         if (error) { console.error(error); setLoading(false); return; }
         if (data) {
           setIncEstado(data.estado || 'abierto');
+          setSinInvestigacion(data.sin_investigacion || false);
           setPasoActual(data.paso_actual || 1);
           setCurrentStep(data.paso_actual || 1);
           setForm({
@@ -316,6 +320,7 @@ export default function IncidenteDetalle() {
             sitio:                      data.sitio                   || '',
             emisor_id:                  data.emisor_id               || '',
             responsable_verif:          Array.isArray(data.responsable_verif) ? data.responsable_verif : [],
+            lecciones_aprendidas:       data.lecciones_aprendidas || '',
           });
           // Inicializar estado del picker de verificación
           if (data.paso_actual >= 5) {
@@ -503,8 +508,9 @@ export default function IncidenteDetalle() {
     try {
       const nextPaso = advance ? Math.max(pasoActual, 6) : pasoActual;
       const { error } = await updateIncidente(id, {
-        responsable_verif: form.responsable_verif,
-        paso_actual: nextPaso,
+        responsable_verif:    form.responsable_verif,
+        lecciones_aprendidas: form.lecciones_aprendidas || null,
+        paso_actual:          nextPaso,
       });
       if (error) throw error;
       if (advance) { setPasoActual(p => Math.max(p, 6)); setCurrentStep(6); }
@@ -676,6 +682,20 @@ export default function IncidenteDetalle() {
           onClick={() => { setEditingAccion(null); setAccionForm({ descripcion: '', responsable_id: '', fecha_vencimiento: '', avance: 0 }); setShowAccionModal(true); }}>
           + Nueva acción
         </button>
+      </div>
+
+      <div className="ncd-form-section">
+        <p className="ncd-section-title">Lecciones Aprendidas</p>
+        <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
+          Documentá los aprendizajes clave derivados de este incidente para prevenir recurrencias.
+        </p>
+        <textarea
+          className="incd-textarea"
+          rows={4}
+          placeholder="Describí qué se aprendió, qué cambios se implementarán y cómo se difundirán..."
+          value={form.lecciones_aprendidas}
+          onChange={e => setForm(f => ({ ...f, lecciones_aprendidas: e.target.value }))}
+        />
       </div>
 
       <div className="ncd-form-section">
@@ -1047,8 +1067,8 @@ export default function IncidenteDetalle() {
           <button className="incd-stepper-nav" disabled={currentStep === 1} onClick={() => setCurrentStep(s => Math.max(1, s - 1))}>
             <ArrowLeft size={16} />
           </button>
-          <Stepper steps={STEPS} currentStep={currentStep} pasoActual={pasoActual} isNew={isNew} onStepClick={setCurrentStep} />
-          <button className="incd-stepper-nav" disabled={currentStep === STEPS.length || currentStep >= pasoActual} onClick={() => setCurrentStep(s => Math.min(STEPS.length, s + 1))}>
+          <Stepper steps={STEPS} currentStep={currentStep} pasoActual={pasoActual} isNew={isNew} sinInvestigacion={sinInvestigacion} onStepClick={setCurrentStep} />
+          <button className="incd-stepper-nav" disabled={currentStep === STEPS.length || currentStep >= pasoActual || (sinInvestigacion && currentStep >= 2)} onClick={() => setCurrentStep(s => Math.min(STEPS.length, s + 1))}>
             <ChevronRight size={16} />
           </button>
         </div>
@@ -1084,6 +1104,22 @@ export default function IncidenteDetalle() {
                 clasificacion={form.clasificacion}
                 onSave={() => handleSavePaso2(false)}
                 onSaveAndAdvance={() => handleSavePaso2(true)}
+                onCerrar={async () => {
+                  if (!window.confirm('¿Cerrar este incidente sin continuar la investigación? Esta acción no se puede deshacer.')) return;
+                  setSaving(true);
+                  try {
+                    const { error } = await updateIncidente(id, { estado: 'cerrado', paso_actual: 6, sin_investigacion: true });
+                    if (error) throw error;
+                    setSinInvestigacion(true);
+                    showToast('Incidente cerrado correctamente', 'success');
+                    setTimeout(() => navigate(-1), 1500);
+                  } catch (err) {
+                    console.error(err);
+                    showToast('Error al cerrar el incidente', 'error');
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
               />
             )}
             {currentStep === 3 && (
@@ -1837,7 +1873,7 @@ function Step2({ step2, setStep2, step2Picker, setStep2Picker, profiles, saving,
 const CLASIF_OPCIONAL = ['Ninguna', 'Menor'];
 
 /* ── Step 2: Evidencias ─────────────────────────────────────────────────────── */
-function StepEvidencias({ incidenteId, saving, pasoActual, clasificacion, onSaveAndAdvance, onSave }) {
+function StepEvidencias({ incidenteId, saving, pasoActual, clasificacion, onSaveAndAdvance, onSave, onCerrar }) {
   const isOpcional = CLASIF_OPCIONAL.includes(clasificacion);
   const [showPrompt, setShowPrompt] = useState(isOpcional);
   const [counts, setCounts] = useState({ p5: 0, timeline: 0 });
@@ -1850,10 +1886,10 @@ function StepEvidencias({ incidenteId, saving, pasoActual, clasificacion, onSave
           <div className="incd-ev-prompt-icon">
             <Camera size={32} />
           </div>
-          <h4 className="incd-ev-prompt-title">Evidencias opcionales</h4>
+          <h4 className="incd-ev-prompt-title">Investigación opcional</h4>
           <p className="incd-ev-prompt-body">
-            Para incidentes clasificados como <strong>{clasificacion || 'esta categoría'}</strong>, el registro de evidencias es opcional.
-            <br />¿Deseas agregar la cronología y registros al incidente?
+            Para incidentes clasificados como <strong>{clasificacion || 'esta categoría'}</strong>, la investigación completa es opcional.
+            <br />¿Cómo querés proceder?
           </p>
           <div className="incd-ev-prompt-actions">
             <button
@@ -1861,16 +1897,16 @@ function StepEvidencias({ incidenteId, saving, pasoActual, clasificacion, onSave
               className="incd-btn-primary"
               onClick={() => setShowPrompt(false)}
             >
-              <Check size={15} /> Sí, agregar evidencias
+              <Check size={15} /> Continuar con la investigación
             </button>
             <button
               type="button"
-              className="incd-btn-secondary"
-              onClick={onSaveAndAdvance}
+              className="incd-btn-secondary incd-btn-cerrar"
+              onClick={onCerrar}
               disabled={saving}
             >
               {saving ? <Loader2 size={15} className="incd-spin" /> : null}
-              No, continuar sin evidencias
+              Cerrar incidente sin investigar
             </button>
           </div>
         </div>
@@ -2219,7 +2255,7 @@ function TimelineSection({ incidenteId, onCountChange }) {
                 </tr>
               ) : (
                 <tr key={row.id}>
-                  <td className="incd-tl-fecha">{formatFecha(row.fecha)}</td>
+                  <td className="incd-tl-fecha" data-hora={formatHora(row.hora)}>{formatFecha(row.fecha)}</td>
                   <td className="incd-tl-hora">{formatHora(row.hora)}</td>
                   <td className="incd-tl-actividad">{row.actividad}</td>
                   <td>
@@ -2234,15 +2270,21 @@ function TimelineSection({ incidenteId, onCountChange }) {
 
             {/* Nueva entrada */}
             <tr className="incd-timeline-new-row">
-              <td><input type="date" className="incd-tl-input" value={newRow.fecha} onChange={e => setNewRow(r => ({ ...r, fecha: e.target.value }))} /></td>
-              <td><input type="time" className="incd-tl-input" value={newRow.hora}  onChange={e => setNewRow(r => ({ ...r, hora:  e.target.value }))} /></td>
-              <td><input type="text" className="incd-tl-input" placeholder="Describí la actividad o evento..." value={newRow.actividad}
-                onChange={e => setNewRow(r => ({ ...r, actividad: e.target.value }))}
-                onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }} /></td>
-              <td>
-                <button className="incd-tl-btn add" onClick={handleAdd} disabled={saving || !newRow.actividad.trim()} title="Agregar">
-                  {saving ? <Loader2 size={13} className="incd-spin" /> : <Check size={13} />}
-                </button>
+              <td colSpan={4}>
+                <div className="incd-tl-new-inner">
+                  <div className="incd-tl-new-dates">
+                    <input type="date" className="incd-tl-input" value={newRow.fecha} onChange={e => setNewRow(r => ({ ...r, fecha: e.target.value }))} />
+                    <input type="time" className="incd-tl-input" value={newRow.hora}  onChange={e => setNewRow(r => ({ ...r, hora:  e.target.value }))} />
+                  </div>
+                  <div className="incd-tl-new-actividad">
+                    <input type="text" className="incd-tl-input" placeholder="Describí la actividad o evento..." value={newRow.actividad}
+                      onChange={e => setNewRow(r => ({ ...r, actividad: e.target.value }))}
+                      onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }} />
+                    <button className="incd-tl-btn add" onClick={handleAdd} disabled={saving || !newRow.actividad.trim()} title="Agregar">
+                      {saving ? <Loader2 size={13} className="incd-spin" /> : <Check size={13} />}
+                    </button>
+                  </div>
+                </div>
               </td>
             </tr>
           </tbody>

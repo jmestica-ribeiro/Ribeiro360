@@ -342,8 +342,85 @@
   .eventos-container {
     padding: 20px;
   }
-  
+
   .eventos-header h2 {
     font-size: 28px;
+  }
+}
+
+@media (max-width: 768px) {
+  .eventos-container {
+    padding: 16px;
+  }
+
+  .eventos-header h2 {
+    font-size: 24px;
+  }
+
+  .eventos-header p {
+    font-size: 14px;
+  }
+
+  .calendar-panel {
+    padding: 14px 12px;
+  }
+
+  .calendar-cell {
+    min-height: 42px;
+    padding: 4px;
+    gap: 2px;
+    border-radius: 8px;
+  }
+
+  .calendar-grid {
+    gap: 2px;
+  }
+
+  .day-number {
+    font-size: 12px;
+    width: 22px;
+    height: 22px;
+  }
+
+  .calendar-cell.today .day-number {
+    width: 22px;
+    height: 22px;
+  }
+
+  .calendar-dow {
+    font-size: 10px;
+    padding: 2px 0;
+  }
+
+  .event-dot {
+    width: 5px;
+    height: 5px;
+  }
+
+  .day-dots {
+    gap: 2px;
+  }
+
+  /* Panel de detalle debajo del calendario, más compacto */
+  .day-detail-panel {
+    position: static;
+    padding: 16px;
+  }
+
+  .day-detail-header h3 {
+    font-size: 15px;
+  }
+
+  .no-day-events {
+    padding: 24px 0;
+    font-size: 13px;
+  }
+
+  .day-event-card {
+    padding: 12px;
+  }
+
+  .day-event-title {
+    font-size: 13px;
   }
 }

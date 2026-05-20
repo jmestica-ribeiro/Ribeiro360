@@ -13,8 +13,9 @@ import {
   getSgiSignedUrl,
 } from '../../../services/sgiService';
 import { EmptyState, useToast } from '../../../components/common';
+import { fetchSgiUploaders, updateCanUploadSgi } from '../../../services/usuariosService';
 
-const EMPTY_CAT = { nombre: '', icono: 'Folder', color: '#6366f1', descripcion: '', orden: 0, activo: true, parent_id: null };
+const EMPTY_CAT = { nombre: '', icono: 'Folder', color: '#6366f1', descripcion: '', orden: 0, activo: true, parent_id: null, nivel_piramide: '' };
 const EMPTY_DOC = { titulo: '', codigo: '', descripcion: '', categoria_id: null, tipo_documento: 'Otro', acceso: 'No Confidencial', lugar_ubicacion: '', periodo_retencion: '', etiquetas: '', documento_controlado: false, activo: true, _ver_id: null, numero_version: '0', fecha_emision: new Date().toISOString().split('T')[0], notas_cambios: '' };
 
 const SGITab = () => {
@@ -28,10 +29,25 @@ const SGITab = () => {
   const [editingCat, setEditingCat] = useState(null);
   const [editingDoc, setEditingDoc] = useState(null);
   const [editingVer, setEditingVer] = useState(null);
+  const [uploaders, setUploaders] = useState([]);
+  const [uploadersSearch, setUploadersSearch] = useState('');
 
   useEffect(() => {
     loadSGI();
+    fetchSgiUploaders().then(({ data }) => setUploaders(data));
   }, []);
+
+  const handleToggleUploader = async (user) => {
+    const newVal = !user.can_upload_sgi;
+    setUploaders(prev => prev.map(u => u.id === user.id ? { ...u, can_upload_sgi: newVal } : u));
+    const { error } = await updateCanUploadSgi(user.id, newVal);
+    if (error) {
+      setUploaders(prev => prev.map(u => u.id === user.id ? { ...u, can_upload_sgi: !newVal } : u));
+      showToast('Error al actualizar permiso', 'error');
+    } else {
+      showToast(newVal ? `${user.full_name} puede subir documentos` : `Permiso removido a ${user.full_name}`, 'success');
+    }
+  };
 
   const loadSGI = async () => {
     const { categorias: cats, documentos: docs, versiones: vers } = await fetchSGI();
@@ -267,6 +283,20 @@ const SGITab = () => {
             <label>Orden</label>
             <input type="number" className="form-control" value={editingCat.orden} onChange={e => setEditingCat(d => ({ ...d, orden: e.target.value }))} />
           </div>
+          <div className="form-group" style={{ maxWidth: 140 }}>
+            <label>Nivel pirámide</label>
+            <input
+              type="number"
+              min="1"
+              className="form-control"
+              placeholder="1, 2, 3..."
+              value={editingCat.nivel_piramide ?? ''}
+              onChange={e => setEditingCat(d => ({ ...d, nivel_piramide: e.target.value }))}
+            />
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
+              1 = cima, 2 = siguiente...
+            </span>
+          </div>
         </div>
         <button className="btn-primary" onClick={handleSaveCat} disabled={!editingCat.nombre}><Save size={16} /> Guardar</button>
       </div>
@@ -363,17 +393,65 @@ const SGITab = () => {
     </div>
   );
 
+  const filteredUploaders = uploaders.filter(u =>
+    !uploadersSearch || u.full_name?.toLowerCase().includes(uploadersSearch.toLowerCase()) || u.email?.toLowerCase().includes(uploadersSearch.toLowerCase())
+  );
+
   return (
     <div className="admin-list-panel">
-      <div className="admin-list-header">
-        <span className="admin-count">{categorias.length} categorías · {documentos.length} documentos</span>
-        <button className="btn-add-admin" onClick={() => { setEditingCat({ ...EMPTY_CAT, orden: categorias.length + 1 }); setEditMode('cat'); }}>
-          <Plus size={16} /> Nueva categoría
-        </button>
+      {/* Sección de editores SGI */}
+      <div style={{ marginBottom: 32 }}>
+        <div className="admin-list-header" style={{ marginBottom: 12 }}>
+          <div>
+            <span className="admin-count">Editores de documentos SGI</span>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
+              Solo estas personas podrán subir y editar documentos. Los admins siempre tienen acceso.
+            </p>
+          </div>
+        </div>
+        <input
+          type="text"
+          className="form-control"
+          placeholder="Buscar por nombre o email..."
+          value={uploadersSearch}
+          onChange={e => setUploadersSearch(e.target.value)}
+          style={{ maxWidth: 340, marginBottom: 12 }}
+        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 320, overflowY: 'auto' }}>
+          {filteredUploaders.map(u => (
+            <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 10 }}>
+              <div>
+                <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-main)' }}>{u.full_name}</span>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 8 }}>{u.email}</span>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: u.can_upload_sgi ? 'var(--primary-color)' : 'var(--text-muted)' }}>
+                {u.can_upload_sgi ? 'Puede subir' : 'Sin permiso'}
+                <input
+                  type="checkbox"
+                  checked={u.can_upload_sgi || false}
+                  onChange={() => handleToggleUploader(u)}
+                  style={{ width: 16, height: 16, accentColor: 'var(--primary-color)', cursor: 'pointer' }}
+                />
+              </label>
+            </div>
+          ))}
+          {filteredUploaders.length === 0 && (
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '16px 0' }}>No se encontraron usuarios.</p>
+          )}
+        </div>
       </div>
-      <div className="sgi-tree">
-        {categorias.filter(c => !c.parent_id).map(cat => renderCategory(cat, 0))}
-        {categorias.length === 0 && <EmptyState message="No hay categorías. Creá la primera con el botón de arriba." />}
+
+      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 24 }}>
+        <div className="admin-list-header">
+          <span className="admin-count">{categorias.length} categorías · {documentos.length} documentos</span>
+          <button className="btn-add-admin" onClick={() => { setEditingCat({ ...EMPTY_CAT, orden: categorias.length + 1 }); setEditMode('cat'); }}>
+            <Plus size={16} /> Nueva categoría
+          </button>
+        </div>
+        <div className="sgi-tree">
+          {categorias.filter(c => !c.parent_id).map(cat => renderCategory(cat, 0))}
+          {categorias.length === 0 && <EmptyState message="No hay categorías. Creá la primera con el botón de arriba." />}
+        </div>
       </div>
     </div>
   );

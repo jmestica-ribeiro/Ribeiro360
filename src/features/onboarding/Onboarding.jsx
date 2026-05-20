@@ -375,8 +375,8 @@ const Onboarding = () => {
         {/* Progress Bar (Dynamic from Supabase) */}
         <div className="wizard-progress">
           {steps.map((step, index) => (
-            <div 
-              key={step.id} 
+            <div
+              key={step.id}
               className={`progress-step ${index === currentStep ? 'active' : ''} ${index < currentStep ? 'completed' : ''}`}
             >
               <div className="step-indicator">
@@ -388,6 +388,38 @@ const Onboarding = () => {
           <div className="progress-line-track">
             <div className="progress-line-fill" style={{ width: `${(currentStep / (steps.length - 1)) * 100}%` }} />
           </div>
+        </div>
+
+        {/* Mobile Step Indicator */}
+        <div className="wizard-progress-mobile">
+          <button
+            className="mobile-step-arrow"
+            onClick={() => setCurrentStep(s => Math.max(0, s - 1))}
+            disabled={currentStep === 0}
+            aria-label="Paso anterior"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <div className="mobile-step-info">
+            <div className="mobile-step-dots">
+              {steps.map((_, index) => (
+                <span
+                  key={index}
+                  className={`mobile-step-dot ${index === currentStep ? 'active' : ''} ${index < currentStep ? 'completed' : ''}`}
+                />
+              ))}
+            </div>
+            <span className="mobile-step-label">{steps[currentStep]?.titulo}</span>
+            <span className="mobile-step-count">Paso {currentStep + 1} de {steps.length}</span>
+          </div>
+          <button
+            className="mobile-step-arrow"
+            onClick={() => setCurrentStep(s => Math.min(steps.length - 1, s + 1))}
+            disabled={currentStep === steps.length - 1}
+            aria-label="Paso siguiente"
+          >
+            <ChevronRight size={20} />
+          </button>
         </div>
 
         {/* Step Content with Animation */}

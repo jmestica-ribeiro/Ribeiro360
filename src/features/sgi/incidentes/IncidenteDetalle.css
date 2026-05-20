@@ -189,6 +189,18 @@ body.dark-theme .incd-step-item.current {
   opacity: 0.45;
 }
 
+.incd-step-item.na {
+  cursor: default;
+  opacity: 0.35;
+}
+
+.incd-step-item.na .incd-step-indicator {
+  border-style: dashed;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
 .incd-step-indicator {
   width: 28px;
   height: 28px;
@@ -562,6 +574,15 @@ body.dark-theme .incd-step-item.completed .incd-step-indicator {
   flex-wrap: wrap;
   justify-content: center;
   margin-top: 4px;
+}
+
+.incd-btn-cerrar {
+  border-color: #E71D36 !important;
+  color: #E71D36 !important;
+}
+
+.incd-btn-cerrar:hover:not(:disabled) {
+  background: rgba(231, 29, 54, 0.06) !important;
 }
 
 /* ── Placeholder ────────────────────────────────────────────────────────────── */
@@ -1741,6 +1762,32 @@ body.dark-theme .incd-textarea {
   line-height: 1.5;
 }
 
+/* Layout interno de la fila nueva */
+.incd-tl-new-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.incd-tl-new-dates {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.incd-tl-new-actividad {
+  display: flex;
+  flex: 1;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+.incd-tl-new-actividad .incd-tl-input {
+  flex: 1;
+  min-width: 0;
+}
+
 .incd-timeline-new-row {
   background: rgba(231, 29, 54, 0.03);
 }
@@ -1850,6 +1897,142 @@ body.dark-theme .incd-timeline-new-row {
 
   .incd-step-body {
     padding: 20px 16px;
+  }
+
+  /* 5P tabs — wrap en mobile */
+  .incd-5p-tabs {
+    flex-wrap: wrap;
+  }
+
+  .incd-5p-tab {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+
+  /* Timeline — layout de cards en mobile */
+  .incd-timeline-table thead {
+    display: none;
+  }
+
+  .incd-timeline-table,
+  .incd-timeline-table tbody,
+  .incd-timeline-table tr,
+  .incd-timeline-table td {
+    display: block;
+    width: 100%;
+  }
+
+  /* Cada fila = una card */
+  .incd-timeline-table tbody tr {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .incd-timeline-table tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .incd-timeline-table td {
+    padding: 0;
+    border: none;
+  }
+
+  /* Fecha + hora en la misma línea */
+  .incd-tl-fecha {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    font-size: 12px;
+  }
+
+  .incd-tl-hora {
+    font-size: 11px;
+  }
+
+  /* Actividad ocupa el ancho completo */
+  .incd-tl-actividad {
+    font-size: 13px;
+    word-break: break-word;
+    white-space: normal;
+    line-height: 1.5;
+    color: var(--text-main);
+  }
+
+  /* Acciones alineadas a la derecha */
+  .incd-timeline-table td:last-child {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 4px;
+  }
+
+  /* Fila de edición inline */
+  .incd-timeline-editing td {
+    padding: 4px 0;
+  }
+
+  /* Fila nueva — más espaciada y amigable en mobile */
+  .incd-timeline-new-row td {
+    padding: 0;
+  }
+
+  .incd-tl-new-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    background: var(--bg-secondary);
+    border-top: 2px dashed var(--border-color);
+  }
+
+  .incd-tl-new-dates {
+    display: flex;
+    gap: 8px;
+  }
+
+  .incd-tl-new-dates .incd-tl-input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .incd-tl-new-actividad {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .incd-tl-new-actividad .incd-tl-input {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Inputs más altos y legibles */
+  .incd-tl-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    font-size: 14px;
+    border-radius: 10px;
+  }
+
+  /* Botón confirmar más grande y visible */
+  .incd-tl-new-actividad .incd-tl-btn.add {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    background: #10B981;
+    border-color: #10B981;
+    color: #fff;
+  }
+
+  .incd-tl-new-actividad .incd-tl-btn.add:disabled {
+    background: var(--bg-color);
+    border-color: var(--border-color);
+    color: var(--text-muted);
   }
 }
 

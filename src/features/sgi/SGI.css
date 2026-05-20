@@ -68,6 +68,109 @@
   gap: 20px;
 }
 
+/* ── Pyramid / Tree view ──────────────────────────────────────────────────── */
+.sgi-tree-pyramid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 8px 0 32px;
+}
+
+.sgi-pyramid-level {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sgi-pyramid-hconnector-row {
+  display: flex;
+  justify-content: center;
+  height: 28px;
+  width: 2px;
+  margin: 0 auto;
+}
+
+.sgi-pyramid-hline {
+  width: 2px;
+  height: 100%;
+  background: var(--border-color);
+}
+
+.sgi-pyramid-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  padding: 4px 16px;
+}
+
+/* Cada fila se va ensanchando hacia abajo — efecto pirámide */
+.sgi-pyramid-row {
+  width: 100%;
+}
+.sgi-pyramid-row[style*="--nivel: 0"] { max-width: 360px;  }
+.sgi-pyramid-row[style*="--nivel: 1"] { max-width: 520px;  }
+.sgi-pyramid-row[style*="--nivel: 2"] { max-width: 680px;  }
+.sgi-pyramid-row[style*="--nivel: 3"] { max-width: 840px;  }
+.sgi-pyramid-row[style*="--nivel: 4"] { max-width: 1000px; }
+.sgi-pyramid-row[style*="--nivel: 5"] { max-width: 1160px; }
+.sgi-pyramid-row[style*="--nivel: 6"] { max-width: 100%;   }
+
+.sgi-pyramid-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--bg-card, white);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
+  border-top: 3px solid var(--cat-color, var(--border-color));
+}
+
+.sgi-pyramid-card-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sgi-pyramid-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.sgi-pyramid-card-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sgi-pyramid-card-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.sgi-pyramid-card-arrow {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
 .sgi-category-card {
   background: white;
   border: 1px solid var(--border-color);
@@ -1421,10 +1524,177 @@
   .sgi-form-group.full {
     grid-column: 1;
   }
-  
+
   .sgi-modal-wide .sgi-modal-header,
   .sgi-modal-wide .sgi-modal-body,
   .sgi-modal-wide .sgi-modal-footer {
     padding: 16px;
   }
+}
+
+/* ── Dark Mode Overrides ───────────────────────────────────────────────────── */
+.dark-theme .sgi-category-card,
+.dark-theme .sgi-doc-row,
+.dark-theme .sgi-detail-panel,
+.dark-theme .sgi-modal,
+.dark-theme .sgi-empty {
+  background: var(--bg-card);
+}
+
+.dark-theme .sgi-search-bar {
+  background: var(--bg-card);
+}
+
+.dark-theme .sgi-doc-row.selected {
+  background: color-mix(in srgb, var(--primary-color) 10%, var(--bg-card));
+}
+
+.dark-theme .sgi-doc-file-icon {
+  background: var(--bg-color);
+}
+
+.dark-theme .sgi-category-card:hover {
+  border-color: var(--border-color);
+  background: var(--bg-hover);
+}
+
+.dark-theme .sgi-doc-row:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-color);
+}
+
+.dark-theme .sgi-form-group input,
+.dark-theme .sgi-form-group select,
+.dark-theme .sgi-form-group textarea {
+  background: var(--bg-input, var(--bg-card));
+  color: var(--text-main);
+}
+
+.dark-theme .btn-sgi-secondary,
+.dark-theme .btn-sgi-secondary-sm {
+  background: var(--bg-card);
+}
+
+.dark-theme .btn-sgi-secondary:hover,
+.dark-theme .btn-sgi-secondary-sm:hover {
+  background: var(--bg-hover);
+}
+
+.dark-theme .sgi-row-dl-btn {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+}
+
+.dark-theme .sgi-row-dl-btn:hover {
+  background: color-mix(in srgb, #16a34a 12%, var(--bg-card));
+  border-color: #16a34a;
+}
+
+.dark-theme .sgi-icon-btn.danger:hover {
+  background: color-mix(in srgb, #dc2626 15%, var(--bg-card));
+  border-color: #dc2626;
+}
+
+.dark-theme .sgi-current-version-box {
+  background: color-mix(in srgb, #16a34a 12%, var(--bg-card));
+  border-color: color-mix(in srgb, #16a34a 40%, transparent);
+}
+
+.dark-theme .sgi-cv-label,
+.dark-theme .sgi-cv-date { color: #4ade80; }
+.dark-theme .sgi-cv-num { color: #86efac; }
+
+.dark-theme .sgi-timeline-item.vigente .sgi-timeline-dot {
+  box-shadow: 0 0 0 3px color-mix(in srgb, #16a34a 25%, transparent);
+}
+
+.dark-theme .sgi-vigente-tag {
+  background: color-mix(in srgb, #16a34a 20%, var(--bg-card));
+  color: #4ade80;
+}
+
+.dark-theme .sgi-version-chip.vigente {
+  background: color-mix(in srgb, #16a34a 20%, var(--bg-card));
+  color: #4ade80;
+}
+
+.dark-theme .sgi-version-chip.none {
+  background: var(--bg-color);
+  color: var(--text-muted);
+}
+
+.dark-theme .sgi-table-title {
+  background: var(--bg-color);
+}
+
+.dark-theme .sgi-info-table td,
+.dark-theme .sgi-info-table th {
+  border-bottom-color: var(--border-color);
+}
+
+.dark-theme .sgi-info-table thead th {
+  background: var(--bg-color);
+}
+
+.dark-theme .sgi-row-vigente td {
+  background: color-mix(in srgb, #16a34a 10%, var(--bg-card));
+}
+
+.dark-theme .sgi-download-btn {
+  background: color-mix(in srgb, #2563eb 15%, var(--bg-card));
+  color: #60a5fa;
+}
+
+.dark-theme .sgi-download-btn:hover {
+  background: color-mix(in srgb, #2563eb 25%, var(--bg-card));
+}
+
+.dark-theme .sgi-doc-code {
+  background: color-mix(in srgb, #6366f1 15%, var(--bg-card));
+  color: #a5b4fc;
+}
+
+.dark-theme .sgi-estado-badge.publicado {
+  background: color-mix(in srgb, #16a34a 18%, var(--bg-card));
+  color: #4ade80;
+}
+.dark-theme .sgi-estado-badge.borrador {
+  background: color-mix(in srgb, #ca8a04 18%, var(--bg-card));
+  color: #fbbf24;
+}
+.dark-theme .sgi-estado-badge.en-revisión {
+  background: color-mix(in srgb, #2563eb 18%, var(--bg-card));
+  color: #60a5fa;
+}
+.dark-theme .sgi-estado-badge.obsoleto {
+  background: color-mix(in srgb, #dc2626 18%, var(--bg-card));
+  color: #f87171;
+}
+
+.dark-theme .sgi-doc-badge.tipo {
+  background: var(--bg-color);
+  color: var(--text-muted);
+}
+.dark-theme .sgi-doc-badge.controlado {
+  background: color-mix(in srgb, #7c3aed 15%, var(--bg-card));
+  color: #c4b5fd;
+}
+.dark-theme .sgi-doc-badge.aprobacion-en_revision {
+  background: color-mix(in srgb, #92400e 15%, var(--bg-card));
+  color: #fcd34d;
+}
+.dark-theme .sgi-doc-badge.aprobacion-pendiente_aprobacion {
+  background: color-mix(in srgb, #1e40af 15%, var(--bg-card));
+  color: #93c5fd;
+}
+
+.dark-theme .sgi-pendientes-header {
+  background: color-mix(in srgb, #f59e0b 10%, var(--bg-card));
+  border-bottom-color: color-mix(in srgb, #f59e0b 30%, transparent);
+  color: #fcd34d;
+}
+
+.dark-theme .sgi-search-dropdown {
+  background: var(--bg-card);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
 }

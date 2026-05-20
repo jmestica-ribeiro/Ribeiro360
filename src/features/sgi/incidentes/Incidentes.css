@@ -143,7 +143,37 @@ body.dark-theme .inc-header-icon {
 
 @media (max-width: 600px) {
   .inc-paso-summary {
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 8px;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .inc-paso-summary::-webkit-scrollbar { display: none; }
+
+  .inc-paso-summary-card {
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    min-width: unset;
+    text-align: left;
+  }
+
+  .inc-paso-summary-badge {
+    margin-bottom: 0;
+    flex-shrink: 0;
+  }
+
+  .inc-paso-summary-count {
+    font-size: 20px;
+  }
+
+  .inc-paso-summary-label {
+    display: none;
   }
 }
 
@@ -620,8 +650,42 @@ body.dark-theme .inc-estado-badge.cerrado {
     justify-content: center;
   }
 
-  .inc-table th:nth-child(4),
-  .inc-table td:nth-child(4) {
+  /* Ocultar: Fecha(4), Gerencia(5), Emisor(6), Estado(8) — quedan Tipo, Criticidad, Nro, Progreso */
+  .inc-table th:nth-child(4), .inc-table td:nth-child(4),
+  .inc-table th:nth-child(5), .inc-table td:nth-child(5),
+  .inc-table th:nth-child(6), .inc-table td:nth-child(6),
+  .inc-table th:nth-child(8), .inc-table td:nth-child(8) {
     display: none;
+  }
+
+  .inc-toolbar-row1 {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .inc-toolbar-right {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .inc-filter-pills-clasif {
+    justify-content: center;
+  }
+
+  .inc-filter-pills {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .inc-estado-toggle {
+    justify-content: center;
+  }
+
+  .inc-filter-select-wrap {
+    width: 100%;
+  }
+
+  .inc-filter-select {
+    width: 100%;
   }
 }

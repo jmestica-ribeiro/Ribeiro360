@@ -8,6 +8,7 @@ import {
 import {
   fetchSgiDocumentoById, fetchSgiVersionesByDocumento, getSgiSignedUrl,
   reviewSgiVersion, approveSgiVersion, rejectSgiVersion,
+  updateSgiDocumentoAprobador, fetchGerentes,
 } from '../../services/sgiService';
 import { useAuth } from '../../contexts/AuthContext';
 import './SGI.css';
@@ -42,6 +43,8 @@ const SGIDocument = () => {
   const [actionMode, setActionMode] = useState(null); // 'review' | 'approve' | 'reject'
   const [actionComment, setActionComment] = useState('');
   const [isActioning, setIsActioning] = useState(false);
+  const [gerentes, setGerentes] = useState([]);
+  const [overrideAprobadorId, setOverrideAprobadorId] = useState('');
 
   async function fetchData() {
     setIsLoading(true);
@@ -56,11 +59,15 @@ const SGIDocument = () => {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchData(); }, [docId]);
+  useEffect(() => { fetchGerentes().then(({ data }) => setGerentes(data ?? [])); }, []);
 
   const handleAction = async () => {
     if (!pendienteVersion || !actionMode) return;
     setIsActioning(true);
     if (actionMode === 'review') {
+      if (overrideAprobadorId && overrideAprobadorId !== documento.aprobador_id) {
+        await updateSgiDocumentoAprobador(documento.id, overrideAprobadorId);
+      }
       await reviewSgiVersion(pendienteVersion.id, profile, actionComment || null);
     } else if (actionMode === 'approve') {
       await approveSgiVersion(pendienteVersion.id, documento.id, profile, actionComment || null);
@@ -102,7 +109,10 @@ const SGIDocument = () => {
   const isTester = profile?.email === 'juan.mestica@ribeirosrl.com.ar';
   const creadorDept = documento.creador?.department;
   const isRevisorCmass = profile?.department === 'CMASS' || isTester;
-  const isAprobadorGerente = (profile?.job_title === 'Gerente' && !!creadorDept && profile?.department === creadorDept) || isTester;
+  const aprobadorEspecifico = documento.aprobador_id || documento.aprobador_perfil?.id;
+  const isAprobadorGerente = aprobadorEspecifico
+    ? profile?.id === aprobadorEspecifico || isTester
+    : (profile?.job_title === 'Gerente' && !!creadorDept && profile?.department === creadorDept) || isTester;
   const showAprobacionCircuito = documento.documento_controlado && currentEstado;
 
   return (
@@ -204,8 +214,10 @@ const SGIDocument = () => {
                       {step.key === 'en_revision' && (pendienteVersion?.revisor || vigenteVersion?.revisor) && (
                         <span className="sgi-aprobacion-step-meta">{pendienteVersion?.revisor || vigenteVersion?.revisor}</span>
                       )}
-                      {step.key === 'pendiente_aprobacion' && currentEstado === 'pendiente_aprobacion' && creadorDept && (
-                        <span className="sgi-aprobacion-step-meta">Gerente de {creadorDept}</span>
+                      {step.key === 'pendiente_aprobacion' && currentEstado === 'pendiente_aprobacion' && (
+                        <span className="sgi-aprobacion-step-meta">
+                          {documento.aprobador_perfil?.full_name || (creadorDept ? `Gerente de ${creadorDept}` : 'Gerente del área')}
+                        </span>
                       )}
                       {step.key === 'aprobado' && vigenteVersion?.aprobador && (
                         <span className="sgi-aprobacion-step-meta">{vigenteVersion.aprobador}</span>
@@ -236,7 +248,7 @@ const SGIDocument = () => {
                 <CheckCircle size={14} />
                 <span>
                   {pendienteVersion?.revisor && <>Revisado por <strong>{pendienteVersion.revisor}</strong> (CMASS){pendienteVersion.comentario_revision ? ` — "${pendienteVersion.comentario_revision}"` : ''}. </>}
-                  Pendiente de aprobación por el <strong>Gerente{creadorDept ? ` de ${creadorDept}` : ' del área'}</strong>.
+                  Pendiente de aprobación por <strong>{documento.aprobador_perfil?.full_name || (creadorDept ? `el Gerente de ${creadorDept}` : 'el Gerente del área')}</strong>.
                 </span>
               </div>
             )}
@@ -246,10 +258,27 @@ const SGIDocument = () => {
               <div className="sgi-aprobacion-action-area">
                 {!actionMode ? (
                   <>
-                    <p className="sgi-aprobacion-prompt">Esta versión está pendiente de revisión por CMASS. Podés validarla y derivarla al gerente del área de origen.</p>
+                    <p className="sgi-aprobacion-prompt">Esta versión está pendiente de revisión por CMASS. Podés validarla y derivarla al gerente aprobador.</p>
+                    <div style={{ marginBottom: 12 }}>
+                      <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+                        Gerente aprobador
+                      </label>
+                      <select
+                        value={overrideAprobadorId || documento.aprobador_id || ''}
+                        onChange={e => setOverrideAprobadorId(e.target.value)}
+                        style={{ fontSize: 13, padding: '7px 10px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-main)', width: '100%', maxWidth: 320 }}
+                      >
+                        <option value="">— Sin asignar —</option>
+                        {gerentes.map(g => (
+                          <option key={g.id} value={g.id}>
+                            {g.full_name}{g.department ? ` (${g.department})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                     <div className="sgi-aprobacion-btn-row">
                       <button className="btn-sgi-aprobacion-primary" onClick={() => setActionMode('review')}>
-                        <CheckCircle size={14} /> Validar y derivar al área
+                        <CheckCircle size={14} /> Validar y derivar
                       </button>
                       <button className="btn-sgi-aprobacion-danger" onClick={() => setActionMode('reject')}>
                         <XCircle size={14} /> Rechazar

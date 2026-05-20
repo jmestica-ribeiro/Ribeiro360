@@ -77,10 +77,9 @@ export const useNotificaciones = (profile) => {
       (ver, idx, arr) => arr.findIndex(v => v.documento_id === ver.documento_id) === idx
     );
     sgiDedup.forEach(ver => {
-      // fecha_emision es YYYY-MM-DD — normalizamos a fin del día para comparar
-      // contra currentLastSeen que es un ISO timestamp completo
+      // fecha_emision es YYYY-MM-DD — comparamos contra la fecha del lastSeen
       const createdAt = ver.fecha_emision;
-      const createdAtTs = new Date(createdAt + 'T23:59:59').toISOString();
+      const lastSeenDate = currentLastSeen ? currentLastSeen.split('T')[0] : '';
       items.push({
         id: `sgi-${ver.id}`,
         tipo: 'documento',
@@ -89,7 +88,7 @@ export const useNotificaciones = (profile) => {
         subtitulo: ver.numero_version ? `v${ver.numero_version}` : null,
         color: '#3B82F6',
         created_at: createdAt,
-        leida: createdAtTs <= currentLastSeen,
+        leida: createdAt <= lastSeenDate,
       });
     });
 
@@ -192,10 +191,15 @@ export const useNotificaciones = (profile) => {
     if (!profile?.id) return;
     const now = new Date().toISOString();
 
+    // Usar como lastSeen la fecha más tardía entre ahora y las fechas de los docs SGI visibles,
+    // para que documentos con fecha_emision de hoy o futura queden marcados como leídos.
+    const sgiDates = (rawDataRef.current?.sgi || []).map(v => v.fecha_emision + 'T23:59:59');
+    const effectiveNow = sgiDates.reduce((max, d) => (d > max ? d : max), now);
+
     await Promise.all([
       supabase
         .from('profiles')
-        .update({ notifications_last_seen_at: now })
+        .update({ notifications_last_seen_at: effectiveNow })
         .eq('id', profile.id),
       supabase
         .from('nc_notificaciones')
@@ -209,11 +213,11 @@ export const useNotificaciones = (profile) => {
       const { eventos, eventosVis, cursos, cursosVis, cursosDest, sgi, nc } = rawDataRef.current;
       const updatedNc = (nc || []).map(n => ({ ...n, leida: true }));
       rawDataRef.current.nc = updatedNc;
-      const items = buildItems(eventos, eventosVis, cursos, cursosVis, cursosDest, sgi, updatedNc, now);
+      const items = buildItems(eventos, eventosVis, cursos, cursosVis, cursosDest, sgi, updatedNc, effectiveNow);
       setNotificaciones(items);
     }
 
-    setLastSeen(now);
+    setLastSeen(effectiveNow);
     setCount(0);
   }, [profile?.id, buildItems]);
 

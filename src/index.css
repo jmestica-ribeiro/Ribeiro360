@@ -10,6 +10,8 @@
   
   --bg-color: #F8F9FA;
   --bg-secondary: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-input: #FFFFFF;
   --bg-hover: #F1F1F1;
   
   --text-main: #1A1A1A;
@@ -36,6 +38,8 @@
 body.dark-theme {
   --bg-color: #18191A;
   --bg-secondary: #242526;
+  --bg-card: #242526;
+  --bg-input: #2C2D2E;
   --bg-hover: #3A3B3C;
 
   --text-main: #E4E6EB;
