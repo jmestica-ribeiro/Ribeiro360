@@ -62,6 +62,7 @@ const EMPTY_FORM = {
   emisor_id:                '',
   responsable_verif:        [],
   lecciones_aprendidas:     '',
+  lesion_na:                false,
   lesionado_id:             '',
   tipo_lesion:              '',
   parte_cuerpo:             [],
@@ -328,6 +329,7 @@ export default function IncidenteDetalle() {
             emisor_id:                  data.emisor_id               || '',
             responsable_verif:          Array.isArray(data.responsable_verif) ? data.responsable_verif : [],
             lecciones_aprendidas:       data.lecciones_aprendidas || '',
+            lesion_na:                  data.lesion_na                || false,
             lesionado_id:               data.lesionado_id             || '',
             tipo_lesion:                data.tipo_lesion              || '',
             parte_cuerpo:               Array.isArray(data.parte_cuerpo) ? data.parte_cuerpo : (data.parte_cuerpo ? [data.parte_cuerpo] : []),
@@ -419,10 +421,11 @@ export default function IncidenteDetalle() {
         gerencia:                   form.gerencia        || null,
         sitio:                      form.sitio           || null,
         emisor_id:                  form.emisor_id       || null,
-        lesionado_id:               form.lesionado_id    || null,
-        tipo_lesion:                form.tipo_lesion     || null,
-        parte_cuerpo:               form.parte_cuerpo    || null,
-        atencion_medica:            form.atencion_medica || false,
+        lesion_na:                  form.lesion_na       || false,
+        lesionado_id:               form.lesion_na ? null : (form.lesionado_id    || null),
+        tipo_lesion:                form.lesion_na ? null : (form.tipo_lesion     || null),
+        parte_cuerpo:               form.lesion_na ? null : (form.parte_cuerpo    || null),
+        atencion_medica:            form.lesion_na ? false : (form.atencion_medica || false),
         foto_1: fotoPaths[0] || null,
         foto_2: fotoPaths[1] || null,
         foto_3: fotoPaths[2] || null,
@@ -1597,72 +1600,96 @@ function Step1({ form, setForm, profiles, clientes, gerencias, sitios, pendingFo
 
       {/* Datos del lesionado */}
       <div className="incd-form-section">
-        <div className="incd-section-title">Datos del lesionado</div>
+        <div className="incd-section-title" style={{ marginBottom: 12 }}>Datos del lesionado</div>
 
-        <div className="incd-form-row">
-          <div className="incd-form-group">
-            <label className="incd-form-label">Persona lesionada</label>
-            <button type="button" className="incd-person-btn" onClick={() => setPicker('lesionado')}>
-              <User size={14} />
-              {profiles.find(p => p.id === form.lesionado_id)?.full_name || '— Sin lesionado —'}
-              {form.lesionado_id && (
-                <span className="incd-person-clear" onClick={e => { e.stopPropagation(); set('lesionado_id', ''); }}><X size={12} /></span>
-              )}
-            </button>
+        <label className={`incd-na-banner${!form.lesion_na ? ' active' : ''}`}>
+          <input
+            type="checkbox"
+            checked={!!form.lesion_na}
+            onChange={e => {
+              set('lesion_na', e.target.checked);
+              if (e.target.checked) {
+                set('lesionado_id', '');
+                set('tipo_lesion', '');
+                set('parte_cuerpo', []);
+                set('atencion_medica', false);
+              }
+            }}
+          />
+          <span className={`incd-na-option${form.lesion_na ? ' selected' : ''}`}>Sin lesión</span>
+          <div className="incd-na-banner-toggle">
+            <span className="incd-na-banner-knob" />
           </div>
-          <div className="incd-form-group">
-            <label className="incd-form-label">Requirió atención médica</label>
-            <label className="incd-check-inline" style={{ marginTop: 8 }}>
-              <input
-                type="checkbox"
-                checked={!!form.atencion_medica}
-                onChange={e => set('atencion_medica', e.target.checked)}
-              />
-              Sí, requirió atención médica
-            </label>
-          </div>
-        </div>
+          <span className={`incd-na-option${!form.lesion_na ? ' selected' : ''}`}>Con lesión</span>
+        </label>
 
-        <div className="incd-form-row">
-          <div className="incd-form-group">
-            <label className="incd-form-label">Tipo de lesión</label>
-            <select className="incd-form-input" value={form.tipo_lesion} onChange={e => set('tipo_lesion', e.target.value)}>
-              <option value="">— Sin lesión / No aplica —</option>
-              {TIPOS_LESION.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
-          <div className="incd-form-group">
-            <label className="incd-form-label">
-              Parte del cuerpo afectada
-              {form.parte_cuerpo.length > 0 && !form.parte_cuerpo.includes('N/A') && (
-                <span className="incd-form-label-count"> ({form.parte_cuerpo.length})</span>
-              )}
-            </label>
-            <div className="incd-chip-group incd-chip-group--wrap">
-              {/* Chip N/A — exclusivo */}
-              <button type="button"
-                className={`incd-chip incd-chip--sm${form.parte_cuerpo.includes('N/A') ? ' active' : ''}`}
-                style={form.parte_cuerpo.includes('N/A') ? { borderColor: '#6B7280', background: 'rgba(107,114,128,0.12)', color: '#6B7280' } : {}}
-                onClick={() => set('parte_cuerpo', form.parte_cuerpo.includes('N/A') ? [] : ['N/A'])}>
-                N/A
-              </button>
-              <span style={{ width: 1, height: 20, background: 'var(--border-color)', alignSelf: 'center', margin: '0 2px' }} />
-              {PARTES_CUERPO.map(p => {
-                const selected = form.parte_cuerpo.includes(p);
-                return (
-                  <button key={p} type="button"
-                    className={`incd-chip incd-chip--sm${selected ? ' active' : ''}`}
-                    onClick={() => {
-                      const sinNA = form.parte_cuerpo.filter(x => x !== 'N/A');
-                      set('parte_cuerpo', selected ? sinNA.filter(x => x !== p) : [...sinNA, p]);
-                    }}>
-                    {p}
-                  </button>
-                );
-              })}
+        {!form.lesion_na && (
+          <>
+            <div className="incd-form-row">
+              <div className="incd-form-group">
+                <label className="incd-form-label">Persona lesionada</label>
+                <button type="button" className="incd-person-btn" onClick={() => setPicker('lesionado')}>
+                  <User size={14} />
+                  {profiles.find(p => p.id === form.lesionado_id)?.full_name || '— Sin lesionado —'}
+                  {form.lesionado_id && (
+                    <span className="incd-person-clear" onClick={e => { e.stopPropagation(); set('lesionado_id', ''); }}><X size={12} /></span>
+                  )}
+                </button>
+              </div>
+              <div className="incd-form-group">
+                <label className="incd-form-label">Requirió atención médica</label>
+                <label className="incd-check-inline" style={{ marginTop: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={!!form.atencion_medica}
+                    onChange={e => set('atencion_medica', e.target.checked)}
+                  />
+                  Sí, requirió atención médica
+                </label>
+              </div>
             </div>
-          </div>
-        </div>
+
+            <div className="incd-form-row">
+              <div className="incd-form-group">
+                <label className="incd-form-label">Tipo de lesión</label>
+                <select className="incd-form-input" value={form.tipo_lesion} onChange={e => set('tipo_lesion', e.target.value)}>
+                  <option value="">— Sin lesión / No aplica —</option>
+                  {TIPOS_LESION.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="incd-form-group">
+                <label className="incd-form-label">
+                  Parte del cuerpo afectada
+                  {form.parte_cuerpo.length > 0 && !form.parte_cuerpo.includes('N/A') && (
+                    <span className="incd-form-label-count"> ({form.parte_cuerpo.length})</span>
+                  )}
+                </label>
+                <div className="incd-chip-group incd-chip-group--wrap">
+                  <button type="button"
+                    className={`incd-chip incd-chip--sm${form.parte_cuerpo.includes('N/A') ? ' active' : ''}`}
+                    style={form.parte_cuerpo.includes('N/A') ? { borderColor: '#6B7280', background: 'rgba(107,114,128,0.12)', color: '#6B7280' } : {}}
+                    onClick={() => set('parte_cuerpo', form.parte_cuerpo.includes('N/A') ? [] : ['N/A'])}>
+                    N/A
+                  </button>
+                  <span style={{ width: 1, height: 20, background: 'var(--border-color)', alignSelf: 'center', margin: '0 2px' }} />
+                  {PARTES_CUERPO.map(p => {
+                    const selected = form.parte_cuerpo.includes(p);
+                    return (
+                      <button key={p} type="button"
+                        className={`incd-chip incd-chip--sm${selected ? ' active' : ''}`}
+                        onClick={() => {
+                          const sinNA = form.parte_cuerpo.filter(x => x !== 'N/A');
+                          set('parte_cuerpo', selected ? sinNA.filter(x => x !== p) : [...sinNA, p]);
+                        }}>
+                        {p}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Descripción y Fotos — layout 2 columnas */}
