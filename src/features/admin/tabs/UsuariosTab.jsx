@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { GraduationCap, Calendar, Rocket, MessageCircle, LayoutGrid, ShieldCheck, Upload, CheckCircle, AlertCircle, Search, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { fetchAllUsers, updateUserRoleAndTabs, syncMsUsers, deleteUser } from '../../../services/usuariosService';
+import React, { useState, useEffect, useMemo } from 'react';
+import { GraduationCap, Calendar, Rocket, MessageCircle, LayoutGrid, ShieldCheck, RefreshCw, ImageIcon, CheckCircle, AlertCircle, Search, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { fetchAllUsers, updateUserRoleAndTabs, syncMsUsers, syncMsPhotos, deleteUser } from '../../../services/usuariosService';
 import { useAuth } from '../../../contexts/AuthContext';
 import { AdminListPanel, LoadingSpinner } from '../../../components/common';
 
@@ -34,23 +34,31 @@ const ROLE_BADGE = {
 
 // ── Panel de sincronización desde Entra ID ───────────────────────────────────
 const SyncPanel = ({ onSuccess }) => {
-  const fileRef = useRef(null);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isSyncingPhotos, setIsSyncingPhotos] = useState(false);
   const [result, setResult] = useState(null);
+  const [photoResult, setPhotoResult] = useState(null);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const handleSync = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleSync = async () => {
     setIsSyncing(true);
     setResult(null);
     setErrorMsg('');
-    const { data, error } = await syncMsUsers(file);
+    const { data, error } = await syncMsUsers();
     setIsSyncing(false);
     if (error) { setErrorMsg(error.message); return; }
     setResult(data);
     onSuccess();
-    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  const handleSyncPhotos = async () => {
+    setIsSyncingPhotos(true);
+    setPhotoResult(null);
+    setErrorMsg('');
+    const { data, error } = await syncMsPhotos();
+    setIsSyncingPhotos(false);
+    if (error) { setErrorMsg(error.message); return; }
+    setPhotoResult(data);
   };
 
   return (
@@ -59,14 +67,27 @@ const SyncPanel = ({ onSuccess }) => {
         <div>
           <p style={{ fontWeight: 700, fontSize: 14 }}>Sincronizar desde Entra ID</p>
           <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
-            Importá el CSV exportado desde Azure con las columnas: displayName, userPrincipalName, userType, accountEnabled, jobTitle, department, officeLocation.
+            Importa directamente desde Microsoft Graph API todos los usuarios activos e inactivos de tu organización.
           </p>
         </div>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 10, background: 'var(--primary-color)', color: '#141414', fontWeight: 700, fontSize: 13, cursor: isSyncing ? 'not-allowed' : 'pointer', opacity: isSyncing ? 0.6 : 1, flexShrink: 0 }}>
-          {isSyncing ? <LoadingSpinner size={14} /> : <Upload size={14} />}
-          {isSyncing ? 'Procesando...' : 'Cargar CSV'}
-          <input ref={fileRef} type="file" accept=".csv" style={{ display: 'none' }} disabled={isSyncing} onChange={handleSync} />
-        </label>
+        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+          <button
+            onClick={handleSyncPhotos}
+            disabled={isSyncingPhotos || isSyncing}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 10, background: 'var(--bg-hover)', color: 'var(--text-main)', fontWeight: 700, fontSize: 13, cursor: (isSyncingPhotos || isSyncing) ? 'not-allowed' : 'pointer', opacity: (isSyncingPhotos || isSyncing) ? 0.6 : 1, border: '1px solid var(--border-color)' }}
+          >
+            {isSyncingPhotos ? <LoadingSpinner size={14} /> : <ImageIcon size={14} />}
+            {isSyncingPhotos ? 'Actualizando...' : 'Sincronizar fotos'}
+          </button>
+          <button
+            onClick={handleSync}
+            disabled={isSyncing || isSyncingPhotos}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 10, background: 'var(--primary-color)', color: '#141414', fontWeight: 700, fontSize: 13, cursor: (isSyncing || isSyncingPhotos) ? 'not-allowed' : 'pointer', opacity: (isSyncing || isSyncingPhotos) ? 0.6 : 1, border: 'none' }}
+          >
+            {isSyncing ? <LoadingSpinner size={14} /> : <RefreshCw size={14} />}
+            {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
+          </button>
+        </div>
       </div>
 
       {errorMsg && (
@@ -105,6 +126,34 @@ const SyncPanel = ({ onSuccess }) => {
           )}
         </div>
       )}
+
+      {photoResult && (
+        <div style={{ marginTop: 12, padding: '12px 14px', borderRadius: 10, background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <CheckCircle size={16} color="#16a34a" />
+            <p style={{ fontSize: 13, fontWeight: 700, color: '#16a34a' }}>Fotos actualizadas</p>
+          </div>
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+            {[
+              { label: 'Actualizadas', value: photoResult.actualizados, color: '#16a34a' },
+              { label: 'Sin foto',     value: photoResult.sin_foto,     color: '#9ca3af' },
+            ].map(({ label, value, color }) => (
+              <div key={label} style={{ textAlign: 'center' }}>
+                <p style={{ fontSize: 20, fontWeight: 800, color }}>{value}</p>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{label}</p>
+              </div>
+            ))}
+          </div>
+          {photoResult.errores?.length > 0 && (
+            <details style={{ marginTop: 10 }}>
+              <summary style={{ fontSize: 12, color: '#dc2626', cursor: 'pointer' }}>{photoResult.errores.length} error(es) — ver detalle</summary>
+              <ul style={{ marginTop: 6, paddingLeft: 16 }}>
+                {photoResult.errores.map((e, i) => <li key={i} style={{ fontSize: 11, color: '#dc2626' }}>{e}</li>)}
+              </ul>
+            </details>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -121,6 +170,7 @@ const UsuariosTab = () => {
   const [page, setPage] = useState(1);
   const [deletingId, setDeletingId] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
+  const [showInactive, setShowInactive] = useState(false);
 
   useEffect(() => { loadUsers(); }, []);
 
@@ -133,11 +183,11 @@ const UsuariosTab = () => {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return users.filter(u =>
-      (u.full_name ?? '').toLowerCase().includes(q) ||
-      (u.email ?? '').toLowerCase().includes(q)
-    );
-  }, [users, search]);
+    return users.filter(u => {
+      if (!showInactive && u.is_active === false) return false;
+      return (u.full_name ?? '').toLowerCase().includes(q) || (u.email ?? '').toLowerCase().includes(q);
+    });
+  }, [users, search, showInactive]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
@@ -168,16 +218,24 @@ const UsuariosTab = () => {
     <AdminListPanel title="Usuarios" count={filtered.length}>
       <SyncPanel onSuccess={loadUsers} />
 
-      {/* Buscador */}
-      <div style={{ position: 'relative', marginBottom: 16 }}>
-        <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-        <input
-          className="form-control"
-          placeholder="Buscar por nombre o email..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          style={{ paddingLeft: 36, fontSize: 13 }}
-        />
+      {/* Buscador + filtro inactivos */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center' }}>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+          <input
+            className="form-control"
+            placeholder="Buscar por nombre o email..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ paddingLeft: 36, fontSize: 13 }}
+          />
+        </div>
+        <button
+          onClick={() => setShowInactive(v => !v)}
+          style={{ flexShrink: 0, padding: '8px 14px', borderRadius: 10, border: `1px solid ${showInactive ? 'var(--primary-color)' : 'var(--border-color)'}`, background: showInactive ? 'rgba(255,220,0,0.1)' : 'var(--bg-card)', color: showInactive ? 'var(--text-main)' : 'var(--text-muted)', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
+        >
+          {showInactive ? 'Ocultar inactivos' : 'Ver inactivos'}
+        </button>
       </div>
 
       {isLoading ? (

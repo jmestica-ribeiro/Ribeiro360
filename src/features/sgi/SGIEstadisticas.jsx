@@ -19,7 +19,7 @@ const COLORS = {
   abierto: '#F59E0B',
   cerrado: '#10B981',
 };
-const PIE_PALETTE = ['#F2DC00', '#1A1A1A', '#3B82F6', '#10B981', '#E71D36', '#F59E0B', '#8B5CF6', '#EC4899'];
+const PIE_PALETTE = ['#F2DC00', '#1A1A1A', '#D4B800', '#4A4A4A', '#F5E84A', '#787878', '#A38900', '#ABABAB'];
 
 // ── Tooltip personalizado ─────────────────────────────────────────────────────
 const CustomTooltip = ({ active, payload, label }) => {
@@ -849,7 +849,7 @@ export default function SGIEstadisticas() {
                   <XAxis type="number" allowDecimals={false} tick={{ fontSize:12, fill:'var(--text-muted)' }} />
                   <YAxis type="category" dataKey="name" width={56} tick={{ fontSize:12, fill:'var(--text-muted)' }} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="value" name="Incidentes" fill="#8B5CF6" radius={[0,4,4,0]} />
+                  <Bar dataKey="value" name="Incidentes" fill="#D4B800" radius={[0,4,4,0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -893,10 +893,10 @@ export default function SGIEstadisticas() {
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                         <span style={{ fontSize: 13, color: 'var(--text-main)', fontWeight: 500 }}>{d.name}</span>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#EC4899' }}>{d.value}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#D4B800' }}>{d.value}</span>
                       </div>
                       <div style={{ height: 6, borderRadius: 3, background: 'var(--bg-hover)', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', borderRadius: 3, background: '#EC4899', width: `${Math.round(d.value / incPorParteCuerpo[0].value * 100)}%`, transition: 'width 0.4s' }} />
+                        <div style={{ height: '100%', borderRadius: 3, background: '#D4B800', width: `${Math.round(d.value / incPorParteCuerpo[0].value * 100)}%`, transition: 'width 0.4s' }} />
                       </div>
                     </div>
                   </div>
@@ -1100,7 +1100,7 @@ export default function SGIEstadisticas() {
                         <Tooltip content={<CustomTooltip />} />
                         <Legend />
                         <Bar dataKey="nc"  name="No Conformidades" fill="#F2DC00" radius={[4,4,0,0]} />
-                        <Bar dataKey="inc" name="Incidentes"        fill="#3B82F6" radius={[4,4,0,0]} />
+                        <Bar dataKey="inc" name="Incidentes"        fill="#4A4A4A" radius={[4,4,0,0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   )}

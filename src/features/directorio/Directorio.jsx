@@ -109,8 +109,8 @@ const Directorio = () => {
     setIsLoading(false);
   };
 
-  const departments = ['Todos', ...new Set(profiles.map(p => p.department).filter(Boolean))].sort();
-  const locations = ['Cualquiera', ...new Set(profiles.map(p => p.office_location).filter(Boolean))].sort();
+  const departments = ['Todos', ...[...new Set(profiles.map(p => p.department?.trim()).filter(Boolean))].sort()];
+  const locations = ['Cualquiera', ...[...new Set(profiles.map(p => p.office_location?.trim()).filter(Boolean))].sort()];
 
   const filtered = profiles.filter(p => {
     const term = searchTerm.toLowerCase();
@@ -118,8 +118,8 @@ const Directorio = () => {
       (p.full_name || '').toLowerCase().includes(term) ||
       (p.job_title || '').toLowerCase().includes(term) ||
       (p.email || '').toLowerCase().includes(term);
-    const matchDept = activeDept === 'Todos' || p.department === activeDept;
-    const matchLoc = activeLocation === 'Cualquiera' || p.office_location === activeLocation;
+    const matchDept = activeDept === 'Todos' || p.department?.trim() === activeDept;
+    const matchLoc = activeLocation === 'Cualquiera' || p.office_location?.trim() === activeLocation;
     return matchSearch && matchDept && matchLoc;
   });
 

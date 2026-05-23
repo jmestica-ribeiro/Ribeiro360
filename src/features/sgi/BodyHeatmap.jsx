@@ -3,19 +3,19 @@ import React, { useState } from 'react';
 function getHeat(value, max) {
   if (!value || !max) return { fill: 'var(--bg-hover)', stroke: 'var(--border-color)' };
   const r = value / max;
-  if (r < 0.2) return { fill: '#fef9c3', stroke: '#fde047' };
-  if (r < 0.4) return { fill: '#fed7aa', stroke: '#fb923c' };
-  if (r < 0.6) return { fill: '#fca5a5', stroke: '#f87171' };
-  if (r < 0.8) return { fill: '#f87171', stroke: '#ef4444' };
-  return { fill: '#dc2626', stroke: '#991b1b' };
+  if (r < 0.2) return { fill: '#FEFAD4', stroke: '#F5E84A' };
+  if (r < 0.4) return { fill: '#F5E84A', stroke: '#F2DC00' };
+  if (r < 0.6) return { fill: '#F2DC00', stroke: '#D4B800' };
+  if (r < 0.8) return { fill: '#D4B800', stroke: '#A38900' };
+  return { fill: '#1A1A1A', stroke: '#000' };
 }
 
 const LEGEND = [
-  { label: 'Sin casos', fill: 'var(--bg-hover)',  stroke: 'var(--border-color)' },
-  { label: 'Bajo',      fill: '#fef9c3',          stroke: '#fde047' },
-  { label: 'Medio',     fill: '#fed7aa',          stroke: '#fb923c' },
-  { label: 'Alto',      fill: '#fca5a5',          stroke: '#f87171' },
-  { label: 'Crítico',   fill: '#dc2626',          stroke: '#991b1b' },
+  { label: 'Sin casos', fill: 'var(--bg-hover)', stroke: 'var(--border-color)' },
+  { label: 'Bajo',      fill: '#FEFAD4',         stroke: '#F5E84A' },
+  { label: 'Medio',     fill: '#F2DC00',         stroke: '#D4B800' },
+  { label: 'Alto',      fill: '#D4B800',         stroke: '#A38900' },
+  { label: 'Crítico',   fill: '#1A1A1A',         stroke: '#000' },
 ];
 
 export default function BodyHeatmap({ data = {} }) {

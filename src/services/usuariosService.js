@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 export async function fetchAllUsers() {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, email, role, admin_tabs')
+    .select('id, full_name, email, role, admin_tabs, is_active')
     .not('full_name', 'is', null)
     .order('full_name');
   if (error) console.error('[usuariosService] fetchAllUsers:', error.message);
@@ -40,14 +40,15 @@ export async function fetchProfileValues() {
  * @param {string} newRole - 'user' | 'admin' | 'superadmin'
  * @param {string[]|null} adminTabs - tabs visibles en el admin, o null para todos
  */
-/**
- * Envía un CSV de Entra ID a la Edge Function para sincronizar usuarios.
- * @param {File} csvFile
- */
-export async function syncMsUsers(csvFile) {
-  const csvText = await csvFile.text();
+export async function syncMsPhotos() {
+  const { data, error } = await supabase.functions.invoke('sync-ms-photos', { body: {} });
+  if (error) return { data: null, error };
+  return { data, error: null };
+}
+
+export async function syncMsUsers() {
   const { data, error } = await supabase.functions.invoke('sync-ms-users', {
-    body: { csv: csvText },
+    body: {},
   });
   if (error) return { data: null, error };
   return { data, error: null };
@@ -94,6 +95,7 @@ export async function fetchDirectorioProfiles() {
   const { data, error } = await supabase
     .from('profiles')
     .select('id, full_name, email, job_title, department, office_location, avatar_url, phone, whatsapp_consent')
+    .neq('is_active', false)
     .order('full_name', { ascending: true });
   if (error) console.error('[usuariosService] fetchDirectorioProfiles:', error.message);
   return { data: data ?? [], error };
