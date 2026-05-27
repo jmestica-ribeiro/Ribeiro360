@@ -531,10 +531,20 @@ export async function fetchIncidentesGerencias() {
   return { data: unique, error };
 }
 
-export async function fetchIncidentes({ tipo, estado, fechaDesde, fechaHasta, paso, gerencia, tipoIncidente, clasificacion } = {}) {
+export async function fetchIncidentesSitios() {
+  const { data, error } = await supabase
+    .from('inc_incidentes')
+    .select('sitio')
+    .not('sitio', 'is', null);
+  if (error) console.error('[sgiService] fetchIncidentesSitios:', error.message);
+  const unique = [...new Set((data ?? []).map(r => r.sitio).filter(Boolean))].sort();
+  return { data: unique, error };
+}
+
+export async function fetchIncidentes({ tipo, estado, fechaDesde, fechaHasta, paso, gerencia, sitio, tipoIncidente, clasificacion } = {}) {
   let query = supabase
     .from('inc_incidentes')
-    .select('id, tipo, numero, fecha, descripcion, paso_actual, estado, gerencia, tipo_incidente, clasificacion, emisor:profiles!emisor_id(full_name)')
+    .select('id, tipo, numero, fecha, descripcion, paso_actual, estado, gerencia, sitio, tipo_incidente, clasificacion, emisor:profiles!emisor_id(full_name)')
     .order('fecha', { ascending: false });
 
   if (tipo) query = query.eq('tipo', tipo);
@@ -543,6 +553,7 @@ export async function fetchIncidentes({ tipo, estado, fechaDesde, fechaHasta, pa
   if (fechaHasta) query = query.lte('fecha', fechaHasta);
   if (paso) query = query.eq('paso_actual', paso);
   if (gerencia) query = query.eq('gerencia', gerencia);
+  if (sitio) query = query.eq('sitio', sitio);
   if (tipoIncidente) query = query.eq('tipo_incidente', tipoIncidente);
   if (clasificacion) query = query.eq('clasificacion', clasificacion);
 

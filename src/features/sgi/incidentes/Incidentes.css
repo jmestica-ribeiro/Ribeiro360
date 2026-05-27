@@ -430,6 +430,7 @@ body.dark-theme .inc-estado-btn.active {
 .inc-table th:nth-child(6), .inc-table td:nth-child(6) { width: 1%; white-space: nowrap; }
 .inc-table th:nth-child(7), .inc-table td:nth-child(7) { width: 1%; white-space: nowrap; }
 .inc-table th:nth-child(8), .inc-table td:nth-child(8) { width: 1%; white-space: nowrap; }
+.inc-table th:nth-child(9), .inc-table td:nth-child(9) { width: 1%; white-space: nowrap; }
 
 /* Tipo badge */
 .inc-tipo-badge {

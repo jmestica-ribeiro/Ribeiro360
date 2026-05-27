@@ -89,6 +89,7 @@ export default function SGIEstadisticas() {
   const [filtroIncTipo, setFiltroIncTipo]             = useState('');
   const [filtroIncClasif, setFiltroIncClasif]         = useState('');
   const [filtroIncGerencia, setFiltroIncGerencia]     = useState('');
+  const [filtroIncSitio, setFiltroIncSitio]           = useState('');
   const [filtroIncAnio, setFiltroIncAnio]             = useState('');
 
   // ── Filtros NC ────────────────────────────────────────────────────────────────
@@ -265,12 +266,15 @@ export default function SGIEstadisticas() {
     if (filtroIncTipo    && h.tipo_incidente !== filtroIncTipo)    return false;
     if (filtroIncClasif  && h.clasificacion  !== filtroIncClasif)  return false;
     if (filtroIncGerencia && h.gerencia      !== filtroIncGerencia) return false;
+    if (filtroIncSitio    && h.sucursal      !== filtroIncSitio)    return false;
     if (filtroIncAnio    && !(h.fecha || h.created_at || '').startsWith(filtroIncAnio)) return false;
     return true;
-  }), [incidentes, filtroIncEstado, filtroIncTipo, filtroIncClasif, filtroIncGerencia, filtroIncAnio]);
+  }), [incidentes, filtroIncEstado, filtroIncTipo, filtroIncClasif, filtroIncGerencia, filtroIncSitio, filtroIncAnio]);
 
   const gerenciasInc = useMemo(() =>
     [...new Set(incidentes.map(h => h.gerencia).filter(Boolean))].sort(), [incidentes]);
+  const sitiosInc = useMemo(() =>
+    [...new Set(incidentes.map(h => h.sucursal).filter(Boolean))].sort(), [incidentes]);
   const aniosInc = useMemo(() => {
     const set = new Set(incidentes.map(h => (h.fecha || h.created_at || '').slice(0, 4)).filter(Boolean));
     return [...set].sort((a, b) => b - a);
@@ -313,8 +317,8 @@ export default function SGIEstadisticas() {
 
   const incPorTipoLesion = useMemo(() => Object.entries(
     incidentesFiltrados.reduce((acc, h) => {
-      const t = h.tipo_lesion || 'Sin registro';
-      acc[t] = (acc[t] || 0) + 1;
+      if (!h.tipo_lesion) return acc;
+      acc[h.tipo_lesion] = (acc[h.tipo_lesion] || 0) + 1;
       return acc;
     }, {})
   ).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value), [incidentesFiltrados]);
@@ -714,14 +718,21 @@ export default function SGIEstadisticas() {
               </select>
             </div>
             <div className="sgi-nc-filtro-group">
+              <label>Sitio</label>
+              <select value={filtroIncSitio} onChange={e => setFiltroIncSitio(e.target.value)}>
+                <option value="">Todos</option>
+                {sitiosInc.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div className="sgi-nc-filtro-group">
               <label>Año</label>
               <select value={filtroIncAnio} onChange={e => setFiltroIncAnio(e.target.value)}>
                 <option value="">Todos</option>
                 {aniosInc.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
             </div>
-            {(filtroIncEstado||filtroIncTipo||filtroIncClasif||filtroIncGerencia||filtroIncAnio) && (
-              <button className="sgi-nc-filtro-clear" onClick={() => { setFiltroIncEstado(''); setFiltroIncTipo(''); setFiltroIncClasif(''); setFiltroIncGerencia(''); setFiltroIncAnio(''); }}>
+            {(filtroIncEstado||filtroIncTipo||filtroIncClasif||filtroIncGerencia||filtroIncSitio||filtroIncAnio) && (
+              <button className="sgi-nc-filtro-clear" onClick={() => { setFiltroIncEstado(''); setFiltroIncTipo(''); setFiltroIncClasif(''); setFiltroIncGerencia(''); setFiltroIncSitio(''); setFiltroIncAnio(''); }}>
                 <X size={14} /> Limpiar
               </button>
             )}

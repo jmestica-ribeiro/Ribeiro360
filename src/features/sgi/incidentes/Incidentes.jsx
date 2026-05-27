@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Plus, AlertCircle } from 'lucide-react';
-import { fetchIncidentesAbiertos, fetchIncidentesGerencias, fetchIncidentes } from '../../../services/sgiService';
+import { fetchIncidentesAbiertos, fetchIncidentesGerencias, fetchIncidentesSitios, fetchIncidentes } from '../../../services/sgiService';
 import './Incidentes.css';
 
 const PASOS = [
@@ -36,7 +36,7 @@ function formatDate(dateStr) {
 function SkeletonRow() {
   return (
     <tr className="inc-skeleton-row">
-      {[70, 100, 110, 220, 130, 110, 100, 90].map((w, i) => (
+      {[70, 100, 110, 220, 130, 110, 110, 100, 90].map((w, i) => (
         <td key={i}>
           <div className="inc-skeleton-cell" style={{ width: w }} />
         </td>
@@ -56,6 +56,8 @@ export default function Incidentes() {
   const [fechaHasta, setFechaHasta] = useState('');
   const [gerenciaFilter, setGerenciaFilter] = useState('');
   const [gerencias, setGerencias] = useState([]);
+  const [sitioFilter, setSitioFilter] = useState('');
+  const [sitios, setSitios] = useState([]);
   const [tipoIncidenteFilter, setTipoIncidenteFilter] = useState(null);
   const [clasificacionFilter, setClasificacionFilter] = useState(null);
 
@@ -65,6 +67,7 @@ export default function Incidentes() {
 
   useEffect(() => {
     fetchIncidentesGerencias().then(({ data }) => setGerencias(data ?? []));
+    fetchIncidentesSitios().then(({ data }) => setSitios(data ?? []));
   }, []);
 
   const fetchData = useCallback(async () => {
@@ -76,6 +79,7 @@ export default function Incidentes() {
         fechaHasta,
         paso: pasoFilter,
         gerencia: gerenciaFilter,
+        sitio: sitioFilter,
         tipoIncidente: tipoIncidenteFilter,
         clasificacion: clasificacionFilter,
       });
@@ -86,7 +90,7 @@ export default function Incidentes() {
     } finally {
       setLoading(false);
     }
-  }, [estadoFilter, fechaDesde, fechaHasta, pasoFilter, gerenciaFilter, tipoIncidenteFilter, clasificacionFilter]);
+  }, [estadoFilter, fechaDesde, fechaHasta, pasoFilter, gerenciaFilter, sitioFilter, tipoIncidenteFilter, clasificacionFilter]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -176,6 +180,20 @@ export default function Incidentes() {
             )}
           </div>
 
+          <div className="inc-select-wrap">
+            <select
+              className="inc-filter-select"
+              value={sitioFilter}
+              onChange={e => setSitioFilter(e.target.value)}
+            >
+              <option value="">Todos los sitios</option>
+              {sitios.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            {sitioFilter && (
+              <button className="inc-filter-clear" onClick={() => setSitioFilter('')} title="Limpiar sitio">✕</button>
+            )}
+          </div>
+
           <div className="inc-estado-toggle">
             {[
               { label: 'Todos',   value: 'todos' },
@@ -228,6 +246,7 @@ export default function Incidentes() {
               <th>Nro.</th>
               <th>Fecha</th>
               <th>Gerencia</th>
+              <th>Sitio</th>
               <th>Emisor</th>
               <th>Progreso</th>
               <th>Estado</th>
@@ -238,7 +257,7 @@ export default function Incidentes() {
               Array.from({ length: 5 }).map((_, i) => <SkeletonRow key={i} />)
             ) : incidentes.length === 0 ? (
               <tr>
-                <td colSpan={8}>
+                <td colSpan={9}>
                   <div className="inc-empty">
                     <div className="inc-empty-icon">
                       <AlertCircle size={26} />
@@ -278,6 +297,9 @@ export default function Incidentes() {
                     </td>
                     <td>
                       <span className="inc-gerencia">{h.gerencia || '—'}</span>
+                    </td>
+                    <td>
+                      <span className="inc-gerencia">{h.sitio || '—'}</span>
                     </td>
                     <td>
                       <span className="inc-emisor">{h.emisor_nombre || '—'}</span>

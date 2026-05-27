@@ -63,10 +63,11 @@ const EMPTY_FORM = {
   responsable_verif:        [],
   lecciones_aprendidas:     '',
   lesion_na:                false,
-  lesionado_id:             '',
+  involucrados:             [],
   tipo_lesion:              '',
   parte_cuerpo:             [],
   atencion_medica:          false,
+  accidente_itinere:        false,
 };
 
 /* ── Toast ──────────────────────────────────────────────────────────────────── */
@@ -229,6 +230,7 @@ export default function IncidenteDetalle() {
     porques: ['', '', '', '', ''],
     causa_raiz: '',
     sistemico_causas: [],
+    adjunto: null,
   });
 
   const [profiles, setProfiles] = useState([]);
@@ -330,10 +332,12 @@ export default function IncidenteDetalle() {
             responsable_verif:          Array.isArray(data.responsable_verif) ? data.responsable_verif : [],
             lecciones_aprendidas:       data.lecciones_aprendidas || '',
             lesion_na:                  data.lesion_na                || false,
-            lesionado_id:               data.lesionado_id             || '',
+            involucrados:               Array.isArray(data.involucrados) ? data.involucrados
+                                          : (data.lesionado_id ? [{ id: data.lesionado_id, nombre: '' }] : []),
             tipo_lesion:                data.tipo_lesion              || '',
             parte_cuerpo:               Array.isArray(data.parte_cuerpo) ? data.parte_cuerpo : (data.parte_cuerpo ? [data.parte_cuerpo] : []),
             atencion_medica:            data.atencion_medica          || false,
+            accidente_itinere:          data.accidente_itinere        || false,
           });
           // Inicializar estado del picker de verificación
           if (data.paso_actual >= 5) {
@@ -352,6 +356,7 @@ export default function IncidenteDetalle() {
             porques: (() => { const raw = Array.isArray(data.acr_porques) ? data.acr_porques.map(p => p || '') : []; while (raw.length < 5) raw.push(''); return raw; })(),
             causa_raiz: data.acr_causa_raiz || '',
             sistemico_causas: (() => { try { return Array.isArray(data.acr_sistemico_causas) ? data.acr_sistemico_causas : JSON.parse(data.acr_sistemico_causas || '[]'); } catch { return []; } })(),
+            adjunto: data.acr_adjunto || null,
           });
         }
         setLoading(false);
@@ -422,10 +427,11 @@ export default function IncidenteDetalle() {
         sitio:                      form.sitio           || null,
         emisor_id:                  form.emisor_id       || null,
         lesion_na:                  form.lesion_na       || false,
-        lesionado_id:               form.lesion_na ? null : (form.lesionado_id    || null),
+        involucrados:               form.involucrados.length ? form.involucrados : null,
         tipo_lesion:                form.lesion_na ? null : (form.tipo_lesion     || null),
         parte_cuerpo:               form.lesion_na ? null : (form.parte_cuerpo    || null),
         atencion_medica:            form.lesion_na ? false : (form.atencion_medica || false),
+        accidente_itinere:          form.lesion_na ? false : (form.accidente_itinere || false),
         foto_1: fotoPaths[0] || null,
         foto_2: fotoPaths[1] || null,
         foto_3: fotoPaths[2] || null,
@@ -501,11 +507,25 @@ export default function IncidenteDetalle() {
     setSaving(true);
     try {
       const nextPaso = advance ? Math.max(pasoActual, 5) : pasoActual;
+
+      // Subir adjunto pendiente si es un File
+      let adjuntoPath = step3.adjunto;
+      if (step3.adjunto instanceof File) {
+        const ext  = step3.adjunto.name.split('.').pop();
+        const path = `incidentes/${id}/acr-${Date.now()}.${ext}`;
+        const { error: upErr } = await uploadIncAdjunto(path, step3.adjunto);
+        if (!upErr) {
+          adjuntoPath = path;
+          setStep3(s => ({ ...s, adjunto: path }));
+        }
+      }
+
       const { error } = await updateIncidente(id, {
         acr_tecnica:           tecnicaEfectiva,
         acr_porques:           step3.porques,
         acr_causa_raiz:        step3.causa_raiz || null,
         acr_sistemico_causas:  step3.sistemico_causas,
+        acr_adjunto:           adjuntoPath || null,
         paso_actual:           nextPaso,
       });
       if (error) throw error;
@@ -1433,7 +1453,17 @@ function Step1({ form, setForm, profiles, clientes, gerencias, sitios, pendingFo
   const emisor = profiles.find(p => p.id === form.emisor_id);
   const respSeg = profiles.find(p => p.id === form.responsable_seguimiento_id);
 
-  const [picker, setPicker] = useState(null); // 'responsable'
+  const [picker, setPicker] = useState(null);
+  const [manualInvolucrado, setManualInvolucrado] = useState('');
+
+  const removeInvolucrado = (i) => setForm(f => ({ ...f, involucrados: f.involucrados.filter((_, idx) => idx !== i) }));
+  const addManualInvolucrado = () => {
+    const nombre = manualInvolucrado.trim();
+    if (!nombre) return;
+    setForm(f => ({ ...f, involucrados: [...f.involucrados, { nombre }] }));
+    setManualInvolucrado('');
+  };
+  const getInvolucradoNombre = (inv) => inv.id ? (profiles.find(p => p.id === inv.id)?.full_name || inv.nombre || inv.id) : inv.nombre;
   const [fotoUrls, setFotoUrls] = useState({});
 
   /* Generar signed URLs para fotos guardadas */
@@ -1596,6 +1626,45 @@ function Step1({ form, setForm, profiles, clientes, gerencias, sitios, pendingFo
           </div>
         </div>
 
+        <div className="incd-form-row">
+          <div className="incd-form-group incd-form-group--full">
+            <label className="incd-form-label">
+              Involucrado(s)
+              {form.involucrados.length > 0 && <span className="incd-form-label-count"> ({form.involucrados.length})</span>}
+            </label>
+            <div className="incd-involucrados-chips">
+              {form.involucrados.map((inv, i) => (
+                <span key={i} className="incd-chip incd-chip--sm active incd-chip--person">
+                  <User size={11} />
+                  {getInvolucradoNombre(inv)}
+                  <button type="button" className="incd-chip-remove" onClick={() => removeInvolucrado(i)}><X size={11} /></button>
+                </span>
+              ))}
+              <button type="button" className="incd-involucrado-add-btn" onClick={() => setPicker('involucrados')}>
+                <User size={13} /> Agregar de la lista
+              </button>
+            </div>
+            <div className="incd-involucrado-manual-row">
+              <input
+                type="text"
+                className="incd-form-input"
+                placeholder="O escribir nombre (externo / no registrado en el sistema)..."
+                value={manualInvolucrado}
+                onChange={e => setManualInvolucrado(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addManualInvolucrado(); } }}
+              />
+              <button
+                type="button"
+                className="incd-btn-secondary incd-involucrado-manual-add"
+                onClick={addManualInvolucrado}
+                disabled={!manualInvolucrado.trim()}
+              >
+                Agregar
+              </button>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       {/* Datos del lesionado */}
@@ -1609,10 +1678,10 @@ function Step1({ form, setForm, profiles, clientes, gerencias, sitios, pendingFo
             onChange={e => {
               set('lesion_na', e.target.checked);
               if (e.target.checked) {
-                set('lesionado_id', '');
                 set('tipo_lesion', '');
                 set('parte_cuerpo', []);
                 set('atencion_medica', false);
+                set('accidente_itinere', false);
               }
             }}
           />
@@ -1627,16 +1696,6 @@ function Step1({ form, setForm, profiles, clientes, gerencias, sitios, pendingFo
           <>
             <div className="incd-form-row">
               <div className="incd-form-group">
-                <label className="incd-form-label">Persona lesionada</label>
-                <button type="button" className="incd-person-btn" onClick={() => setPicker('lesionado')}>
-                  <User size={14} />
-                  {profiles.find(p => p.id === form.lesionado_id)?.full_name || '— Sin lesionado —'}
-                  {form.lesionado_id && (
-                    <span className="incd-person-clear" onClick={e => { e.stopPropagation(); set('lesionado_id', ''); }}><X size={12} /></span>
-                  )}
-                </button>
-              </div>
-              <div className="incd-form-group">
                 <label className="incd-form-label">Requirió atención médica</label>
                 <label className="incd-check-inline" style={{ marginTop: 8 }}>
                   <input
@@ -1645,6 +1704,25 @@ function Step1({ form, setForm, profiles, clientes, gerencias, sitios, pendingFo
                     onChange={e => set('atencion_medica', e.target.checked)}
                   />
                   Sí, requirió atención médica
+                </label>
+              </div>
+              <div className="incd-form-group">
+                <label className="incd-form-label" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  Accidente in itinere
+                  <span className="incd-tooltip-wrap">
+                    <HelpCircle size={13} className="incd-tooltip-icon" />
+                    <span className="incd-tooltip-box">
+                      Accidente ocurrido en el trayecto directo entre el domicilio del trabajador y el lugar de trabajo, o viceversa.
+                    </span>
+                  </span>
+                </label>
+                <label className="incd-check-inline" style={{ marginTop: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={!!form.accidente_itinere}
+                    onChange={e => set('accidente_itinere', e.target.checked)}
+                  />
+                  Sí, es accidente in itinere
                 </label>
               </div>
             </div>
@@ -1760,11 +1838,20 @@ function Step1({ form, setForm, profiles, clientes, gerencias, sitios, pendingFo
           onClose={() => setPicker(null)}
         />
       )}
-      {picker === 'lesionado' && (
+      {picker === 'involucrados' && (
         <PersonPickerModal
           profiles={profiles}
-          title="Persona lesionada"
-          onSelect={p => { set('lesionado_id', p.id); setPicker(null); }}
+          title="Agregar involucrado(s)"
+          multi={true}
+          selectedIds={form.involucrados.filter(x => x.id).map(x => x.id)}
+          onSelect={ids => {
+            const manualEntries = form.involucrados.filter(x => !x.id);
+            const profileEntries = ids.map(id => ({
+              id,
+              nombre: profiles.find(p => p.id === id)?.full_name || '',
+            }));
+            set('involucrados', [...profileEntries, ...manualEntries]);
+          }}
           onClose={() => setPicker(null)}
         />
       )}
@@ -1780,10 +1867,27 @@ const TECNICAS_INC = [
   { key: 'otra',       icon: <FileText  size={20} />,  title: 'Otra técnica',      desc: 'Describí libremente la técnica de análisis utilizada.' },
 ];
 
-function Step3({ step3, setStep3, clasificacion, saving, pasoActual, onSave, onSaveAndAdvance }) {
+function Step3({ step3, setStep3, clasificacion, saving, pasoActual, onSave, onSaveAndAdvance, incidenteId }) {
   const esCritico = clasificacion === 'Crítica' || clasificacion === 'Mayor';
-  // Derivar la técnica efectiva en render para evitar parpadeo con useEffect asíncrono
   const tecnicaEfectiva = esCritico ? 'sistemico' : step3.tecnica;
+  const acrFileRef = useRef(null);
+  const [acrFileUrl, setAcrFileUrl] = useState(null);
+
+  useEffect(() => {
+    if (!step3.adjunto || step3.adjunto instanceof File) {
+      setAcrFileUrl(step3.adjunto instanceof File ? URL.createObjectURL(step3.adjunto) : null);
+      return;
+    }
+    getSignedUrl(step3.adjunto, 3600).then(({ data }) => {
+      if (data?.signedUrl) setAcrFileUrl(data.signedUrl);
+    });
+  }, [step3.adjunto]);
+
+  const acrFileName = step3.adjunto instanceof File
+    ? step3.adjunto.name
+    : step3.adjunto
+      ? decodeURIComponent(step3.adjunto.split('/').pop().replace(/^\d+-/, ''))
+      : null;
 
   return (
     <div className="incd-step-form">
@@ -1865,6 +1969,53 @@ function Step3({ step3, setStep3, clasificacion, saving, pasoActual, onSave, onS
             placeholder="Describe la causa raíz detectada como resultado del análisis..."
             value={step3.causa_raiz}
             onChange={e => setStep3(s => ({ ...s, causa_raiz: e.target.value }))}
+          />
+        </div>
+
+        {/* Adjunto */}
+        <div className="incd-acr-adjunto">
+          <label className="incd-form-label" style={{ marginTop: 16, display: 'block' }}>
+            Adjunto del análisis <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 12 }}>(informe, planilla, PPT del análisis)</span>
+          </label>
+          {acrFileName ? (
+            <div className="incd-acr-adjunto-file">
+              <Paperclip size={14} />
+              <button
+                type="button"
+                className="incd-acr-adjunto-name"
+                onClick={() => acrFileUrl && window.open(acrFileUrl, '_blank')}
+                title="Abrir adjunto"
+              >
+                {acrFileName}
+              </button>
+              <button
+                type="button"
+                className="incd-acr-adjunto-remove"
+                onClick={() => setStep3(s => ({ ...s, adjunto: null }))}
+                title="Quitar adjunto"
+              >
+                <X size={13} />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="incd-acr-adjunto-btn"
+              onClick={() => acrFileRef.current?.click()}
+            >
+              <Upload size={14} />
+              Adjuntar archivo
+            </button>
+          )}
+          <input
+            ref={acrFileRef}
+            type="file"
+            style={{ display: 'none' }}
+            onChange={e => {
+              const file = e.target.files?.[0];
+              if (file) setStep3(s => ({ ...s, adjunto: file }));
+              e.target.value = '';
+            }}
           />
         </div>
       </div>
