@@ -570,7 +570,7 @@ const SGI = () => {
                       <label>Tipo de documento</label>
                       <select value={docForm.tipo_documento} onChange={e => setDocForm(f => ({ ...f, tipo_documento: e.target.value }))}>
                         <option>Procedimiento</option><option>Manual</option><option>Instructivo</option>
-                        <option>Registro</option><option>Formato</option><option>Otro</option>
+                        <option>Registro</option><option>Formato</option><option>Programa</option><option>Estándar</option><option>Otro</option>
                       </select>
                     </div>
                     <div className="sgi-form-group">

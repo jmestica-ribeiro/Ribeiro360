@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Search, X, FileText } from 'lucide-react';
 
-const TIPOS = ['Procedimiento', 'Manual', 'Instructivo', 'Registro', 'Formato', 'Otro'];
+const TIPOS = ['Procedimiento', 'Manual', 'Instructivo', 'Registro', 'Formato', 'Programa', 'Estándar', 'Otro'];
 
 // value: [{id, titulo, codigo, tipo_documento}]
 const DocInternoSelector = ({ documentos = [], value = [], onChange }) => {
