@@ -676,18 +676,22 @@ export async function saveCheqChecklist(header, respuestas) {
   return { data: checklist, error: errResp };
 }
 
-export async function fetchCheqChecklists({ tipoEquipo, dominio, internoNro } = {}) {
+export async function fetchCheqChecklists({ tipoEquipo, dominio, internoNro, page = 1, pageSize = 15 } = {}) {
+  const from = (page - 1) * pageSize;
+  const to   = from + pageSize - 1;
+
   let query = supabase
     .from('cheq_checklists')
-    .select('*, operador:profiles!operador_id(full_name)')
+    .select('*, operador:profiles!operador_id(full_name)', { count: 'exact' })
     .order('fecha', { ascending: false })
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(from, to);
   if (tipoEquipo) query = query.eq('tipo_equipo', tipoEquipo);
   if (dominio)    query = query.ilike('dominio', `%${dominio}%`);
   if (internoNro) query = query.ilike('interno_nro', `%${internoNro}%`);
-  const { data, error } = await query;
+  const { data, error, count } = await query;
   if (error) console.error('[sgiService] fetchCheqChecklists:', error.message);
-  return { data: data ?? [], error };
+  return { data: data ?? [], error, total: count ?? 0 };
 }
 
 export async function fetchCheqDetalle(id) {

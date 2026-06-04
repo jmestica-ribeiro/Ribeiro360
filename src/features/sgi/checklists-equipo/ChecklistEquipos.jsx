@@ -215,28 +215,42 @@ function ChecklistForm({ tipo, vehiculoInicial, onBack, onSaved }) {
 }
 
 // ── Vista: Historial ───────────────────────────────────────────────────────────
+const PAGE_SIZE = 15;
+
 function Historial({ onBack, onViewDetalle }) {
   const [checklists, setChecklists] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading]   = useState(true);
   const [filtroTipo, setFiltroTipo] = useState('');
   const [filtroInterno, setFiltroInterno] = useState('');
-  const debounceRef = useRef(null);
+  const [page, setPage]             = useState(1);
+  const [total, setTotal]           = useState(0);
+  const debounceRef                 = useRef(null);
 
-  const load = useCallback(async () => {
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const load = useCallback(async (p = page) => {
     setIsLoading(true);
-    const { data } = await fetchCheqChecklists({
+    const { data, total: t } = await fetchCheqChecklists({
       tipoEquipo: filtroTipo || undefined,
       internoNro: filtroInterno || undefined,
+      page: p,
+      pageSize: PAGE_SIZE,
     });
     setChecklists(data);
+    setTotal(t);
     setIsLoading(false);
+  }, [filtroTipo, filtroInterno, page]);
+
+  // Reset a página 1 cuando cambian filtros
+  useEffect(() => {
+    setPage(1);
   }, [filtroTipo, filtroInterno]);
 
   useEffect(() => {
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(load, 300);
+    debounceRef.current = setTimeout(() => load(page), 300);
     return () => clearTimeout(debounceRef.current);
-  }, [load]);
+  }, [load, page]);
 
   return (
     <div className="cheq-container">
@@ -269,39 +283,54 @@ function Historial({ onBack, onViewDetalle }) {
       ) : checklists.length === 0 ? (
         <EmptyState mensaje="No hay checklists registrados con esos filtros." />
       ) : (
-        <div className="cheq-tabla-wrap">
-          <table className="cheq-tabla">
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Tipo</th>
-                <th>Interno N°</th>
-                <th>Km / Hrs</th>
-                <th>Operador</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {checklists.map(c => {
-                const tipoLabel = TIPOS_EQUIPO.find(t => t.key === c.tipo_equipo)?.label ?? c.tipo_equipo;
-                return (
-                  <tr key={c.id}>
-                    <td>{formatDate(c.fecha)}</td>
-                    <td><span className="cheq-tipo-chip">{tipoLabel}</span></td>
-                    <td>{c.interno_nro || '—'}</td>
-                    <td>{c.km_hrs || '—'}</td>
-                    <td>{c.operador?.full_name || '—'}</td>
-                    <td>
-                      <button className="cheq-ver-btn" onClick={() => onViewDetalle(c.id)}>
-                        <Eye size={13} /> Ver
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div className="cheq-tabla-wrap">
+            <table className="cheq-tabla">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Tipo</th>
+                  <th>Interno N°</th>
+                  <th>Km / Hrs</th>
+                  <th>Operador</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {checklists.map(c => {
+                  const tipoLabel = TIPOS_EQUIPO.find(t => t.key === c.tipo_equipo)?.label ?? c.tipo_equipo;
+                  return (
+                    <tr key={c.id}>
+                      <td>{formatDate(c.fecha)}</td>
+                      <td><span className="cheq-tipo-chip">{tipoLabel}</span></td>
+                      <td>{c.interno_nro || '—'}</td>
+                      <td>{c.km_hrs || '—'}</td>
+                      <td>{c.operador?.full_name || '—'}</td>
+                      <td>
+                        <button className="cheq-ver-btn" onClick={() => onViewDetalle(c.id)}>
+                          <Eye size={13} /> Ver
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="cheq-paginacion">
+            <span className="cheq-pag-info">
+              {((page - 1) * PAGE_SIZE) + 1}–{Math.min(page * PAGE_SIZE, total)} de {total} registros
+            </span>
+            <div className="cheq-pag-controls">
+              <button className="cheq-pag-btn" onClick={() => setPage(1)} disabled={page === 1}>«</button>
+              <button className="cheq-pag-btn" onClick={() => setPage(p => p - 1)} disabled={page === 1}>‹</button>
+              <span className="cheq-pag-current">{page} / {totalPages}</span>
+              <button className="cheq-pag-btn" onClick={() => setPage(p => p + 1)} disabled={page === totalPages}>›</button>
+              <button className="cheq-pag-btn" onClick={() => setPage(totalPages)} disabled={page === totalPages}>»</button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
