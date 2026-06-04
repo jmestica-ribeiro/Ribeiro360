@@ -51,7 +51,7 @@ export async function fetchVehiculos() {
   );
 
   const enriched = (vehiculos ?? [])
-    .filter(v => /^(AS|ER)/i.test(v['Codigo'] ?? ''))
+    .filter(v => /^(AS|ER)/i.test(v['Codigo'] ?? '') && v['Codigo'] !== 'AS-000')
     .map(v => ({
       ...v,
       tipo_equipo: familiaMap[v['Modelo_Codigo']] ?? null,

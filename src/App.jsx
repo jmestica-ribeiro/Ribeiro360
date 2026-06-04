@@ -84,7 +84,8 @@ function AnimatedRoutes() {
       <Route path="/sgi/nc/nuevo"          element={<ProtectedRoute requireSgiWrite><W><NCDetalle /></W></ProtectedRoute>} />
       <Route path="/sgi/nc/:id"            element={<ProtectedRoute requireSgiWrite><W><NCDetalle /></W></ProtectedRoute>} />
       <Route path="/sgi/cert-equipos"          element={<W><CertEquipos /></W>} />
-      <Route path="/sgi/checklists-equipo"  element={<W><ChecklistEquipos /></W>} />
+      <Route path="/sgi/checklists-equipo"     element={<W><ChecklistEquipos /></W>} />
+      <Route path="/sgi/checklists-equipo/:id" element={<W><ChecklistEquipos /></W>} />
       <Route path="/sgi/incidentes"             element={<W><Incidentes /></W>} />
       <Route path="/sgi/incidentes/nuevo"        element={<ProtectedRoute requireSgiWrite><W><IncidenteNuevo /></W></ProtectedRoute>} />
       <Route path="/sgi/incidentes/nuevo/form"  element={<ProtectedRoute requireSgiWrite><W><IncidenteDetalle /></W></ProtectedRoute>} />

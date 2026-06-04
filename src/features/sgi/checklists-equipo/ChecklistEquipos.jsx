@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   ClipboardList, Search, ChevronLeft, Trash2, Save, Truck,
   CheckCircle, AlertTriangle, Minus, FileText, Filter, Eye, QrCode, Ban,
@@ -308,6 +309,8 @@ function Historial({ onBack, onViewDetalle }) {
 
 // ── Vista: Detalle de un checklist ─────────────────────────────────────────────
 function ChecklistDetalle({ checklistId, onBack }) {
+  const navigate = useNavigate();
+  const handleBack = onBack ?? (() => navigate('/sgi/checklists-equipo'));
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
   const [detalle, setDetalle] = useState(null);
@@ -324,7 +327,7 @@ function ChecklistDetalle({ checklistId, onBack }) {
   const handleDelete = async () => {
     if (!window.confirm('¿Eliminar este checklist?')) return;
     await deleteCheqChecklist(checklistId);
-    onBack();
+    handleBack();
   };
 
   if (isLoading) return <div className="cheq-container"><LoadingSpinner /></div>;
@@ -336,7 +339,7 @@ function ChecklistDetalle({ checklistId, onBack }) {
   return (
     <div className="cheq-container">
       <div className="cheq-page-header">
-        <button className="cheq-back-btn" onClick={onBack}><ChevronLeft size={18} /> Volver</button>
+        <button className="cheq-back-btn" onClick={handleBack}><ChevronLeft size={18} /> Volver</button>
         <div className="cheq-header-icon"><ClipboardList size={24} /></div>
         <div>
           <h2>{tipoLabel}</h2>
@@ -419,10 +422,12 @@ const TIPO_GRADIENTS = [
 
 // ── Componente raíz ────────────────────────────────────────────────────────────
 const ChecklistEquipos = () => {
-  const [vista, setVista] = useState('landing'); // landing | tipo-selector | form | historial | detalle
+  const navigate                                        = useNavigate();
+  const { id: paramId }                                 = useParams();
+  const [vista, setVista]                               = useState(paramId ? 'detalle' : 'landing');
   const [vehiculoSeleccionado, setVehiculoSeleccionado] = useState(null);
   const [tipoSeleccionado, setTipoSeleccionado]         = useState(null);
-  const [detalleId, setDetalleId]                       = useState(null);
+  const [detalleId, setDetalleId]                       = useState(paramId ?? null);
   const [showQR, setShowQR]                             = useState(false);
 
   // Lectura de ?v=CODIGO al ingresar desde un QR
@@ -480,7 +485,7 @@ const ChecklistEquipos = () => {
         tipo={tipoSeleccionado}
         vehiculoInicial={vehiculoSeleccionado}
         onBack={handleBack}
-        onSaved={(id) => { setDetalleId(id); setVista('detalle'); }}
+        onSaved={(id) => navigate(`/sgi/checklists-equipo/${id}`)}
       />
     );
   }
@@ -519,7 +524,7 @@ const ChecklistEquipos = () => {
     return (
       <Historial
         onBack={() => setVista('landing')}
-        onViewDetalle={(id) => { setDetalleId(id); setVista('detalle'); }}
+        onViewDetalle={(id) => navigate(`/sgi/checklists-equipo/${id}`)}
       />
     );
   }
