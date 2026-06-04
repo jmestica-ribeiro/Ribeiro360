@@ -37,10 +37,16 @@ const Perfil          = lazy(() => import('./features/perfil/Perfil'));
 const Login           = lazy(() => import('./pages/Login'));
 const NotFound        = lazy(() => import('./pages/NotFound'));
 
+const RETURN_KEY = 'ribeiro360_returnTo';
+
 const ProtectedRoute = ({ children, requireAdmin = false, requireSgiWrite = false }) => {
   const { session, isAdmin, isSgiWriter, isLoading } = useAuth();
   if (isLoading) return <div className="app-loading"><span>Cargando...</span></div>;
-  if (!session) return <Navigate to="/login" replace />;
+  if (!session) {
+    const dest = window.location.pathname + window.location.search;
+    if (dest !== '/' && dest !== '/login') sessionStorage.setItem(RETURN_KEY, dest);
+    return <Navigate to="/login" replace />;
+  }
   if (requireAdmin && !isAdmin) return <Navigate to="/" replace />;
   if (requireSgiWrite && !isSgiWriter) return <Navigate to="/sgi" replace />;
   return children;
@@ -49,7 +55,12 @@ const ProtectedRoute = ({ children, requireAdmin = false, requireSgiWrite = fals
 const LoginRoute = () => {
   const { session, isLoading } = useAuth();
   if (isLoading) return <div className="app-loading"><span>Cargando...</span></div>;
-  return session ? <Navigate to="/" replace /> : <Login />;
+  if (session) {
+    const returnTo = sessionStorage.getItem(RETURN_KEY);
+    if (returnTo) { sessionStorage.removeItem(RETURN_KEY); return <Navigate to={returnTo} replace />; }
+    return <Navigate to="/" replace />;
+  }
+  return <Login />;
 };
 
 function AnimatedRoutes() {

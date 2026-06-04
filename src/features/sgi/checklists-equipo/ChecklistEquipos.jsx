@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ClipboardList, Search, ChevronLeft, Trash2, Save, Truck,
-  CheckCircle, AlertTriangle, Minus, FileText, Filter, Eye, QrCode,
+  CheckCircle, AlertTriangle, Minus, FileText, Filter, Eye, QrCode, Ban,
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useToast } from '../../../contexts/ToastContext';
 import {
   fetchCheqItems, saveCheqChecklist, fetchCheqChecklists,
   fetchCheqDetalle, deleteCheqChecklist,
@@ -19,6 +20,7 @@ const ESTADO_CONFIG = {
   bien:    { label: 'Bien',    color: '#22c55e', bg: '#dcfce7', icon: CheckCircle },
   regular: { label: 'Regular', color: '#f59e0b', bg: '#fef3c7', icon: Minus },
   mal:     { label: 'Mal',     color: '#ef4444', bg: '#fee2e2', icon: AlertTriangle },
+  na:      { label: 'N/A',     color: '#94a3b8', bg: '#f1f5f9', icon: Ban },
 };
 
 function formatDate(d) {
@@ -53,6 +55,7 @@ function TipoSelector({ onSelect }) {
 // ── Vista: Formulario de checklist ─────────────────────────────────────────────
 function ChecklistForm({ tipo, vehiculoInicial, onBack, onSaved }) {
   const { profile } = useAuth();
+  const { showToast } = useToast();
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -96,7 +99,14 @@ function ChecklistForm({ tipo, vehiculoInicial, onBack, onSaved }) {
     }));
     const { data, error } = await saveCheqChecklist(checkHeader, rows);
     setIsSaving(false);
-    if (!error && data) onSaved(data.id);
+    if (error) {
+      showToast('Ocurrió un error al guardar el checklist. Intentá de nuevo.', 'error');
+      return;
+    }
+    if (data) {
+      showToast(`Checklist de ${tipo.label} guardado correctamente.`, 'success');
+      onSaved(data.id);
+    }
   };
 
   if (isLoading) return <div className="cheq-container"><LoadingSpinner /></div>;

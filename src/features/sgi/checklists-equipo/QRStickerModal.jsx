@@ -11,13 +11,14 @@ const QRStickerModal = ({ onClose }) => {
   const printRef                  = useRef(null);
 
   useEffect(() => {
-    if (!vehiculo?.interno_nro) { setQrDataUrl(null); return; }
+    if (!vehiculo?.interno_nro) return;
     const url = `${window.location.origin}/sgi/checklists-equipo?v=${encodeURIComponent(vehiculo.interno_nro)}`;
     QRCode.toDataURL(url, {
       width: 400,
       margin: 2,
       color: { dark: '#111010', light: '#ffffff' },
     }).then(setQrDataUrl).catch(console.error);
+    return () => setQrDataUrl(null);
   }, [vehiculo]);
 
   const handlePrint = () => {
