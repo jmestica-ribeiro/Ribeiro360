@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GraduationCap, Calendar, Rocket, MessageCircle, LayoutGrid, ShieldCheck, Bell, Users, Compass, PanelLeft, Images, Wrench } from 'lucide-react';
+import { GraduationCap, Calendar, Rocket, MessageCircle, LayoutGrid, ShieldCheck, Bell, Users, Compass, PanelLeft, Images, Wrench, ClipboardCheck, Truck, Tag } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import CapacitacionesTab from './tabs/CapacitacionesTab';
 import PAFTab from './tabs/PAFTab';
@@ -8,6 +8,10 @@ import EventosTab from './tabs/EventosTab';
 import FAQTab from './tabs/FAQTab';
 import OrganigramaTab from './tabs/OrganigramaTab';
 import SGITab from './tabs/SGITab';
+import CertEquiposTab from './tabs/CertEquiposTab';
+import ChecklistItemsTab from './tabs/ChecklistItemsTab';
+import VehiculosTab from './tabs/VehiculosTab';
+import FamiliasTab from './tabs/FamiliasTab';
 import NovedadesTab from './tabs/NovedadesTab';
 import UsuariosTab from './tabs/UsuariosTab';
 import PortalesTab from './tabs/PortalesTab';
@@ -16,7 +20,7 @@ import MultimediaTab from './tabs/MultimediaTab';
 import HerramientasTab from './tabs/HerramientasTab';
 import './AdminPanel.css';
 
-const ALL_TABS = ['capacitaciones', 'paf', 'onboarding', 'eventos', 'faq', 'organigrama', 'sgi', 'novedades', 'multimedia', 'herramientas'];
+const ALL_TABS = ['capacitaciones', 'paf', 'onboarding', 'eventos', 'faq', 'organigrama', 'sgi', 'cert-equipos', 'checklist-items', 'vehiculos', 'familias', 'novedades', 'multimedia', 'herramientas'];
 
 const TAB_CONFIG = [
   { key: 'capacitaciones', label: 'Capacitaciones', icon: <GraduationCap size={18} /> },
@@ -26,6 +30,10 @@ const TAB_CONFIG = [
   { key: 'faq',            label: 'FAQ',              icon: <MessageCircle size={18} /> },
   { key: 'organigrama',    label: 'Organigrama',      icon: <LayoutGrid size={18} /> },
   { key: 'sgi',            label: 'SGI',              icon: <ShieldCheck size={18} /> },
+  { key: 'cert-equipos',     label: 'Cert. Equipos',      icon: <ClipboardCheck size={18} /> },
+  { key: 'checklist-items',  label: 'Checklists Equipo',  icon: <ClipboardCheck size={18} /> },
+  { key: 'vehiculos',        label: 'Vehículos',           icon: <Truck size={18} /> },
+  { key: 'familias',         label: 'Familias Equipo',     icon: <Tag size={18} /> },
   { key: 'novedades',      label: 'Novedades',        icon: <Bell size={18} /> },
   { key: 'multimedia',     label: 'Multimedia',       icon: <Images size={18} /> },
   { key: 'herramientas',  label: 'Herramientas',     icon: <Wrench size={18} /> },
@@ -92,6 +100,10 @@ const AdminPanel = () => {
           {activeTab === 'faq'            && allowedTabs.includes('faq')            && <FAQTab />}
           {activeTab === 'organigrama'    && allowedTabs.includes('organigrama')    && <OrganigramaTab />}
           {activeTab === 'sgi'            && allowedTabs.includes('sgi')            && <SGITab />}
+          {activeTab === 'cert-equipos'     && allowedTabs.includes('cert-equipos')     && <CertEquiposTab />}
+          {activeTab === 'checklist-items' && allowedTabs.includes('checklist-items') && <ChecklistItemsTab />}
+          {activeTab === 'vehiculos'       && allowedTabs.includes('vehiculos')       && <VehiculosTab />}
+          {activeTab === 'familias'        && allowedTabs.includes('familias')        && <FamiliasTab />}
           {activeTab === 'novedades'      && allowedTabs.includes('novedades')      && <NovedadesTab />}
           {activeTab === 'multimedia'     && allowedTabs.includes('multimedia')     && <MultimediaTab />}
           {activeTab === 'herramientas'   && allowedTabs.includes('herramientas')   && <HerramientasTab />}

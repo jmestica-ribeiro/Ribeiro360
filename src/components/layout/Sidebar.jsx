@@ -125,6 +125,14 @@ const Sidebar = ({ isOpen, onToggle, isCollapsed, onToggleCollapse }) => {
                         <span className="nav-sub-dot" />
                         <span>Estadísticas</span>
                       </NavLink>
+                      <NavLink to="/sgi/cert-equipos" className={subLinkClass} title="Cert. Equipos" onClick={handleLinkClick}>
+                        <span className="nav-sub-dot" />
+                        <span>Cert. Equipos</span>
+                      </NavLink>
+                      <NavLink to="/sgi/checklists-equipo" className={subLinkClass} title="Checklists de Equipo" onClick={handleLinkClick}>
+                        <span className="nav-sub-dot" />
+                        <span>Checklists Equipo</span>
+                      </NavLink>
                     </motion.div>
                   )}
                 </AnimatePresence>

@@ -1,0 +1,166 @@
+.qrs-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0,0,0,0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  backdrop-filter: blur(3px);
+}
+
+.qrs-modal {
+  width: 100%;
+  max-width: 520px;
+  background: #131210;
+  border: 1.5px solid rgba(201, 168, 0, 0.35);
+  border-radius: 16px;
+  box-shadow:
+    0 0 0 1px rgba(201, 168, 0, 0.1),
+    0 24px 64px rgba(0,0,0,0.6);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: qrs-in 0.18s ease;
+  position: relative;
+}
+.qrs-modal::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, #f5c518 0%, #c9a800 100%);
+  border-radius: 16px 0 0 16px;
+}
+
+@keyframes qrs-in {
+  from { opacity: 0; transform: scale(0.96) translateY(10px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
+}
+
+.qrs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.qrs-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #f0ece0;
+}
+.qrs-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255,255,255,0.4);
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  border-radius: 6px;
+  transition: color 0.12s;
+}
+.qrs-close:hover { color: #f5c518; }
+
+.qrs-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.qrs-hint {
+  font-size: 13px;
+  color: rgba(255,255,255,0.4);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Preview del sticker dentro del modal */
+.qrs-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding-top: 4px;
+}
+
+.qrs-sticker {
+  background: #fff;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+
+.qr-print-sticker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 32px;
+  width: 280px;
+}
+.qr-print-logo {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #888;
+  text-transform: uppercase;
+}
+.qr-print-qr img {
+  width: 180px;
+  height: 180px;
+  display: block;
+  border-radius: 8px;
+}
+.qr-print-codigo {
+  font-size: 22px;
+  font-weight: 900;
+  color: #111;
+  letter-spacing: 0.06em;
+  background: #f5c518;
+  padding: 5px 18px;
+  border-radius: 8px;
+}
+.qr-print-nombre {
+  font-size: 12px;
+  color: #444;
+  text-align: center;
+  max-width: 220px;
+  line-height: 1.4;
+}
+.qr-print-instruccion {
+  font-size: 10px;
+  color: #999;
+  text-align: center;
+  border-top: 1px dashed #ddd;
+  padding-top: 10px;
+  width: 100%;
+  line-height: 1.6;
+}
+
+.qrs-print-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 700;
+  background: #f5c518;
+  color: #111;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  box-shadow: 0 2px 12px rgba(245, 197, 24, 0.35);
+}
+.qrs-print-btn:hover {
+  background: #ffd740;
+  box-shadow: 0 4px 20px rgba(245, 197, 24, 0.5);
+  transform: translateY(-1px);
+}

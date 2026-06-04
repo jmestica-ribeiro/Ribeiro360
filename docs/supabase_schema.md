@@ -88,3 +88,36 @@
 | curso_id | string | uuid | |
 | orden | integer | | |
 | contenido | string | json | Bloques de contenido |
+
+
+### cheq_items
+| Columna | Tipo | Formato | Info |
+|:---|:---|:---|:---|
+| id | string | uuid | PK |
+| tipo_equipo | string | text | topadora, cargadora, retropala, excavadora, motoniveladora, vibro_compactador, camioneta, camion, control_equipo_enganchado |
+| nombre | string | text | Descripción del ítem de verificación |
+| orden | integer | | Orden de aparición en el formulario |
+| activo | boolean | | Si false, no aparece en nuevos checklists |
+
+### cheq_checklists
+| Columna | Tipo | Formato | Info |
+|:---|:---|:---|:---|
+| id | string | uuid | PK |
+| tipo_equipo | string | text | Tipo de equipo |
+| fecha | string | date | Fecha del control |
+| lugar | string | | Lugar de operación |
+| dominio | string | | Patente / dominio del vehículo |
+| interno_nro | string | | Número interno del equipo |
+| marca | string | | |
+| modelo | string | | |
+| km_hrs | string | | Kilómetros u horas del equipo |
+| operador_id | string | uuid | FK profiles |
+
+### cheq_respuestas
+| Columna | Tipo | Formato | Info |
+|:---|:---|:---|:---|
+| id | string | uuid | PK |
+| checklist_id | string | uuid | FK cheq_checklists |
+| item_id | string | uuid | FK cheq_items |
+| estado | string | enum | bien, regular, mal |
+| observacion | string | | Comentario opcional |

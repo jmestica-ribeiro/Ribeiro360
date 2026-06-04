@@ -1,0 +1,38 @@
+.cheqpdf-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(0,0,0,0.55);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 24px 16px; overflow-y: auto;
+}
+.cheqpdf-modal {
+  background: var(--bg-card); border-radius: 14px;
+  width: 100%; max-width: 760px;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.25);
+  overflow: hidden;
+}
+.cheqpdf-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 20px; border-bottom: 1px solid var(--border-color, #e5e7eb);
+  background: var(--bg-main);
+}
+.cheqpdf-toolbar-title { font-size: 13px; font-weight: 600; color: var(--text-main); }
+.cheqpdf-toolbar-actions { display: flex; gap: 8px; align-items: center; }
+.cheqpdf-btn-print {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 600;
+  background: #16a34a; color: #fff; border: none; cursor: pointer;
+}
+.cheqpdf-btn-print:hover { background: #15803d; }
+.cheqpdf-btn-close {
+  background: none; border: none; cursor: pointer; color: var(--text-secondary);
+  display: flex; align-items: center;
+}
+.cheqpdf-btn-close:hover { color: var(--text-main); }
+
+.cheqpdf-preview { padding: 20px; }
+.cheqpdf-document {
+  background: #fff; color: #1a1a1a;
+  padding: 28px 32px; border-radius: 4px;
+  font-family: Arial, sans-serif; font-size: 11px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}

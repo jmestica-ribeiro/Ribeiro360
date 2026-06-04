@@ -562,3 +562,146 @@ export async function fetchIncidentes({ tipo, estado, fechaDesde, fechaHasta, pa
   const mapped = (data ?? []).map(r => ({ ...r, emisor_nombre: r.emisor?.full_name ?? null }));
   return { data: mapped, error };
 }
+
+// ── Equipos de Medición ───────────────────────────────────────────────────────
+
+const DIAS_ALERTA = 30;
+
+export function calcularEstadoEquipo(fechaProxima) {
+  if (!fechaProxima) return 'sin_fecha';
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  const proxima = new Date(fechaProxima);
+  const diffDias = Math.floor((proxima - hoy) / (1000 * 60 * 60 * 24));
+  if (diffDias < 0) return 'vencido';
+  if (diffDias <= DIAS_ALERTA) return 'por_vencer';
+  return 'vigente';
+}
+
+export async function fetchEquiposMedicion() {
+  const { data, error } = await supabase
+    .from('sgi_equipos_medicion')
+    .select('*')
+    .order('tipo', { ascending: true });
+  if (error) console.error('[sgiService] fetchEquiposMedicion:', error.message);
+  const enriched = (data ?? []).map(e => ({
+    ...e,
+    estado: calcularEstadoEquipo(e.fecha_proxima_verificacion),
+  }));
+  return { data: enriched, error };
+}
+
+export async function saveEquipoMedicion(payload) {
+  const { id, ...fields } = payload;
+  const query = id
+    ? supabase.from('sgi_equipos_medicion').update(fields).eq('id', id).select()
+    : supabase.from('sgi_equipos_medicion').insert(fields).select();
+  const { data, error } = await query;
+  if (error) console.error('[sgiService] saveEquipoMedicion:', error.message);
+  return { data, error };
+}
+
+export async function deleteEquipoMedicion(id) {
+  const { error } = await supabase.from('sgi_equipos_medicion').delete().eq('id', id);
+  if (error) console.error('[sgiService] deleteEquipoMedicion:', error.message);
+  return { error };
+}
+
+export async function uploadCeqAdjunto(equipoId, file) {
+  const ext = file.name.split('.').pop();
+  const path = `${equipoId}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from('ceq-adjuntos').upload(path, file, { upsert: true });
+  if (error) console.error('[sgiService] uploadCeqAdjunto:', error.message);
+  return { path: error ? null : path, error };
+}
+
+export async function getCeqAdjuntoSignedUrl(path, seconds = 120) {
+  const { data, error } = await supabase.storage.from('ceq-adjuntos').createSignedUrl(path, seconds);
+  if (error) console.error('[sgiService] getCeqAdjuntoSignedUrl:', error.message);
+  return { data, error };
+}
+
+// ── Checklists de Equipo ──────────────────────────────────────────────────────
+
+export async function fetchCheqItems(tipoEquipo) {
+  const { data, error } = await supabase
+    .from('cheq_items')
+    .select('*')
+    .eq('tipo_equipo', tipoEquipo)
+    .eq('activo', true)
+    .order('orden', { ascending: true });
+  if (error) console.error('[sgiService] fetchCheqItems:', error.message);
+  return { data: data ?? [], error };
+}
+
+export async function fetchAllCheqItems() {
+  const { data, error } = await supabase
+    .from('cheq_items')
+    .select('*')
+    .order('tipo_equipo', { ascending: true })
+    .order('orden', { ascending: true });
+  if (error) console.error('[sgiService] fetchAllCheqItems:', error.message);
+  return { data: data ?? [], error };
+}
+
+export async function saveCheqItem(payload) {
+  const { id, ...fields } = payload;
+  const query = id
+    ? supabase.from('cheq_items').update(fields).eq('id', id).select()
+    : supabase.from('cheq_items').insert(fields).select();
+  const { data, error } = await query;
+  if (error) console.error('[sgiService] saveCheqItem:', error.message);
+  return { data, error };
+}
+
+export async function deleteCheqItem(id) {
+  const { error } = await supabase.from('cheq_items').delete().eq('id', id);
+  if (error) console.error('[sgiService] deleteCheqItem:', error.message);
+  return { error };
+}
+
+export async function saveCheqChecklist(header, respuestas) {
+  const { data: checklist, error: errCheck } = await supabase
+    .from('cheq_checklists')
+    .insert(header)
+    .select()
+    .single();
+  if (errCheck) {
+    console.error('[sgiService] saveCheqChecklist (header):', errCheck.message);
+    return { data: null, error: errCheck };
+  }
+  const rows = respuestas.map(r => ({ ...r, checklist_id: checklist.id }));
+  const { error: errResp } = await supabase.from('cheq_respuestas').insert(rows);
+  if (errResp) console.error('[sgiService] saveCheqChecklist (respuestas):', errResp.message);
+  return { data: checklist, error: errResp };
+}
+
+export async function fetchCheqChecklists({ tipoEquipo, dominio, internoNro } = {}) {
+  let query = supabase
+    .from('cheq_checklists')
+    .select('*, operador:profiles!operador_id(full_name)')
+    .order('fecha', { ascending: false })
+    .order('created_at', { ascending: false });
+  if (tipoEquipo) query = query.eq('tipo_equipo', tipoEquipo);
+  if (dominio)    query = query.ilike('dominio', `%${dominio}%`);
+  if (internoNro) query = query.ilike('interno_nro', `%${internoNro}%`);
+  const { data, error } = await query;
+  if (error) console.error('[sgiService] fetchCheqChecklists:', error.message);
+  return { data: data ?? [], error };
+}
+
+export async function fetchCheqDetalle(id) {
+  const { data, error } = await supabase
+    .from('cheq_checklists')
+    .select('*, operador:profiles!operador_id(full_name), respuestas:cheq_respuestas(*, item:cheq_items(nombre, orden))')
+    .eq('id', id)
+    .single();
+  if (error) console.error('[sgiService] fetchCheqDetalle:', error.message);
+  return { data, error };
+}
+
+export async function deleteCheqChecklist(id) {
+  const { error } = await supabase.from('cheq_checklists').delete().eq('id', id);
+  if (error) console.error('[sgiService] deleteCheqChecklist:', error.message);
+  return { error };
+}

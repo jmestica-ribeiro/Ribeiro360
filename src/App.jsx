@@ -25,6 +25,8 @@ const SGIDocument     = lazy(() => import('./features/sgi/SGIDocument'));
 const NoConformidades = lazy(() => import('./features/sgi/nc/NoConformidades'));
 const NCDetalle       = lazy(() => import('./features/sgi/nc/NCDetalle'));
 const SGIEstadisticas = lazy(() => import('./features/sgi/SGIEstadisticas'));
+const CertEquipos         = lazy(() => import('./features/sgi/cert-equipos/CertEquipos'));
+const ChecklistEquipos    = lazy(() => import('./features/sgi/checklists-equipo/ChecklistEquipos'));
 const Incidentes       = lazy(() => import('./features/sgi/incidentes/Incidentes'));
 const IncidenteNuevo    = lazy(() => import('./features/sgi/incidentes/IncidenteNuevo'));
 const IncidenteDetalle  = lazy(() => import('./features/sgi/incidentes/IncidenteDetalle'));
@@ -70,6 +72,8 @@ function AnimatedRoutes() {
       <Route path="/sgi/nc"                element={<W><NoConformidades /></W>} />
       <Route path="/sgi/nc/nuevo"          element={<ProtectedRoute requireSgiWrite><W><NCDetalle /></W></ProtectedRoute>} />
       <Route path="/sgi/nc/:id"            element={<ProtectedRoute requireSgiWrite><W><NCDetalle /></W></ProtectedRoute>} />
+      <Route path="/sgi/cert-equipos"          element={<W><CertEquipos /></W>} />
+      <Route path="/sgi/checklists-equipo"  element={<W><ChecklistEquipos /></W>} />
       <Route path="/sgi/incidentes"             element={<W><Incidentes /></W>} />
       <Route path="/sgi/incidentes/nuevo"        element={<ProtectedRoute requireSgiWrite><W><IncidenteNuevo /></W></ProtectedRoute>} />
       <Route path="/sgi/incidentes/nuevo/form"  element={<ProtectedRoute requireSgiWrite><W><IncidenteDetalle /></W></ProtectedRoute>} />
