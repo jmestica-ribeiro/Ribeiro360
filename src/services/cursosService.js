@@ -1,5 +1,23 @@
 import { supabase } from '../lib/supabase';
 
+export async function uploadArchivoBloque(file) {
+  const safeName = file.name.replace(/\s+/g, '_');
+  const path = `capacitaciones/archivos/${Date.now()}-${safeName}`;
+  const { error } = await supabase.storage.from('novedades').upload(path, file, { upsert: true });
+  if (error) return { url: null, error };
+  const { data } = supabase.storage.from('novedades').getPublicUrl(path);
+  return { url: data.publicUrl, error: null };
+}
+
+export async function uploadBannerImage(file) {
+  const ext = file.name.split('.').pop();
+  const path = `capacitaciones/banners/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from('novedades').upload(path, file, { upsert: true });
+  if (error) return { url: null, error };
+  const { data } = supabase.storage.from('novedades').getPublicUrl(path);
+  return { url: data.publicUrl, error: null };
+}
+
 export async function fetchCursos() {
   const { data, error } = await supabase
     .from('cursos')

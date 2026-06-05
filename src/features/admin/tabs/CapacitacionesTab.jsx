@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Save, ChevronLeft, Search, X } from 'lucide-react';
-import { fetchCursos, fetchCursosCategorias, fetchCursoDetalle, saveCurso, deleteCurso } from '../../../services/cursosService';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Edit2, Trash2, Save, ChevronLeft, Search, X, GripVertical, Upload, Image as ImageIcon } from 'lucide-react';
+import { fetchCursos, fetchCursosCategorias, fetchCursoDetalle, saveCurso, deleteCurso, uploadBannerImage, uploadArchivoBloque } from '../../../services/cursosService';
 import { fetchPAF } from '../../../services/pafService';
 import { fetchAllUsers, fetchProfileValues } from '../../../services/usuariosService';
 import { parseBlocks, updateBlockInList, updateBlockMetaInList } from '../../../lib/blockUtils';
@@ -45,10 +45,10 @@ const CapacitacionesTab = () => {
   const [editingPreguntas, setEditingPreguntas] = useState([]);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [destinatariosSearch, setDestinatariosSearch] = useState('');
-
-  useEffect(() => {
-    loadData();
-  }, []);
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
+  const bannerInputRef = useRef(null);
+  const [modDragging, setModDragging] = useState(null);
+  const [modDragOver, setModDragOver] = useState(null);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -67,6 +67,10 @@ const CapacitacionesTab = () => {
     setProfileValues(profileRes.data);
     setIsLoading(false);
   };
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const reloadCourses = async () => {
     const { data } = await fetchCursos();
@@ -136,6 +140,32 @@ const CapacitacionesTab = () => {
     await reloadCourses();
   };
 
+  // Banner upload
+  const handleBannerFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingBanner(true);
+    const { url, error } = await uploadBannerImage(file);
+    setIsUploadingBanner(false);
+    if (error) return showToast('Error al subir la imagen: ' + error.message, 'error');
+    setEditingData(prev => ({ ...prev, imagen_banner: url }));
+  };
+
+  // Module drag & drop
+  const handleModDragStart = (idx) => { setModDragging(idx); };
+  const handleModDragOver = (e, idx) => { e.preventDefault(); setModDragOver(idx); };
+  const handleModDrop = (e, idx) => {
+    e.preventDefault();
+    if (modDragging === null || modDragging === idx) { setModDragOver(null); return; }
+    const reordered = [...editingModules];
+    const [moved] = reordered.splice(modDragging, 1);
+    reordered.splice(idx, 0, moved);
+    setEditingModules(reordered.map((m, i) => ({ ...m, numero_orden: i + 1 })));
+    setModDragging(null);
+    setModDragOver(null);
+  };
+  const handleModDragEnd = () => { setModDragging(null); setModDragOver(null); };
+
   // Module block handlers
   const handleAddBlockToModule = (mIdx, tipo) => {
     const newModules = [...editingModules];
@@ -171,6 +201,12 @@ const CapacitacionesTab = () => {
     newModules[mIdx].contenido = JSON.stringify(
       parseBlocks(newModules[mIdx].contenido).filter(b => b.id !== bId)
     );
+    setEditingModules(newModules);
+  };
+
+  const reorderBlocksInModule = (mIdx, newBlocks) => {
+    const newModules = [...editingModules];
+    newModules[mIdx].contenido = JSON.stringify(newBlocks);
     setEditingModules(newModules);
   };
 
@@ -311,8 +347,34 @@ const CapacitacionesTab = () => {
           </div>
 
           <div className="form-group" style={{ marginBottom: '32px' }}>
-            <label>Imagen de Portada (URL)</label>
-            <input className="form-control" value={editingData.imagen_banner || ''} onChange={e => setEditingData({ ...editingData, imagen_banner: e.target.value })} />
+            <label>Imagen de Portada</label>
+            <input ref={bannerInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBannerFileChange} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              {editingData.imagen_banner ? (
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <img src={editingData.imagen_banner} alt="portada" style={{ width: 120, height: 72, objectFit: 'cover', borderRadius: 8, border: '1px solid var(--border-color)' }} />
+                  <button
+                    onClick={() => setEditingData(prev => ({ ...prev, imagen_banner: '' }))}
+                    style={{ position: 'absolute', top: -6, right: -6, background: '#ef4444', border: 'none', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}
+                  ><X size={11} /></button>
+                </div>
+              ) : (
+                <div style={{ width: 120, height: 72, borderRadius: 8, border: '2px dashed var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', flexShrink: 0 }}>
+                  <ImageIcon size={28} />
+                </div>
+              )}
+              <button
+                className="btn-secondary"
+                onClick={() => bannerInputRef.current?.click()}
+                disabled={isUploadingBanner}
+                style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+              >
+                {isUploadingBanner
+                  ? <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 0.8s linear infinite' }}><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" strokeDasharray="40 20" /></svg> Subiendo...</>
+                  : <><Upload size={15} /> {editingData.imagen_banner ? 'Cambiar imagen' : 'Subir imagen'}</>
+                }
+              </button>
+            </div>
           </div>
 
           <div className="section-divider" style={{ margin: '32px 0 16px 0', borderBottom: '1px solid #f0f0f0' }} />
@@ -461,8 +523,23 @@ const CapacitacionesTab = () => {
 
           <div className="modules-list-editor">
             {editingModules.map((mod, mIdx) => (
-              <div key={mod.id} className="module-item-card" style={{ marginBottom: '24px' }}>
+              <div
+                key={mod.id}
+                className="module-item-card"
+                draggable
+                onDragStart={() => handleModDragStart(mIdx)}
+                onDragOver={(e) => handleModDragOver(e, mIdx)}
+                onDrop={(e) => handleModDrop(e, mIdx)}
+                onDragEnd={handleModDragEnd}
+                style={{
+                  marginBottom: '24px',
+                  opacity: modDragging === mIdx ? 0.4 : 1,
+                  border: modDragOver === mIdx ? '2px dashed var(--primary-color)' : undefined,
+                  transition: 'opacity 0.15s',
+                }}
+              >
                 <div className="module-item-header" style={{ padding: '16px 20px' }}>
+                  <GripVertical size={16} style={{ cursor: 'grab', color: '#ccc', flexShrink: 0 }} />
                   <span className="mod-number">{mIdx + 1}</span>
                   <input
                     className="form-control-ghost"
@@ -483,6 +560,8 @@ const CapacitacionesTab = () => {
                     onUpdateMeta={(bId, k, v) => updateModuleBlockMeta(mIdx, bId, k, v)}
                     onRemove={(bId) => removeBlockFromModule(mIdx, bId)}
                     onAdd={(tipo) => handleAddBlockToModule(mIdx, tipo)}
+                    onReorder={(newBlocks) => reorderBlocksInModule(mIdx, newBlocks)}
+                    onUploadArchivo={uploadArchivoBloque}
                   />
                 </div>
               </div>

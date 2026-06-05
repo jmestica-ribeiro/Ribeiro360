@@ -197,7 +197,7 @@ const CoursePlayer = ({ course, onBack }) => {
       return blocks.map((block, i) => {
         switch (block.tipo) {
           case 'texto':
-            return <p key={i} className="player-text-block">{block.contenido}</p>;
+            return <div key={i} className="player-text-block" dangerouslySetInnerHTML={{ __html: block.contenido }} />;
           case 'banner':
             return (
               <div 
@@ -216,7 +216,7 @@ const CoursePlayer = ({ course, onBack }) => {
                 <iframe src={toEmbedUrl(block.contenido)} frameBorder="0" allowFullScreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" title="Video Content" />
               </div>
             );
-          case 'cards':
+          case 'cards': {
             const items = JSON.parse(block.contenido || '[]');
             return (
               <div key={i} className="player-cards-grid">
@@ -228,6 +228,40 @@ const CoursePlayer = ({ course, onBack }) => {
                 ))}
               </div>
             );
+          }
+          case 'archivo': {
+            const url = block.contenido;
+            if (!url) return null;
+            const nombre = block.metadata?.nombre || 'Archivo';
+            const ext = (block.metadata?.ext || url.split('.').pop()).toLowerCase();
+            const officeExts = ['ppt', 'pptx', 'doc', 'docx', 'xls', 'xlsx'];
+            if (ext === 'pdf') {
+              return (
+                <div key={i} className="player-file-embed-wrapper">
+                  <div className="player-file-embed-label"><FileText size={16} /> {nombre}</div>
+                  <iframe src={url} className="player-file-embed" title={nombre} />
+                </div>
+              );
+            }
+            if (officeExts.includes(ext)) {
+              return (
+                <div key={i} className="player-file-embed-wrapper">
+                  <div className="player-file-embed-label"><FileText size={16} /> {nombre}</div>
+                  <iframe
+                    src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`}
+                    className="player-file-embed"
+                    title={nombre}
+                    frameBorder="0"
+                  />
+                </div>
+              );
+            }
+            return (
+              <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="player-file-download">
+                <FileText size={18} /> {nombre}
+              </a>
+            );
+          }
           default:
             return null;
         }
