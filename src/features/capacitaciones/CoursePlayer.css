@@ -612,3 +612,91 @@
 .player-file-download:hover {
   background: var(--bg-hover);
 }
+
+/* Separador */
+.player-separator-block {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 28px 0;
+  color: var(--text-muted);
+}
+.player-separator-block::before,
+.player-separator-block::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+}
+.player-separator-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  white-space: nowrap;
+}
+
+/* Callout */
+.player-callout-block {
+  padding: 14px 18px;
+  border-radius: 10px;
+  margin: 16px 0;
+  font-size: 14px;
+  line-height: 1.6;
+  border-left: 4px solid;
+  font-weight: 500;
+}
+.player-callout-info    { background: #eff4ff; color: #1e40af; border-color: #3b82f6; }
+.player-callout-warning { background: #fffbeb; color: #92400e; border-color: #f59e0b; }
+.player-callout-danger  { background: #fff5f5; color: #991b1b; border-color: #ef4444; }
+.player-callout-success { background: #f0fff4; color: #14532d; border-color: #22c55e; }
+
+/* Acordeón */
+.player-acordeon-block {
+  margin: 16px 0;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.acordeon-item {
+  border-bottom: 1px solid var(--border-color);
+}
+.acordeon-item:last-child { border-bottom: none; }
+.acordeon-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: var(--bg-card);
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  text-align: left;
+  transition: background 0.15s;
+  gap: 12px;
+}
+.acordeon-header:hover { background: var(--bg-hover); }
+.acordeon-item.open .acordeon-header { background: var(--bg-hover); }
+.acordeon-body {
+  padding: 14px 20px;
+  font-size: 14px;
+  color: var(--text-muted);
+  line-height: 1.65;
+  border-top: 1px solid var(--border-color);
+}
+
+/* Descripción en sidebar */
+.mod-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 400;
+  margin-top: 2px;
+  opacity: 0.8;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

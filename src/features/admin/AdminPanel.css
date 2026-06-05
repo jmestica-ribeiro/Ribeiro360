@@ -418,7 +418,8 @@ textarea.form-control {
 
 .add-block-tools {
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 24px;
   padding: 12px;
   background-color: #f9fafb;

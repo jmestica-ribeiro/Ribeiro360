@@ -101,6 +101,7 @@ export async function saveCurso(cursoData, modulos, visibilidadRules, destinatar
         supabase.from('cursos_modulos').update({
           numero_orden: modulos.indexOf(m) + 1,
           titulo: m.titulo,
+          descripcion: m.descripcion || null,
           contenido: typeof m.contenido === 'string' ? m.contenido : JSON.stringify(m.contenido),
         }).eq('id', m.id)
       )
@@ -113,6 +114,7 @@ export async function saveCurso(cursoData, modulos, visibilidadRules, destinatar
         curso_id: savedId,
         numero_orden: modulos.indexOf(m) + 1,
         titulo: m.titulo,
+        descripcion: m.descripcion || null,
         contenido: typeof m.contenido === 'string' ? m.contenido : JSON.stringify(m.contenido),
       }))
     );

@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Edit2, Trash2, Save, ChevronLeft, Search, X, GripVertical, Upload, Image as ImageIcon } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, ChevronLeft, Search, X, GripVertical, Upload, Image as ImageIcon, Eye, Copy, ChevronDown, ChevronUp } from 'lucide-react';
 import { fetchCursos, fetchCursosCategorias, fetchCursoDetalle, saveCurso, deleteCurso, uploadBannerImage, uploadArchivoBloque } from '../../../services/cursosService';
 import { fetchPAF } from '../../../services/pafService';
 import { fetchAllUsers, fetchProfileValues } from '../../../services/usuariosService';
 import { parseBlocks, updateBlockInList, updateBlockMetaInList } from '../../../lib/blockUtils';
 import BlocksEditor from '../shared/BlocksEditor';
 import QuizBuilder from '../shared/QuizBuilder';
+import CoursePreviewModal from '../shared/CoursePreviewModal';
 import { VisibilidadEditor, LoadingSpinner, useToast } from '../../../components/common';
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -46,9 +47,11 @@ const CapacitacionesTab = () => {
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [destinatariosSearch, setDestinatariosSearch] = useState('');
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const bannerInputRef = useRef(null);
   const [modDragging, setModDragging] = useState(null);
   const [modDragOver, setModDragOver] = useState(null);
+  const [collapsedModules, setCollapsedModules] = useState(new Set());
 
   const loadData = async () => {
     setIsLoading(true);
@@ -173,8 +176,8 @@ const CapacitacionesTab = () => {
     const newBlock = {
       id: 'b-' + Date.now(),
       tipo,
-      contenido: (tipo === 'cards' || tipo === 'timeline') ? '[]' : '',
-      metadata: tipo === 'banner' ? { bg_color: '#000000', text_color: '#F2DC00' } : {}
+      contenido: (tipo === 'cards' || tipo === 'timeline' || tipo === 'acordeon') ? '[]' : '',
+      metadata: tipo === 'banner' ? { bg_color: '#000000', text_color: '#F2DC00' } : tipo === 'callout' ? { nivel: 'info' } : {}
     };
     newModules[mIdx].contenido = JSON.stringify([...currentBlocks, newBlock]);
     setEditingModules(newModules);
@@ -208,6 +211,32 @@ const CapacitacionesTab = () => {
     const newModules = [...editingModules];
     newModules[mIdx].contenido = JSON.stringify(newBlocks);
     setEditingModules(newModules);
+  };
+
+  const duplicateBlockInModule = (mIdx, bId) => {
+    const newModules = [...editingModules];
+    const blocks = parseBlocks(newModules[mIdx].contenido);
+    const src = blocks.find(b => b.id === bId);
+    if (!src) return;
+    const copy = { ...src, id: 'b-' + Date.now(), metadata: { ...src.metadata } };
+    const idx = blocks.indexOf(src);
+    blocks.splice(idx + 1, 0, copy);
+    newModules[mIdx].contenido = JSON.stringify(blocks);
+    setEditingModules(newModules);
+  };
+
+  const duplicateModule = (mIdx) => {
+    const src = editingModules[mIdx];
+    const copy = { ...src, id: 'temp-' + Date.now(), titulo: src.titulo + ' (copia)', numero_orden: editingModules.length + 1 };
+    setEditingModules(prev => [...prev, copy]);
+  };
+
+  const toggleCollapseModule = (modId) => {
+    setCollapsedModules(prev => {
+      const next = new Set(prev);
+      next.has(modId) ? next.delete(modId) : next.add(modId);
+      return next;
+    });
   };
 
   if (isLoading) {
@@ -308,7 +337,41 @@ const CapacitacionesTab = () => {
           <button className="btn-back" onClick={handleBack}><ChevronLeft size={20} /></button>
           <h3>{editingData.id ? 'Editar Capacitación' : 'Nueva Capacitación'}</h3>
         </div>
-        <div className="form-header-actions">{saveButton}</div>
+        <div className="form-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            onClick={() => setShowPreview(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              padding: '9px 18px', borderRadius: 10,
+              border: '1.5px solid var(--border-color)',
+              background: 'var(--bg-card)', color: 'var(--text-main)',
+              fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              transition: 'border-color 0.15s, box-shadow 0.15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary-color)'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
+          >
+            <Eye size={15} /> Vista previa
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 7,
+              padding: '9px 20px', borderRadius: 10, border: 'none',
+              background: isSaving ? '#ccc' : 'var(--primary-color)',
+              color: '#000', fontSize: 13, fontWeight: 800,
+              cursor: isSaving ? 'not-allowed' : 'pointer',
+              boxShadow: isSaving ? 'none' : '0 2px 8px rgba(0,0,0,0.12)',
+              transition: 'background 0.15s, box-shadow 0.15s',
+            }}
+          >
+            {isSaving
+              ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 0.8s linear infinite' }}><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" strokeDasharray="40 20" /></svg> Guardando...</>
+              : <><Save size={15} /> Publicar Capacitación</>
+            }
+          </button>
+        </div>
       </div>
 
       {isLoadingDetail ? (
@@ -538,12 +601,12 @@ const CapacitacionesTab = () => {
                   transition: 'opacity 0.15s',
                 }}
               >
-                <div className="module-item-header" style={{ padding: '16px 20px' }}>
+                <div className="module-item-header" style={{ padding: '14px 20px', gap: 8 }}>
                   <GripVertical size={16} style={{ cursor: 'grab', color: '#ccc', flexShrink: 0 }} />
                   <span className="mod-number">{mIdx + 1}</span>
                   <input
                     className="form-control-ghost"
-                    style={{ fontSize: '16px', fontWeight: '800' }}
+                    style={{ fontSize: '15px', fontWeight: '800', flex: 1 }}
                     value={mod.titulo}
                     onChange={e => {
                       const next = [...editingModules];
@@ -551,19 +614,43 @@ const CapacitacionesTab = () => {
                       setEditingModules(next);
                     }}
                   />
-                  <button className="delete-mod" onClick={() => setEditingModules(prev => prev.filter(m => m.id !== mod.id))}><Trash2 size={16} /></button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                    <button title="Duplicar módulo" className="delete-mod" style={{ color: '#94a3b8' }} onClick={() => duplicateModule(mIdx)}><Copy size={15} /></button>
+                    <button title="Colapsar/expandir" className="delete-mod" style={{ color: '#94a3b8' }} onClick={() => toggleCollapseModule(mod.id)}>
+                      {collapsedModules.has(mod.id) ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
+                    </button>
+                    <button className="delete-mod" onClick={() => setEditingModules(prev => prev.filter(m => m.id !== mod.id))}><Trash2 size={15} /></button>
+                  </div>
                 </div>
-                <div className="module-item-body" style={{ padding: '24px' }}>
-                  <BlocksEditor
-                    blocks={parseBlocks(mod.contenido)}
-                    onUpdate={(bId, f, v) => updateModuleBlock(mIdx, bId, f, v)}
-                    onUpdateMeta={(bId, k, v) => updateModuleBlockMeta(mIdx, bId, k, v)}
-                    onRemove={(bId) => removeBlockFromModule(mIdx, bId)}
-                    onAdd={(tipo) => handleAddBlockToModule(mIdx, tipo)}
-                    onReorder={(newBlocks) => reorderBlocksInModule(mIdx, newBlocks)}
-                    onUploadArchivo={uploadArchivoBloque}
-                  />
-                </div>
+                {!collapsedModules.has(mod.id) && (
+                  <>
+                    <div style={{ padding: '0 20px 12px' }}>
+                      <input
+                        className="form-control"
+                        style={{ fontSize: 13 }}
+                        placeholder="Descripción breve del módulo (visible en el índice)…"
+                        value={mod.descripcion || ''}
+                        onChange={e => {
+                          const next = [...editingModules];
+                          next[mIdx] = { ...next[mIdx], descripcion: e.target.value };
+                          setEditingModules(next);
+                        }}
+                      />
+                    </div>
+                    <div className="module-item-body" style={{ padding: '0 24px 24px' }}>
+                      <BlocksEditor
+                        blocks={parseBlocks(mod.contenido)}
+                        onUpdate={(bId, f, v) => updateModuleBlock(mIdx, bId, f, v)}
+                        onUpdateMeta={(bId, k, v) => updateModuleBlockMeta(mIdx, bId, k, v)}
+                        onRemove={(bId) => removeBlockFromModule(mIdx, bId)}
+                        onAdd={(tipo) => handleAddBlockToModule(mIdx, tipo)}
+                        onReorder={(newBlocks) => reorderBlocksInModule(mIdx, newBlocks)}
+                        onDuplicate={(bId) => duplicateBlockInModule(mIdx, bId)}
+                        onUploadArchivo={uploadArchivoBloque}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -578,6 +665,14 @@ const CapacitacionesTab = () => {
         <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '24px 0 8px' }}>
           {saveButton}
         </div>
+      )}
+
+      {showPreview && (
+        <CoursePreviewModal
+          course={editingData}
+          modules={editingModules}
+          onClose={() => setShowPreview(false)}
+        />
       )}
     </div>
   );

@@ -21,6 +21,23 @@ import { useAuth } from '../../contexts/AuthContext';
 import Certificado from './Certificado';
 import './CoursePlayer.css';
 
+const AcordeonBlock = ({ items }) => {
+  const [open, setOpen] = useState(null);
+  return (
+    <div className="player-acordeon-block">
+      {items.map((item, idx) => (
+        <div key={idx} className={`acordeon-item ${open === idx ? 'open' : ''}`}>
+          <button className="acordeon-header" onClick={() => setOpen(open === idx ? null : idx)}>
+            <span>{item.pregunta}</span>
+            <ChevronLeft size={16} style={{ transform: open === idx ? 'rotate(-90deg)' : 'rotate(-180deg)', transition: 'transform 0.2s', flexShrink: 0 }} />
+          </button>
+          {open === idx && <div className="acordeon-body">{item.respuesta}</div>}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const CoursePlayer = ({ course, onBack }) => {
   const [modules, setModules] = useState([]);
   const [activeModule, setActiveModule] = useState(null);
@@ -229,6 +246,24 @@ const CoursePlayer = ({ course, onBack }) => {
               </div>
             );
           }
+          case 'separador': {
+            const titulo = block.contenido?.trim();
+            return (
+              <div key={i} className="player-separator-block">
+                {titulo && <span className="player-separator-label">{titulo}</span>}
+              </div>
+            );
+          }
+          case 'callout': {
+            const nivel = block.metadata?.nivel || 'info';
+            return (
+              <div key={i} className={`player-callout-block player-callout-${nivel}`}>
+                {block.contenido}
+              </div>
+            );
+          }
+          case 'acordeon':
+            return <AcordeonBlock key={i} items={JSON.parse(block.contenido || '[]')} />;
           case 'archivo': {
             const url = block.contenido;
             if (!url) return null;
@@ -309,7 +344,11 @@ const CoursePlayer = ({ course, onBack }) => {
                   style={{ opacity: quizResult?.passed && !isActive ? 0.6 : 1, cursor: quizResult?.passed ? 'default' : 'pointer' }}
                 >
                   <div className="mod-status-icon">{isCompleted ? <CheckCircle2 size={18} /> : <PlayCircle size={18} />}</div>
-                  <div className="mod-nav-info"><span className="mod-idx">Módulo {idx + 1}</span><span className="mod-name">{mod.titulo}</span></div>
+                  <div className="mod-nav-info">
+                    <span className="mod-idx">Módulo {idx + 1}</span>
+                    <span className="mod-name">{mod.titulo}</span>
+                    {mod.descripcion && <span className="mod-desc">{mod.descripcion}</span>}
+                  </div>
                 </button>
               );
             })}
