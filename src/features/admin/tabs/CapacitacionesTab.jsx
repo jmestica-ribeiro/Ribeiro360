@@ -8,6 +8,7 @@ import BlocksEditor from '../shared/BlocksEditor';
 import QuizBuilder from '../shared/QuizBuilder';
 import CoursePreviewModal from '../shared/CoursePreviewModal';
 import { VisibilidadEditor, LoadingSpinner, useToast } from '../../../components/common';
+import { notificarNuevoCurso } from '../../../lib/ncNotificaciones';
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
@@ -130,9 +131,13 @@ const CapacitacionesTab = () => {
     delete coursePayload._paf_anio;
     coursePayload.cuestionario = JSON.stringify(editingPreguntas);
 
-    const { error } = await saveCurso(coursePayload, editingModules, editingVisibilidad, editingDestinatarios);
+    const isNew = !editingData.id;
+    const { data: savedCurso, error } = await saveCurso(coursePayload, editingModules, editingVisibilidad, editingDestinatarios);
     setIsSaving(false);
     if (error) return showToast(error.message, 'error');
+    if (isNew && savedCurso?.id) {
+      notificarNuevoCurso({ cursoTitulo: editingData.titulo, cursoId: savedCurso.id, visRules: editingVisibilidad, destinatarios: editingDestinatarios });
+    }
     await reloadCourses();
     handleBack();
   };

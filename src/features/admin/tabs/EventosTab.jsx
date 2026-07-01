@@ -10,6 +10,7 @@ import {
 } from '../../../services/eventosService';
 import { fetchProfileValues } from '../../../services/usuariosService';
 import { AdminListPanel, EmptyState, VisibilidadEditor, useToast } from '../../../components/common';
+import { notificarNuevoEvento } from '../../../lib/ncNotificaciones';
 
 const EMPTY_EVENTO = { titulo: '', descripcion: '', fecha: new Date().toISOString().split('T')[0], categoria_id: null, area_id: null };
 
@@ -68,9 +69,13 @@ const EventosTab = () => {
       categoria_id: editingData.categoria_id || null,
       area_id: editingData.area_id || null,
     };
+    const isNew = !editingData.id;
     if (editingData.id) payload.id = editingData.id;
-    const { error } = await saveEvento(payload, editingVisibilidad);
+    const { data: savedEvento, error } = await saveEvento(payload, editingVisibilidad);
     if (error) return showToast(error.message, 'error');
+    if (isNew && savedEvento?.id) {
+      notificarNuevoEvento({ eventoTitulo: payload.titulo, eventoId: savedEvento.id, eventoFecha: payload.fecha, visRules: editingVisibilidad });
+    }
     await loadData();
     handleBack();
   };

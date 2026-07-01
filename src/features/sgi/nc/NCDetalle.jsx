@@ -14,7 +14,7 @@ import {
   fetchHitosNc, fetchHitosNcResumen, insertHitoNc, deleteHitoNc,
   uploadNcAdjunto, getNcPublicUrl, getNcSignedUrls,
 } from '../../../services/ncService';
-import { notificarAsignacion } from '../../../lib/ncNotificaciones';
+import { notificarAsignacion, notificarCambioEstadoHallazgo } from '../../../lib/ncNotificaciones';
 import { useAuth } from '../../../contexts/AuthContext';
 import './NCDetalle.css';
 
@@ -1027,6 +1027,24 @@ export default function NCDetalle() {
         await uploadPendingFiles(hallazgoId);
         // Notificar nuevas asignaciones
         await _notificarCambiosAsignacion(id, form.numero);
+        // Notificar cambio de estado a todos los asignados
+        if (advance) {
+          const todosAsignados = [
+            form.emisor_id,
+            form.auditor_id,
+            ...form.responsable_proceso,
+            ...form.responsable_verif,
+            step2.responsable_analisis_id,
+            ...step2.participantes,
+          ];
+          notificarCambioEstadoHallazgo({
+            hallazgoId: id,
+            hallazgoNumero: form.numero,
+            evento: closing ? 'cerrado' : 'avance',
+            nuevoPaso: newPaso,
+            userIds: todosAsignados,
+          });
+        }
         setPasoActual(newPaso);
         if (advance && !closing) setCurrentStep(currentStep + 1);
         showToast(closing ? 'Hallazgo cerrado correctamente' : 'Guardado correctamente', 'success');

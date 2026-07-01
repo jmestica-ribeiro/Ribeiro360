@@ -11,6 +11,7 @@ import {
   updateSgiDocumentoAprobador, fetchGerentes,
 } from '../../services/sgiService';
 import { useAuth } from '../../contexts/AuthContext';
+import { notificarDocumentoSGI } from '../../lib/ncNotificaciones';
 import './SGI.css';
 import './SGIDocument.css';
 
@@ -64,16 +65,27 @@ const SGIDocument = () => {
   const handleAction = async () => {
     if (!pendienteVersion || !actionMode) return;
     setIsActioning(true);
+
+    const aprobadorId = overrideAprobadorId || documento.aprobador_id || documento.aprobador_perfil?.id;
+    const docParams = { documentoTitulo: documento.titulo, versionNumero: pendienteVersion.numero_version, documentoId: documento.id };
+
     if (actionMode === 'review') {
       if (overrideAprobadorId && overrideAprobadorId !== documento.aprobador_id) {
         await updateSgiDocumentoAprobador(documento.id, overrideAprobadorId);
       }
       await reviewSgiVersion(pendienteVersion.id, profile, actionComment || null);
+      // Notificar al aprobador que hay una versión esperando su aprobación
+      if (aprobadorId) notificarDocumentoSGI({ userId: aprobadorId, ...docParams, evento: 'pendiente_aprobacion' });
     } else if (actionMode === 'approve') {
       await approveSgiVersion(pendienteVersion.id, documento.id, profile, actionComment || null);
+      // Notificar al revisor que su versión fue aprobada
+      if (pendienteVersion.revisor_id) notificarDocumentoSGI({ userId: pendienteVersion.revisor_id, ...docParams, evento: 'aprobado' });
     } else if (actionMode === 'reject') {
       await rejectSgiVersion(pendienteVersion.id, actionComment || null);
+      // Notificar al revisor que su versión fue rechazada
+      if (pendienteVersion.revisor_id) notificarDocumentoSGI({ userId: pendienteVersion.revisor_id, ...docParams, evento: 'rechazado' });
     }
+
     setActionMode(null);
     setActionComment('');
     setIsActioning(false);

@@ -5,6 +5,7 @@ import { ArrowLeft, Check, Clock, ChevronRight, Loader2, Search, User, Upload, X
 import IncidenteInformePDF from './IncidenteInformePDF';
 import SistemicoPicker from './SistemicoPicker';
 import { useAuth } from '../../../contexts/AuthContext';
+import { notificarAccionIncidente } from '../../../lib/ncNotificaciones';
 import {
   fetchIncidentesProfiles, fetchCentrosDeCostos,
   countIncidentesByYear, fetchIncidente, insertIncidente, updateIncidente,
@@ -1053,6 +1054,7 @@ export default function IncidenteDetalle() {
           onSaved={() => { setShowAccionModal(false); loadAcciones(); }}
           onHitoSaved={() => loadAcciones()}
           incidenteId={id}
+          incidenteNumero={form.numero}
           isAdmin={isAdmin}
           currentUserId={user?.id}
         />
@@ -1217,7 +1219,7 @@ function IncStep6Hitos({ accionId }) {
 }
 
 /* ── IncAccionModal ───────────────────────────────────────────────────────────── */
-function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, accionPicker, setAccionPicker, onClose, onSaved, onHitoSaved, incidenteId, isAdmin, currentUserId }) {
+function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, accionPicker, setAccionPicker, onClose, onSaved, onHitoSaved, incidenteId, incidenteNumero, isAdmin, currentUserId }) {
   const [saving, setSaving]           = useState(false);
   const [hitos, setHitos]             = useState([]);
   const [hitosLoading, setHitosLoading] = useState(false);
@@ -1255,6 +1257,14 @@ function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, ac
           estado: 'pendiente',
         });
         accionId = inserted?.id;
+        if (accionForm.responsable_id && incidenteNumero) {
+          notificarAccionIncidente({
+            userId: accionForm.responsable_id,
+            incidenteNumero,
+            accionDescripcion: accionForm.descripcion,
+            incidenteId,
+          });
+        }
       }
 
       // Insertar hito primero para que el avance final sea correcto
