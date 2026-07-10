@@ -8,7 +8,7 @@ import BlocksEditor from '../shared/BlocksEditor';
 import QuizBuilder from '../shared/QuizBuilder';
 import CoursePreviewModal from '../shared/CoursePreviewModal';
 import { VisibilidadEditor, LoadingSpinner, useToast } from '../../../components/common';
-import { notificarNuevoCurso } from '../../../lib/ncNotificaciones';
+import { notificarNuevoCurso } from '../../../lib/notificaciones';
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 

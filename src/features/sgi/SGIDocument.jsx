@@ -11,7 +11,7 @@ import {
   updateSgiDocumentoAprobador, fetchGerentes,
 } from '../../services/sgiService';
 import { useAuth } from '../../contexts/AuthContext';
-import { notificarDocumentoSGI } from '../../lib/ncNotificaciones';
+import { notificarDocumentoSGI } from '../../lib/notificaciones';
 import './SGI.css';
 import './SGIDocument.css';
 

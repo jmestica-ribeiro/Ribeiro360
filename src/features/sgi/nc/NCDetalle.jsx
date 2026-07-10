@@ -14,7 +14,7 @@ import {
   fetchHitosNc, fetchHitosNcResumen, insertHitoNc, deleteHitoNc,
   uploadNcAdjunto, getNcPublicUrl, getNcSignedUrls,
 } from '../../../services/ncService';
-import { notificarAsignacion, notificarCambioEstadoHallazgo } from '../../../lib/ncNotificaciones';
+import { notificarAsignacion, notificarCambioEstadoHallazgo } from '../../../lib/notificaciones';
 import { useAuth } from '../../../contexts/AuthContext';
 import './NCDetalle.css';
 
@@ -1806,8 +1806,36 @@ export default function NCDetalle() {
         setPasoActual(4);
         setCurrentStep(4);
         await fetchAcciones();
+        notificarCambioEstadoHallazgo({
+          hallazgoId: id,
+          hallazgoNumero: form.numero || id,
+          evento: 'verif_rechazada',
+          nuevoPaso: 4,
+          userIds: [
+            form.emisor_id,
+            form.auditor_id,
+            ...(form.responsable_proceso || []),
+            ...(form.responsable_verif || []),
+            step2.responsable_analisis_id,
+            ...(step2.participantes || []),
+          ],
+        });
         showToast('Acción no eficaz: se creó una acción rectificativa y se regresó al Paso 4', 'error');
       } else {
+        notificarCambioEstadoHallazgo({
+          hallazgoId: id,
+          hallazgoNumero: form.numero || id,
+          evento: 'verif_aprobada',
+          nuevoPaso: pasoActual,
+          userIds: [
+            form.emisor_id,
+            form.auditor_id,
+            ...(form.responsable_proceso || []),
+            ...(form.responsable_verif || []),
+            step2.responsable_analisis_id,
+            ...(step2.participantes || []),
+          ],
+        });
         showToast('Verificación guardada', 'success');
       }
     } catch {

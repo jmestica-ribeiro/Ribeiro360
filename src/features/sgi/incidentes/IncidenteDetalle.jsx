@@ -5,7 +5,7 @@ import { ArrowLeft, Check, Clock, ChevronRight, Loader2, Search, User, Upload, X
 import IncidenteInformePDF from './IncidenteInformePDF';
 import SistemicoPicker from './SistemicoPicker';
 import { useAuth } from '../../../contexts/AuthContext';
-import { notificarAccionIncidente } from '../../../lib/ncNotificaciones';
+import { notificarAccionIncidente } from '../../../lib/notificaciones';
 import {
   fetchIncidentesProfiles, fetchCentrosDeCostos,
   countIncidentesByYear, fetchIncidente, insertIncidente, updateIncidente,

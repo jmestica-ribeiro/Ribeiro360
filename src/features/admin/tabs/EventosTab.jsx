@@ -10,7 +10,7 @@ import {
 } from '../../../services/eventosService';
 import { fetchProfileValues } from '../../../services/usuariosService';
 import { AdminListPanel, EmptyState, VisibilidadEditor, useToast } from '../../../components/common';
-import { notificarNuevoEvento } from '../../../lib/ncNotificaciones';
+import { notificarNuevoEvento } from '../../../lib/notificaciones';
 
 const EMPTY_EVENTO = { titulo: '', descripcion: '', fecha: new Date().toISOString().split('T')[0], categoria_id: null, area_id: null };
 

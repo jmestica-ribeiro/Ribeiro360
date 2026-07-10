@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { TIPOS_NC } from '../lib/ncNotificaciones';
+import { TIPOS_NC } from '../lib/notificaciones';
 import { visMatchesProfile, courseIsVisible } from '../lib/visibilidad';
 
 const WINDOW_DAYS = 30;
