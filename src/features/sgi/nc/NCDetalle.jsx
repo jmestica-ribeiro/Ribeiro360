@@ -16,6 +16,7 @@ import {
 } from '../../../services/ncService';
 import { notificarAsignacion, notificarCambioEstadoHallazgo } from '../../../lib/notificaciones';
 import { useAuth } from '../../../contexts/AuthContext';
+import { AccessDeniedModal } from '../../../components/common';
 import './NCDetalle.css';
 
 /* ── Constants ──────────────────────────────────────────────────────────────── */
@@ -605,6 +606,7 @@ export default function NCDetalle() {
   const [currentStep, setCurrentStep] = useState(1);
   const [pasoActual, setPasoActual] = useState(1);
   const [loading, setLoading] = useState(!isNew);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
   const [pickerTarget, setPickerTarget] = useState(null); // 'auditor' | 'emisor' | 'responsable' | 'verif' | null
@@ -838,7 +840,7 @@ export default function NCDetalle() {
         }
       } catch (err) {
         console.error('Error loading hallazgo:', err);
-        showToast('Error al cargar el hallazgo', 'error');
+        setAccessDenied(true);
       } finally {
         setLoading(false);
       }
@@ -2041,6 +2043,16 @@ export default function NCDetalle() {
     if (currentStep === 5) return renderStep5();
     return <StepPlaceholder step={step} />;
   };
+
+  /* ── Access denied (visibilidad) ── */
+  if (accessDenied) {
+    return (
+      <AccessDeniedModal
+        entityLabel="este hallazgo"
+        onClose={() => navigate('/sgi', { replace: true })}
+      />
+    );
+  }
 
   /* ── Loading state ── */
   if (loading) {

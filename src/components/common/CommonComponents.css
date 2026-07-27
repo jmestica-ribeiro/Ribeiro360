@@ -42,6 +42,70 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* ─── AccessDeniedModal ────────────────────────────────────────────────────── */
+.access-denied-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.access-denied-modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 28px 24px;
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+}
+
+.access-denied-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: rgba(231, 29, 54, 0.12);
+  color: #E71D36;
+  margin-bottom: 14px;
+}
+
+.access-denied-modal h4 {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0 0 8px;
+}
+
+.access-denied-modal p {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin: 0 0 20px;
+}
+
+.access-denied-btn {
+  background: var(--primary-color);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 24px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.access-denied-btn:hover {
+  filter: brightness(0.95);
+}
+
 /* ─── VisibilidadEditor ────────────────────────────────────────────────────── */
 .visibilidad-editor {
   margin-top: 8px;

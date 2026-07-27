@@ -6,6 +6,7 @@ import IncidenteInformePDF from './IncidenteInformePDF';
 import SistemicoPicker from './SistemicoPicker';
 import { useAuth } from '../../../contexts/AuthContext';
 import { notificarAccionIncidente } from '../../../lib/notificaciones';
+import { AccessDeniedModal } from '../../../components/common';
 import {
   fetchIncidentesProfiles, fetchCentrosDeCostos,
   countIncidentesByYear, fetchIncidente, insertIncidente, updateIncidente,
@@ -216,6 +217,7 @@ export default function IncidenteDetalle() {
   const [loading, setLoading]       = useState(!isNew);
   const [saving, setSaving]         = useState(false);
   const [toast, setToast]           = useState(null);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [incEstado, setIncEstado]   = useState('abierto');
   const [sinInvestigacion, setSinInvestigacion] = useState(false);
   const [showPDF, setShowPDF]       = useState(false);
@@ -305,7 +307,7 @@ export default function IncidenteDetalle() {
     setLoading(true);
     fetchIncidente(id)
       .then(({ data, error }) => {
-        if (error) { console.error(error); setLoading(false); return; }
+        if (error) { console.error(error); setLoading(false); setAccessDenied(true); return; }
         if (data) {
           setIncEstado(data.estado || 'abierto');
           setSinInvestigacion(data.sin_investigacion || false);
@@ -1027,6 +1029,15 @@ export default function IncidenteDetalle() {
       </div>
     );
   };
+
+  if (accessDenied) {
+    return (
+      <AccessDeniedModal
+        entityLabel="este incidente"
+        onClose={() => navigate('/sgi', { replace: true })}
+      />
+    );
+  }
 
   if (loading) {
     return (

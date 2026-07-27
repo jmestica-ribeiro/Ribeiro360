@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   PieChart, Pie, Cell,
@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import {
   BarChart2, FileText, AlertCircle, CheckCircle, Clock, TrendingUp, RefreshCw,
-  ClipboardList, FolderOpen, Filter, X, Download,
+  ClipboardList, FolderOpen, Filter, X, Download, ChevronDown, Check,
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { fetchSgiEstadisticasData } from '../../services/sgiService';
@@ -72,6 +72,56 @@ function ChartSkeleton({ height = 260 }) {
   return <div className="sgi-stat-skeleton" style={{ height }} />;
 }
 
+// ── Filtro multi-selección ─────────────────────────────────────────────────────
+function MultiSelectFiltro({ options, selected, onChange, placeholder = 'Todos', disabled = false }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const toggleValue = (value) => {
+    onChange(selected.includes(value) ? selected.filter(v => v !== value) : [...selected, value]);
+  };
+
+  const label = selected.length === 0
+    ? placeholder
+    : selected.length === 1
+      ? selected[0]
+      : `${selected.length} seleccionados`;
+
+  return (
+    <div className={`sgi-multiselect${disabled ? ' disabled' : ''}`} ref={ref}>
+      <button
+        type="button"
+        className={`sgi-multiselect-btn${selected.length ? ' has-value' : ''}`}
+        onClick={() => !disabled && setOpen(o => !o)}
+        disabled={disabled}
+      >
+        <span title={label}>{label}</span>
+        <ChevronDown size={14} className={`sgi-multiselect-chevron${open ? ' open' : ''}`} />
+      </button>
+      {open && !disabled && (
+        <div className="sgi-multiselect-menu">
+          {options.length === 0 && <div className="sgi-multiselect-empty">Sin opciones</div>}
+          {options.map(opt => {
+            const checked = selected.includes(opt.value);
+            return (
+              <div key={opt.value} className={`sgi-multiselect-item${checked ? ' checked' : ''}`} onClick={() => toggleValue(opt.value)}>
+                <span className={`sgi-multiselect-checkbox${checked ? ' on' : ''}`}>{checked && <Check size={11} />}</span>
+                <span className="sgi-multiselect-item-label">{opt.label}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Component principal ───────────────────────────────────────────────────────
 export default function SGIEstadisticas() {
   const [tabActiva, setTabActiva] = useState('nc');
@@ -84,21 +134,21 @@ export default function SGIEstadisticas() {
   const [categorias, setCategorias] = useState([]);
   const [lastUpdated, setLastUpdated] = useState(null);
 
-  // ── Filtros Incidentes ────────────────────────────────────────────────────────
-  const [filtroIncEstado, setFiltroIncEstado]         = useState('');
-  const [filtroIncTipo, setFiltroIncTipo]             = useState('');
-  const [filtroIncClasif, setFiltroIncClasif]         = useState('');
-  const [filtroIncGerencia, setFiltroIncGerencia]     = useState('');
-  const [filtroIncSitio, setFiltroIncSitio]           = useState('');
-  const [filtroIncAnio, setFiltroIncAnio]             = useState('');
+  // ── Filtros Incidentes (multi-selección) ──────────────────────────────────────
+  const [filtroIncEstado, setFiltroIncEstado]         = useState([]);
+  const [filtroIncTipo, setFiltroIncTipo]             = useState([]);
+  const [filtroIncClasif, setFiltroIncClasif]         = useState([]);
+  const [filtroIncGerencia, setFiltroIncGerencia]     = useState([]);
+  const [filtroIncSitio, setFiltroIncSitio]           = useState([]);
+  const [filtroIncAnio, setFiltroIncAnio]             = useState([]);
 
-  // ── Filtros NC ────────────────────────────────────────────────────────────────
-  const [filtroTipo, setFiltroTipo] = useState('');
-  const [filtroEstado, setFiltroEstado] = useState('');
-  const [filtroGerencia, setFiltroGerencia] = useState('');
+  // ── Filtros NC (multi-selección) ──────────────────────────────────────────────
+  const [filtroTipo, setFiltroTipo] = useState([]);
+  const [filtroEstado, setFiltroEstado] = useState([]);
+  const [filtroGerencia, setFiltroGerencia] = useState([]);
   const [filtroModo, setFiltroModo] = useState('periodo'); // 'periodo' | 'rango'
-  const [filtroAnio, setFiltroAnio] = useState('');
-  const [filtroMes, setFiltroMes] = useState('');
+  const [filtroAnio, setFiltroAnio] = useState([]);
+  const [filtroMes, setFiltroMes] = useState([]);
   const [filtroDesde, setFiltroDesde] = useState('');
   const [filtroHasta, setFiltroHasta] = useState('');
 
@@ -135,14 +185,13 @@ export default function SGIEstadisticas() {
   // Hallazgos filtrados
   const hallazgosFiltrados = useMemo(() => {
     return hallazgos.filter(h => {
-      if (filtroTipo && h.tipo !== filtroTipo) return false;
-      if (filtroEstado && h.estado !== filtroEstado) return false;
-      if (filtroGerencia && h.gerencia !== filtroGerencia) return false;
+      if (filtroTipo.length && !filtroTipo.includes(h.tipo)) return false;
+      if (filtroEstado.length && !filtroEstado.includes(h.estado)) return false;
+      if (filtroGerencia.length && !filtroGerencia.includes(h.gerencia)) return false;
       const fecha = (h.fecha || h.created_at || '').slice(0, 10);
       if (filtroModo === 'periodo') {
-        if (filtroAnio && !fecha.startsWith(filtroAnio)) return false;
-        if (filtroMes && filtroAnio && fecha !== `${filtroAnio}-${filtroMes}`.slice(0, 7) &&
-            !fecha.startsWith(`${filtroAnio}-${filtroMes}`)) return false;
+        if (filtroAnio.length && !filtroAnio.some(a => fecha.startsWith(a))) return false;
+        if (filtroMes.length && !filtroMes.includes(fecha.slice(5, 7))) return false;
       } else {
         if (filtroDesde && fecha < filtroDesde) return false;
         if (filtroHasta && fecha > filtroHasta) return false;
@@ -151,12 +200,12 @@ export default function SGIEstadisticas() {
     });
   }, [hallazgos, filtroTipo, filtroEstado, filtroGerencia, filtroModo, filtroAnio, filtroMes, filtroDesde, filtroHasta]);
 
-  const hayFiltrosActivos = filtroTipo || filtroEstado || filtroGerencia ||
-    (filtroModo === 'periodo' ? (filtroAnio || filtroMes) : (filtroDesde || filtroHasta));
+  const hayFiltrosActivos = filtroTipo.length || filtroEstado.length || filtroGerencia.length ||
+    (filtroModo === 'periodo' ? (filtroAnio.length || filtroMes.length) : (filtroDesde || filtroHasta));
 
   const limpiarFiltros = () => {
-    setFiltroTipo(''); setFiltroEstado(''); setFiltroGerencia('');
-    setFiltroAnio(''); setFiltroMes(''); setFiltroDesde(''); setFiltroHasta('');
+    setFiltroTipo([]); setFiltroEstado([]); setFiltroGerencia([]);
+    setFiltroAnio([]); setFiltroMes([]); setFiltroDesde(''); setFiltroHasta('');
   };
 
   const totalDocs = docs.length;
@@ -217,10 +266,10 @@ export default function SGIEstadisticas() {
   const evolucion = (() => {
     // Si hay filtro de periodo/rango, adaptamos el eje temporal
     const meses = [];
-    if (filtroModo === 'periodo' && filtroAnio && filtroMes) {
-      // Un solo mes — mostramos semanas
-      const anio = parseInt(filtroAnio);
-      const mes = parseInt(filtroMes) - 1;
+    if (filtroModo === 'periodo' && filtroAnio.length === 1 && filtroMes.length === 1) {
+      // Un solo año + un solo mes — mostramos semanas
+      const anio = parseInt(filtroAnio[0]);
+      const mes = parseInt(filtroMes[0]) - 1;
       const diasEnMes = new Date(anio, mes + 1, 0).getDate();
       for (let sem = 1; sem <= 5; sem++) {
         const desde = (sem - 1) * 7 + 1;
@@ -233,11 +282,12 @@ export default function SGIEstadisticas() {
         }).length;
         meses.push({ name: `Sem ${sem}`, Hallazgos: count });
       }
-    } else if (filtroModo === 'periodo' && filtroAnio && !filtroMes) {
-      // Año completo — mostramos 12 meses
+    } else if (filtroModo === 'periodo' && filtroAnio.length === 1 && filtroMes.length === 0) {
+      // Un solo año, sin mes — mostramos 12 meses
+      const anioSel = filtroAnio[0];
       for (let m = 0; m < 12; m++) {
-        const key = `${filtroAnio}-${String(m + 1).padStart(2, '0')}`;
-        const label = new Date(parseInt(filtroAnio), m, 1).toLocaleDateString('es-AR', { month: 'short' });
+        const key = `${anioSel}-${String(m + 1).padStart(2, '0')}`;
+        const label = new Date(parseInt(anioSel), m, 1).toLocaleDateString('es-AR', { month: 'short' });
         const count = hallazgosFiltrados.filter(h => (h.fecha || h.created_at || '').startsWith(key)).length;
         meses.push({ name: label, Hallazgos: count });
       }
@@ -262,19 +312,19 @@ export default function SGIEstadisticas() {
 
   // ── Derivaciones Incidentes ───────────────────────────────────────────────────
   const incidentesFiltrados = useMemo(() => incidentes.filter(h => {
-    if (filtroIncEstado  && h.estado        !== filtroIncEstado)  return false;
-    if (filtroIncTipo    && h.tipo_incidente !== filtroIncTipo)    return false;
-    if (filtroIncClasif  && h.clasificacion  !== filtroIncClasif)  return false;
-    if (filtroIncGerencia && h.gerencia      !== filtroIncGerencia) return false;
-    if (filtroIncSitio    && h.sucursal      !== filtroIncSitio)    return false;
-    if (filtroIncAnio    && !(h.fecha || h.created_at || '').startsWith(filtroIncAnio)) return false;
+    if (filtroIncEstado.length  && !filtroIncEstado.includes(h.estado))         return false;
+    if (filtroIncTipo.length    && !filtroIncTipo.includes(h.tipo_incidente))   return false;
+    if (filtroIncClasif.length  && !filtroIncClasif.includes(h.clasificacion))  return false;
+    if (filtroIncGerencia.length && !filtroIncGerencia.includes(h.gerencia))    return false;
+    if (filtroIncSitio.length    && !filtroIncSitio.includes(h.sitio))          return false;
+    if (filtroIncAnio.length    && !filtroIncAnio.some(a => (h.fecha || h.created_at || '').startsWith(a))) return false;
     return true;
   }), [incidentes, filtroIncEstado, filtroIncTipo, filtroIncClasif, filtroIncGerencia, filtroIncSitio, filtroIncAnio]);
 
   const gerenciasInc = useMemo(() =>
     [...new Set(incidentes.map(h => h.gerencia).filter(Boolean))].sort(), [incidentes]);
   const sitiosInc = useMemo(() =>
-    [...new Set(incidentes.map(h => h.sucursal).filter(Boolean))].sort(), [incidentes]);
+    [...new Set(incidentes.map(h => h.sitio).filter(Boolean))].sort(), [incidentes]);
   const aniosInc = useMemo(() => {
     const set = new Set(incidentes.map(h => (h.fecha || h.created_at || '').slice(0, 4)).filter(Boolean));
     return [...set].sort((a, b) => b - a);
@@ -450,25 +500,28 @@ export default function SGIEstadisticas() {
           <div className="sgi-nc-filtros-row">
             <div className="sgi-nc-filtro-group">
               <label>Tipo</label>
-              <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}>
-                <option value="">Todos</option>
-                {['NC', 'OBS', 'OM', 'Fortaleza'].map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+              <MultiSelectFiltro
+                selected={filtroTipo}
+                onChange={setFiltroTipo}
+                options={['NC', 'OBS', 'OM', 'Fortaleza'].map(t => ({ value: t, label: t }))}
+              />
             </div>
             <div className="sgi-nc-filtro-group">
               <label>Estado</label>
-              <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}>
-                <option value="">Todos</option>
-                <option value="abierto">Abierto</option>
-                <option value="cerrado">Cerrado</option>
-              </select>
+              <MultiSelectFiltro
+                selected={filtroEstado}
+                onChange={setFiltroEstado}
+                options={[{ value: 'abierto', label: 'Abierto' }, { value: 'cerrado', label: 'Cerrado' }]}
+              />
             </div>
             <div className="sgi-nc-filtro-group">
               <label>Área / Gerencia</label>
-              <select value={filtroGerencia} onChange={e => setFiltroGerencia(e.target.value)}>
-                <option value="">Todas</option>
-                {gerenciasUnicas.map(g => <option key={g} value={g}>{g}</option>)}
-              </select>
+              <MultiSelectFiltro
+                selected={filtroGerencia}
+                onChange={setFiltroGerencia}
+                placeholder="Todas"
+                options={gerenciasUnicas.map(g => ({ value: g, label: g }))}
+              />
             </div>
             <div className="sgi-nc-filtro-group sgi-nc-filtro-group--modo">
               <label>Período</label>
@@ -481,21 +534,22 @@ export default function SGIEstadisticas() {
               <>
                 <div className="sgi-nc-filtro-group">
                   <label>Año</label>
-                  <select value={filtroAnio} onChange={e => { setFiltroAnio(e.target.value); setFiltroMes(''); }}>
-                    <option value="">Todos</option>
-                    {aniosUnicos.map(a => <option key={a} value={a}>{a}</option>)}
-                  </select>
+                  <MultiSelectFiltro
+                    selected={filtroAnio}
+                    onChange={setFiltroAnio}
+                    options={aniosUnicos.map(a => ({ value: a, label: a }))}
+                  />
                 </div>
                 <div className="sgi-nc-filtro-group">
                   <label>Mes</label>
-                  <select value={filtroMes} onChange={e => setFiltroMes(e.target.value)} disabled={!filtroAnio}>
-                    <option value="">Todos</option>
-                    {['01','02','03','04','05','06','07','08','09','10','11','12'].map((m, i) => (
-                      <option key={m} value={m}>
-                        {new Date(2000, i, 1).toLocaleDateString('es-AR', { month: 'long' })}
-                      </option>
-                    ))}
-                  </select>
+                  <MultiSelectFiltro
+                    selected={filtroMes}
+                    onChange={setFiltroMes}
+                    options={['01','02','03','04','05','06','07','08','09','10','11','12'].map((m, i) => ({
+                      value: m,
+                      label: new Date(2000, i, 1).toLocaleDateString('es-AR', { month: 'long' }),
+                    }))}
+                  />
                 </div>
               </>
             ) : (
@@ -690,49 +744,56 @@ export default function SGIEstadisticas() {
           <div className="sgi-nc-filtros-row">
             <div className="sgi-nc-filtro-group">
               <label>Estado</label>
-              <select value={filtroIncEstado} onChange={e => setFiltroIncEstado(e.target.value)}>
-                <option value="">Todos</option>
-                <option value="abierto">Abierto</option>
-                <option value="cerrado">Cerrado</option>
-              </select>
+              <MultiSelectFiltro
+                selected={filtroIncEstado}
+                onChange={setFiltroIncEstado}
+                options={[{ value: 'abierto', label: 'Abierto' }, { value: 'cerrado', label: 'Cerrado' }]}
+              />
             </div>
             <div className="sgi-nc-filtro-group">
               <label>Tipo</label>
-              <select value={filtroIncTipo} onChange={e => setFiltroIncTipo(e.target.value)}>
-                <option value="">Todos</option>
-                {['Personal','Vehicular','Ambiental','Industrial'].map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+              <MultiSelectFiltro
+                selected={filtroIncTipo}
+                onChange={setFiltroIncTipo}
+                options={['Personal','Vehicular','Ambiental','Industrial'].map(t => ({ value: t, label: t }))}
+              />
             </div>
             <div className="sgi-nc-filtro-group">
               <label>Criticidad</label>
-              <select value={filtroIncClasif} onChange={e => setFiltroIncClasif(e.target.value)}>
-                <option value="">Todas</option>
-                {['Ninguna','Menor','Relevante','Crítica','Mayor'].map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+              <MultiSelectFiltro
+                selected={filtroIncClasif}
+                onChange={setFiltroIncClasif}
+                placeholder="Todas"
+                options={['Ninguna','Menor','Relevante','Crítica','Mayor'].map(c => ({ value: c, label: c }))}
+              />
             </div>
             <div className="sgi-nc-filtro-group">
               <label>Gerencia</label>
-              <select value={filtroIncGerencia} onChange={e => setFiltroIncGerencia(e.target.value)}>
-                <option value="">Todas</option>
-                {gerenciasInc.map(g => <option key={g} value={g}>{g}</option>)}
-              </select>
+              <MultiSelectFiltro
+                selected={filtroIncGerencia}
+                onChange={setFiltroIncGerencia}
+                placeholder="Todas"
+                options={gerenciasInc.map(g => ({ value: g, label: g }))}
+              />
             </div>
             <div className="sgi-nc-filtro-group">
               <label>Sitio</label>
-              <select value={filtroIncSitio} onChange={e => setFiltroIncSitio(e.target.value)}>
-                <option value="">Todos</option>
-                {sitiosInc.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <MultiSelectFiltro
+                selected={filtroIncSitio}
+                onChange={setFiltroIncSitio}
+                options={sitiosInc.map(s => ({ value: s, label: s }))}
+              />
             </div>
             <div className="sgi-nc-filtro-group">
               <label>Año</label>
-              <select value={filtroIncAnio} onChange={e => setFiltroIncAnio(e.target.value)}>
-                <option value="">Todos</option>
-                {aniosInc.map(a => <option key={a} value={a}>{a}</option>)}
-              </select>
+              <MultiSelectFiltro
+                selected={filtroIncAnio}
+                onChange={setFiltroIncAnio}
+                options={aniosInc.map(a => ({ value: a, label: a }))}
+              />
             </div>
-            {(filtroIncEstado||filtroIncTipo||filtroIncClasif||filtroIncGerencia||filtroIncSitio||filtroIncAnio) && (
-              <button className="sgi-nc-filtro-clear" onClick={() => { setFiltroIncEstado(''); setFiltroIncTipo(''); setFiltroIncClasif(''); setFiltroIncGerencia(''); setFiltroIncSitio(''); setFiltroIncAnio(''); }}>
+            {(filtroIncEstado.length||filtroIncTipo.length||filtroIncClasif.length||filtroIncGerencia.length||filtroIncSitio.length||filtroIncAnio.length) && (
+              <button className="sgi-nc-filtro-clear" onClick={() => { setFiltroIncEstado([]); setFiltroIncTipo([]); setFiltroIncClasif([]); setFiltroIncGerencia([]); setFiltroIncSitio([]); setFiltroIncAnio([]); }}>
                 <X size={14} /> Limpiar
               </button>
             )}
