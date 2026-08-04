@@ -309,6 +309,20 @@ export default function IncidenteDetalle() {
       .then(({ data, error }) => {
         if (error) { console.error(error); setLoading(false); setAccessDenied(true); return; }
         if (data) {
+          const participantesAnalisis = (() => { try { return Array.isArray(data.participantes_analisis) ? data.participantes_analisis : JSON.parse(data.participantes_analisis || '[]'); } catch { return []; } })();
+          const involucradosIds = Array.isArray(data.involucrados) ? data.involucrados.map(i => i?.id).filter(Boolean) : [];
+          const responsablesVerif = Array.isArray(data.responsable_verif) ? data.responsable_verif : [];
+          const participanteIds = [
+            data.emisor_id,
+            data.responsable_seguimiento_id,
+            data.responsable_analisis_id,
+            ...participantesAnalisis,
+            ...responsablesVerif,
+            ...involucradosIds,
+          ].filter(Boolean);
+          const tieneAcceso = isAdmin || isSgiWriter || participanteIds.includes(user?.id);
+          if (!tieneAcceso) { setAccessDenied(true); setLoading(false); return; }
+
           setIncEstado(data.estado || 'abierto');
           setSinInvestigacion(data.sin_investigacion || false);
           setPasoActual(data.paso_actual || 1);
@@ -364,7 +378,7 @@ export default function IncidenteDetalle() {
         }
         setLoading(false);
       });
-  }, [id]);
+  }, [id, user?.id, isAdmin, isSgiWriter]);
 
   const showToast = useCallback((msg, type = 'success') => setToast({ message: msg, type }), []);
 
