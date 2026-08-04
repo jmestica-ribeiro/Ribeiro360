@@ -168,6 +168,22 @@ function buildCursoHtml(fullName: string, cursoTitulo: string, cursoId: string):
   });
 }
 
+function buildPublicacionHtml(fullName: string, titulo: string, tipo: string): string {
+  const esAnuncio = tipo === 'anuncio';
+  return emailLayout({
+    primerNombre: fullName?.split(' ')[0] ?? 'Hola',
+    subtitulo: 'Social',
+    mensaje: esAnuncio
+      ? `Nuevo anuncio: "${titulo}"`
+      : `Nueva foto publicada: "${titulo}"`,
+    badgeLabel: 'Tipo',
+    badgeValue: esAnuncio ? 'Anuncio' : 'Foto',
+    link: `${APP_URL}/social`,
+    linkLabel: 'Ver en Social →',
+    footer: 'Este email fue generado automáticamente por Ribeiro 360.',
+  });
+}
+
 function buildEventoHtml(fullName: string, eventoTitulo: string, eventoFecha: string, eventoId: string): string {
   return emailLayout({
     primerNombre: fullName?.split(' ')[0] ?? 'Hola',
@@ -401,6 +417,31 @@ serve(async (req: Request) => {
       const sent = results.filter(r => r.status === 'fulfilled').length;
       const failed = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected').map(r => r.reason?.message);
       if (failed.length) console.error('[send-nc-email] evento fallos:', failed);
+      return new Response(JSON.stringify({ ok: true, sent, failed: failed.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // ── Publicacion Social: todos los usuarios ─────────────────────────────
+    if (notifType === 'publicacion') {
+      const { titulo, tipo, id } = body;
+      if (!titulo) {
+        return new Response(JSON.stringify({ error: 'Faltan parámetros PUBLICACION' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
+      const { data: allProfiles, error: pErr } = await adminClient.from('profiles').select('id, full_name, email').not('email', 'is', null);
+      if (pErr) throw pErr;
+
+      const subject = tipo === 'foto'
+        ? `Nueva foto publicada: "${titulo}" · Ribeiro 360`
+        : `Nuevo anuncio: "${titulo}" · Ribeiro 360`;
+
+      const results = await Promise.allSettled(
+        (allProfiles ?? []).map((p: { id: string; full_name: string; email: string }) =>
+          sendEmail(resendKey, p.email, subject, buildPublicacionHtml(p.full_name, titulo, tipo ?? 'anuncio'))
+        )
+      );
+      const sent = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected').map(r => r.reason?.message);
+      if (failed.length) console.error('[send-nc-email] publicacion fallos:', failed);
       return new Response(JSON.stringify({ ok: true, sent, failed: failed.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 

@@ -157,6 +157,23 @@ export function notificarNuevoEvento({ eventoTitulo, eventoId, eventoFecha, visR
     .catch(err => console.warn('[notif] evento invoke failed:', err?.message));
 }
 
+// ── notificarNuevaPublicacion ──────────────────────────────────────────────────
+
+/**
+ * Envía email a todos los usuarios cuando se crea un anuncio o se sube una foto en Social.
+ * @param {'anuncio'|'foto'} tipo
+ */
+export function notificarNuevaPublicacion({ titulo, tipo, id }) {
+  supabase.functions
+    .invoke('send-nc-email', {
+      body: { notifType: 'publicacion', titulo, tipo, id },
+    })
+    .then(({ error: fnErr }) => {
+      if (fnErr) console.warn('[notif] publicacion email error:', fnErr.message);
+    })
+    .catch(err => console.warn('[notif] publicacion invoke failed:', err?.message));
+}
+
 // ── Constantes ─────────────────────────────────────────────────────────────────
 
 export const TIPOS_NC = {

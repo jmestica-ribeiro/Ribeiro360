@@ -10,6 +10,7 @@ import {
   getNovedadPublicUrl,
 } from '../../../services/novedadesService';
 import { useToast } from '../../../components/common';
+import { notificarNuevaPublicacion } from '../../../lib/notificaciones';
 
 const EMPTY_FORM = { titulo: '', link_url: '', activo: true, fecha_hasta: '' };
 
@@ -46,7 +47,7 @@ const NovedadesTab = () => {
         imagen_url = path;
       }
       const maxOrden = novedades.length > 0 ? Math.max(...novedades.map(n => n.orden || 0)) + 1 : 1;
-      await insertNovedad({
+      const { data: nueva } = await insertNovedad({
         titulo: form.titulo || null,
         link_url: form.link_url || null,
         imagen_url,
@@ -54,6 +55,7 @@ const NovedadesTab = () => {
         orden: maxOrden,
         fecha_hasta: form.fecha_hasta || null,
       });
+      notificarNuevaPublicacion({ titulo: form.titulo || 'Nuevo anuncio', tipo: 'anuncio', id: nueva?.[0]?.id });
       setForm({ ...EMPTY_FORM });
       setFile(null);
       await loadNovedades();

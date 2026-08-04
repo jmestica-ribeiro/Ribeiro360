@@ -5,6 +5,7 @@ import { Upload, X, Tag, Plus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { uploadFoto } from '../../services/multimediaService';
 import { useToast } from '../../components/common';
+import { notificarNuevaPublicacion } from '../../lib/notificaciones';
 
 const SubirFoto = ({ etiquetas, onUploaded, onClose }) => {
   const { session } = useAuth();
@@ -50,6 +51,7 @@ const SubirFoto = ({ etiquetas, onUploaded, onClose }) => {
     });
     setSubiendo(false);
     if (error) return showToast('Error al subir la foto: ' + error.message, 'error');
+    notificarNuevaPublicacion({ titulo: titulo.trim(), tipo: 'foto' });
     showToast('Foto publicada correctamente', 'success');
     onUploaded();
   };

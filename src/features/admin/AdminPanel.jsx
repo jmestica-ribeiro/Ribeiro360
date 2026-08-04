@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { GraduationCap, Calendar, Rocket, MessageCircle, LayoutGrid, ShieldCheck, Bell, Users, Compass, PanelLeft, Images, Wrench, ClipboardCheck, Truck, Tag } from 'lucide-react';
+import { GraduationCap, Calendar, Rocket, MessageCircle, LayoutGrid, ShieldCheck, Users, Compass, PanelLeft, Rss, Wrench, ClipboardCheck, Truck, Tag } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import CapacitacionesTab from './tabs/CapacitacionesTab';
 import PAFTab from './tabs/PAFTab';
@@ -12,15 +12,14 @@ import CertEquiposTab from './tabs/CertEquiposTab';
 import ChecklistItemsTab from './tabs/ChecklistItemsTab';
 import VehiculosTab from './tabs/VehiculosTab';
 import FamiliasTab from './tabs/FamiliasTab';
-import NovedadesTab from './tabs/NovedadesTab';
+import SocialTab from './tabs/SocialTab';
 import UsuariosTab from './tabs/UsuariosTab';
 import PortalesTab from './tabs/PortalesTab';
 import NavTab from './tabs/NavTab';
-import MultimediaTab from './tabs/MultimediaTab';
 import HerramientasTab from './tabs/HerramientasTab';
 import './AdminPanel.css';
 
-const ALL_TABS = ['capacitaciones', 'paf', 'onboarding', 'eventos', 'faq', 'organigrama', 'sgi', 'cert-equipos', 'checklist-items', 'vehiculos', 'familias', 'novedades', 'multimedia', 'herramientas'];
+const ALL_TABS = ['capacitaciones', 'paf', 'onboarding', 'eventos', 'faq', 'organigrama', 'sgi', 'cert-equipos', 'checklist-items', 'vehiculos', 'familias', 'social', 'herramientas'];
 
 const TAB_CONFIG = [
   { key: 'capacitaciones', label: 'Capacitaciones', icon: <GraduationCap size={18} /> },
@@ -34,8 +33,7 @@ const TAB_CONFIG = [
   { key: 'checklist-items',  label: 'Checklists Equipo',  icon: <ClipboardCheck size={18} /> },
   { key: 'vehiculos',        label: 'Vehículos',           icon: <Truck size={18} /> },
   { key: 'familias',         label: 'Familias Equipo',     icon: <Tag size={18} /> },
-  { key: 'novedades',      label: 'Novedades',        icon: <Bell size={18} /> },
-  { key: 'multimedia',     label: 'Multimedia',       icon: <Images size={18} /> },
+  { key: 'social',         label: 'Social',           icon: <Rss size={18} /> },
   { key: 'herramientas',  label: 'Herramientas',     icon: <Wrench size={18} /> },
 ];
 
@@ -104,8 +102,7 @@ const AdminPanel = () => {
           {activeTab === 'checklist-items' && allowedTabs.includes('checklist-items') && <ChecklistItemsTab />}
           {activeTab === 'vehiculos'       && allowedTabs.includes('vehiculos')       && <VehiculosTab />}
           {activeTab === 'familias'        && allowedTabs.includes('familias')        && <FamiliasTab />}
-          {activeTab === 'novedades'      && allowedTabs.includes('novedades')      && <NovedadesTab />}
-          {activeTab === 'multimedia'     && allowedTabs.includes('multimedia')     && <MultimediaTab />}
+          {activeTab === 'social'          && allowedTabs.includes('social')          && <SocialTab />}
           {activeTab === 'herramientas'   && allowedTabs.includes('herramientas')   && <HerramientasTab />}
           {activeTab === 'portales' && isSuperAdmin && <PortalesTab />}
           {activeTab === 'nav'      && isSuperAdmin && <NavTab />}

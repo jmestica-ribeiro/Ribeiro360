@@ -1,81 +1,57 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import { X, Send, Trash2, Heart, Download, Tag } from 'lucide-react';
+import { X, Send, Trash2, Heart, ExternalLink } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import './Multimedia.css';
 import {
-  fetchComentarios,
-  addComentario,
-  deleteComentario,
-  toggleLike,
-  getFotoSignedUrl,
-} from '../../services/multimediaService';
+  toggleNovedadLike,
+  fetchNovedadComentarios,
+  addNovedadComentario,
+  deleteNovedadComentario,
+} from '../../services/novedadesService';
 
-const FotoDetalle = ({ foto, onClose, onLikeChange }) => {
+const AnuncioDetalle = ({ anuncio, onClose, onLikeChange }) => {
   const { session, profile } = useAuth();
   const userId = session?.user?.id;
   const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
 
-  const [imgSrc, setImgSrc] = useState(null);
   const [comentarios, setComentarios] = useState([]);
   const [texto, setTexto] = useState('');
   const [enviando, setEnviando] = useState(false);
-  const [downloading, setDownloading] = useState(false);
-  const [isLiked, setIsLiked] = useState(foto.likes?.some(l => l.user_id === userId) ?? false);
-  const [likes, setLikes] = useState(foto.likes?.length ?? 0);
+  const [isLiked, setIsLiked] = useState(anuncio.likes?.some(l => l.user_id === userId) ?? false);
+  const [likes, setLikes] = useState(anuncio.likes?.length ?? 0);
   const bottomRef = useRef(null);
 
   useEffect(() => {
-    getFotoSignedUrl(foto.imagen_url).then(({ url }) => setImgSrc(url));
-    loadComentarios();
-  }, [foto.id]);
+    fetchNovedadComentarios(anuncio.id).then(({ data }) => setComentarios(data));
+  }, [anuncio.id]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [comentarios]);
-
-  const loadComentarios = async () => {
-    const { data } = await fetchComentarios(foto.id);
-    setComentarios(data);
-  };
 
   const handleLike = async () => {
     const prev = isLiked;
     setIsLiked(!prev);
     const newCount = prev ? likes - 1 : likes + 1;
     setLikes(newCount);
-    await toggleLike(foto.id, userId);
-    onLikeChange?.(foto.id, newCount, !prev);
+    await toggleNovedadLike(anuncio.id, userId);
+    onLikeChange?.(anuncio.id, newCount, !prev);
   };
 
   const handleSend = async () => {
     if (!texto.trim()) return;
     setEnviando(true);
-    const { data } = await addComentario(foto.id, userId, texto.trim());
+    const { data } = await addNovedadComentario(anuncio.id, userId, texto.trim());
     if (data) setComentarios(prev => [...prev, data]);
     setTexto('');
     setEnviando(false);
   };
 
   const handleDeleteComentario = async (id) => {
-    await deleteComentario(id);
+    await deleteNovedadComentario(id);
     setComentarios(prev => prev.filter(c => c.id !== id));
   };
-
-  const handleDownload = async () => {
-    setDownloading(true);
-    const { url } = await getFotoSignedUrl(foto.imagen_url);
-    if (url) {
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = foto.titulo || 'foto';
-      a.click();
-    }
-    setDownloading(false);
-  };
-
-  const etiquetas = foto.etiquetas?.map(e => e.etiqueta).filter(Boolean) ?? [];
 
   return createPortal(
     <motion.div
@@ -96,38 +72,38 @@ const FotoDetalle = ({ foto, onClose, onLikeChange }) => {
       >
         <button className="foto-detalle-close" onClick={onClose}><X size={18} /></button>
 
-        <div className="foto-detalle-left">
-          {imgSrc
-            ? <img src={imgSrc} alt={foto.titulo} className="foto-detalle-img" />
-            : <div className="foto-card-img-placeholder foto-detalle-img" />
-          }
-        </div>
+        {anuncio.imagen_url && (
+          <div className="foto-detalle-left">
+            <img src={anuncio.imagen_url} alt={anuncio.titulo} className="foto-detalle-img" />
+          </div>
+        )}
 
         <div className="foto-detalle-right">
           <div className="foto-detalle-info">
-            <h3 className="foto-detalle-titulo">{foto.titulo}</h3>
-            {foto.descripcion && <p className="foto-detalle-desc">{foto.descripcion}</p>}
-            {etiquetas.length > 0 && (
-              <div className="foto-card-tags" style={{ marginTop: 8 }}>
-                <Tag size={11} />
-                {etiquetas.map(et => (
-                  <span key={et.id} className="foto-tag">{et.nombre}</span>
-                ))}
+            <h3 className="foto-detalle-titulo">{anuncio.titulo}</h3>
+            {anuncio.created_at && (
+              <div className="foto-detalle-meta">
+                <span>Anuncio</span>
+                <span>{new Date(anuncio.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
               </div>
             )}
-            <div className="foto-detalle-meta">
-              <span>{foto.uploader?.full_name ?? 'Desconocido'}</span>
-              <span>{new Date(foto.created_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-            </div>
             <div className="foto-detalle-acciones">
               <button className={`foto-action-btn${isLiked ? ' liked' : ''}`} onClick={handleLike}>
                 <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
                 <span>{likes} {likes === 1 ? 'like' : 'likes'}</span>
               </button>
-              <button className="foto-action-btn" onClick={handleDownload} disabled={downloading}>
-                <Download size={16} />
-                <span>Descargar</span>
-              </button>
+              {anuncio.link_url && (
+                <a
+                  href={anuncio.link_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="foto-action-btn"
+                  style={{ textDecoration: 'none' }}
+                >
+                  <ExternalLink size={16} />
+                  <span>Ver más</span>
+                </a>
+              )}
             </div>
           </div>
 
@@ -180,4 +156,4 @@ const FotoDetalle = ({ foto, onClose, onLikeChange }) => {
   , document.body);
 };
 
-export default FotoDetalle;
+export default AnuncioDetalle;

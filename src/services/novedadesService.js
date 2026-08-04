@@ -74,6 +74,50 @@ export function getNovedadPublicUrl(path) {
   return data?.publicUrl ?? null;
 }
 
+// ── Likes ──────────────────────────────────────────────────────────────────
+
+export async function toggleNovedadLike(novedadId, userId) {
+  const { data: existing } = await supabase
+    .from('novedad_likes')
+    .select('id')
+    .eq('novedad_id', novedadId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase.from('novedad_likes').delete().eq('id', existing.id);
+    return { liked: false, error };
+  } else {
+    const { error } = await supabase.from('novedad_likes').insert({ novedad_id: novedadId, user_id: userId });
+    return { liked: true, error };
+  }
+}
+
+// ── Comentarios ────────────────────────────────────────────────────────────
+
+export async function fetchNovedadComentarios(novedadId) {
+  const { data, error } = await supabase
+    .from('novedad_comentarios')
+    .select('id, contenido, created_at, user_id, autor:profiles!user_id(full_name, avatar_url)')
+    .eq('novedad_id', novedadId)
+    .order('created_at', { ascending: true });
+  return { data: data ?? [], error };
+}
+
+export async function addNovedadComentario(novedadId, userId, contenido) {
+  const { data, error } = await supabase
+    .from('novedad_comentarios')
+    .insert({ novedad_id: novedadId, user_id: userId, contenido })
+    .select('id, contenido, created_at, user_id, autor:profiles!user_id(full_name, avatar_url)')
+    .single();
+  return { data, error };
+}
+
+export async function deleteNovedadComentario(id) {
+  const { error } = await supabase.from('novedad_comentarios').delete().eq('id', id);
+  return { error };
+}
+
 export async function fetchNovedadesActivas() {
   const today = new Date().toISOString().split('T')[0];
   const { data, error } = await supabase

@@ -3,13 +3,14 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { PlayCircle, Clock, Award, ArrowRight, BarChart2, BookOpen, Folder, Monitor, FileText, Link as LinkIcon, ExternalLink, Globe, CheckCircle2, XCircle, Trophy, Calendar, Users, GraduationCap } from 'lucide-react';
-import BannerNovedades from './BannerNovedades';
 import * as LucideIcons from 'lucide-react';
 import { eventoIsVisible } from '../../lib/visibilidad';
 import { fetchCursosVisibles, fetchResultadosByUser, fetchCursosAprobadosByUser, fetchProgresoByUser, fetchGlobalStats, fetchAccesosRapidos } from '../../services/cursosService';
 import { fetchEventosProximos } from '../../services/eventosService';
-import { fetchNovedadesActivas } from '../../services/novedadesService';
+import { fetchSocialPreview } from '../../services/socialService';
+import { Image as ImageIcon, Megaphone } from 'lucide-react';
 import './Dashboard.css';
+import '../social/Social.css';
 
 const DashboardChart = lazy(() => import('./DashboardChart'));
 
@@ -54,7 +55,7 @@ const Dashboard = () => {
   const [cursosLoaded, setCursosLoaded] = useState(false);
   const [resultados, setResultados] = useState(null);
   const [proximosEventos, setProximosEventos] = useState(null); // null = loading
-  const [novedades, setNovedades] = useState([]);
+  const [socialPreview, setSocialPreview] = useState([]);
 
   useEffect(() => {
     if (!userEmail) return;
@@ -135,8 +136,7 @@ const Dashboard = () => {
     loadCursos();
     loadGlobalStats();
 
-    // Novedades (sin cache — cambian frecuentemente)
-    fetchNovedadesActivas().then(({ data }) => setNovedades(data));
+    fetchSocialPreview({ limit: 4 }).then(({ data }) => setSocialPreview(data ?? []));
 
   }, [userEmail, profile]);
 
@@ -234,13 +234,37 @@ const Dashboard = () => {
         )}
       </motion.section>
 
-      {/* Banner Novedades */}
-      {novedades.length > 0 && (
+      {/* Social Preview */}
+      {socialPreview.length > 0 && (
         <motion.section className="section" {...fadeUp(0.2)}>
           <div className="section-header">
-            <h2>Novedades</h2>
+            <h2>Últimas publicaciones</h2>
+            <button className="view-all" onClick={() => navigate('/social')}>Ver todo</button>
           </div>
-          <BannerNovedades novedades={novedades} />
+          <div className="social-preview-grid">
+            {socialPreview.map(item => {
+              const isAnuncio = item._type === 'anuncio';
+              const card = (
+                <div className="social-preview-card" key={item.id}>
+                  <div className="social-preview-img">
+                    {(item.imagen_signed_url ?? item.imagen_url)
+                      ? <img src={item.imagen_signed_url ?? item.imagen_url} alt={item.titulo} loading="lazy" />
+                      : <div className="social-preview-img-placeholder">
+                          {isAnuncio ? <Megaphone size={24} /> : <ImageIcon size={24} />}
+                        </div>
+                    }
+                  </div>
+                  <div className="social-preview-body">
+                    <div className="social-preview-badge">{isAnuncio ? 'Anuncio' : 'Foto'}</div>
+                    <p className="social-preview-titulo">{item.titulo ?? 'Sin título'}</p>
+                  </div>
+                </div>
+              );
+              return isAnuncio && item.link_url
+                ? <a key={item.id} href={item.link_url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>{card}</a>
+                : <div key={item.id} onClick={() => navigate('/social')} style={{ cursor: 'pointer' }}>{card}</div>;
+            })}
+          </div>
         </motion.section>
       )}
 

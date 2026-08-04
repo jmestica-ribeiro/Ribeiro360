@@ -31,7 +31,7 @@ const Incidentes       = lazy(() => import('./features/sgi/incidentes/Incidentes
 const IncidenteNuevo    = lazy(() => import('./features/sgi/incidentes/IncidenteNuevo'));
 const IncidenteDetalle  = lazy(() => import('./features/sgi/incidentes/IncidenteDetalle'));
 const IncidenteEventoWIP = lazy(() => import('./features/sgi/incidentes/IncidenteEventoWIP'));
-const Multimedia      = lazy(() => import('./features/multimedia/Multimedia'));
+const Social          = lazy(() => import('./features/social/Social'));
 const Herramientas    = lazy(() => import('./features/herramientas/HerramientasHub'));
 const Perfil          = lazy(() => import('./features/perfil/Perfil'));
 const Login           = lazy(() => import('./pages/Login'));
@@ -92,7 +92,8 @@ function AnimatedRoutes() {
       <Route path="/sgi/incidentes/nuevo/evento" element={<ProtectedRoute requireSgiWrite><W><IncidenteEventoWIP /></W></ProtectedRoute>} />
       <Route path="/sgi/incidentes/:id"         element={<W><IncidenteDetalle /></W>} />
       <Route path="/sgi/:categoria"        element={<W><SGI /></W>} />
-      <Route path="/multimedia"            element={<W><Multimedia /></W>} />
+      <Route path="/social"                 element={<W><Social /></W>} />
+      <Route path="/multimedia"            element={<Navigate to="/social" replace />} />
       <Route path="/herramientas"          element={<W><Herramientas /></W>} />
       <Route path="/perfil"                element={<W><Perfil /></W>} />
       <Route path="/admin"                 element={
