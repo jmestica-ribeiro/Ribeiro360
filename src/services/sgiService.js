@@ -1,10 +1,16 @@
 import { supabase } from '../lib/supabase';
 
+/**
+ * Trae categorías, documentos y solo la versión VIGENTE de cada documento
+ * (una por documento, acotado). El historial completo de versiones de un
+ * documento puntual se trae bajo demanda con `fetchVersionesByDocumento`
+ * cuando el usuario lo expande, en vez de traer todo el historial siempre.
+ */
 export async function fetchSGI() {
   const [catsRes, docsRes, versRes] = await Promise.all([
     supabase.from('sgi_categorias').select('*').order('orden'),
     supabase.from('sgi_documentos').select('*').eq('activo', true).order('codigo'),
-    supabase.from('sgi_versiones').select('*').order('numero_version', { ascending: true }),
+    supabase.from('sgi_versiones').select('*').eq('vigente', true),
   ]);
   if (catsRes.error) console.error('[sgiService] fetchSGI - categorias:', catsRes.error.message);
   if (docsRes.error) console.error('[sgiService] fetchSGI - documentos:', docsRes.error.message);
@@ -15,6 +21,16 @@ export async function fetchSGI() {
     versiones: versRes.data ?? [],
     error: catsRes.error || docsRes.error || versRes.error || null,
   };
+}
+
+export async function fetchVersionesByDocumento(documentoId) {
+  const { data, error } = await supabase
+    .from('sgi_versiones')
+    .select('*')
+    .eq('documento_id', documentoId)
+    .order('numero_version', { ascending: true });
+  if (error) console.error('[sgiService] fetchVersionesByDocumento:', error.message);
+  return { data: data ?? [], error };
 }
 
 export async function fetchVersionVigente(documentoId) {
@@ -433,14 +449,17 @@ export async function fetchNcInformeData(hallazgoId) {
 
   if (errA) console.error('[sgiService] fetchNcInformeData - acciones:', errA.message);
 
-  const acciones = await Promise.all((accionesRaw || []).map(async a => {
-    const { data: hitos } = await supabase
+  let acciones = accionesRaw || [];
+  if (acciones.length > 0) {
+    const { data: hitosData } = await supabase
       .from('nc_accion_hitos')
-      .select('fecha, porcentaje, descripcion')
-      .eq('accion_id', a.id)
+      .select('accion_id, fecha, porcentaje, descripcion')
+      .in('accion_id', acciones.map(a => a.id))
       .order('fecha', { ascending: true });
-    return { ...a, hitos: hitos || [] };
-  }));
+    const hitosByAccion = {};
+    (hitosData || []).forEach(h => { (hitosByAccion[h.accion_id] ??= []).push(h); });
+    acciones = acciones.map(a => ({ ...a, hitos: hitosByAccion[a.id] || [] }));
+  }
 
   return {
     data: { hallazgo, profiles: profiles || [], clientes: clientes || [], acciones },

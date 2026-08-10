@@ -3,6 +3,7 @@ import { Plus, Edit2, Trash2, Save, ChevronLeft, ChevronRight, ChevronDown, File
 import {
   fetchSGI,
   fetchVersionVigente,
+  fetchVersionesByDocumento,
   saveSgiCategoria,
   deleteSgiCategoria,
   saveSgiDocumento,
@@ -22,7 +23,8 @@ const SGITab = () => {
   const { showToast } = useToast();
   const [categorias, setCategorias] = useState([]);
   const [documentos, setDocumentos] = useState([]);
-  const [versiones, setVersiones] = useState([]);
+  const [versiones, setVersiones] = useState([]); // solo la version vigente de cada documento
+  const [versionesPorDoc, setVersionesPorDoc] = useState({}); // historial completo, cargado bajo demanda al expandir
   const [expandedCats, setExpandedCats] = useState({});
   const [expandedDocs, setExpandedDocs] = useState({});
   const [editMode, setEditMode] = useState(null); // null | 'cat' | 'doc' | 'ver'
@@ -54,6 +56,21 @@ const SGITab = () => {
     setCategorias(cats);
     setDocumentos(docs);
     setVersiones(vers);
+  };
+
+  // Trae el historial completo de un documento solo cuando se expande (bajo demanda)
+  const toggleDocExpand = async (docId) => {
+    const opening = !expandedDocs[docId];
+    setExpandedDocs(s => ({ ...s, [docId]: opening }));
+    if (opening && !versionesPorDoc[docId]) {
+      const { data } = await fetchVersionesByDocumento(docId);
+      setVersionesPorDoc(prev => ({ ...prev, [docId]: data }));
+    }
+  };
+
+  const refreshVersionesDoc = async (docId) => {
+    const { data } = await fetchVersionesByDocumento(docId);
+    setVersionesPorDoc(prev => ({ ...prev, [docId]: data }));
   };
 
   const closeEdit = () => { setEditMode(null); setEditingCat(null); setEditingDoc(null); setEditingVer(null); };
@@ -137,14 +154,14 @@ const SGITab = () => {
 
     const { error } = await saveSgiVersion(payload);
     if (error) { showToast(error.message, 'error'); return; }
-    await loadSGI();
+    await Promise.all([loadSGI(), refreshVersionesDoc(editingVer.documento_id)]);
     closeEdit();
   };
 
-  const handleDeleteVer = async (id) => {
+  const handleDeleteVer = async (id, documentoId) => {
     if (!window.confirm('¿Eliminar esta versión?')) return;
     await deleteSgiVersion(id);
-    await loadSGI();
+    await Promise.all([loadSGI(), refreshVersionesDoc(documentoId)]);
   };
 
   // ── Tree helpers ──────────────────────────────────────────────────────────
@@ -184,13 +201,13 @@ const SGITab = () => {
               {catDocs.length === 0 && subcats.length === 0 ? (
                 <div className="sgi-tree-empty">Vacío</div>
               ) : catDocs.map(doc => {
-                const docVers = versiones.filter(v => v.documento_id === doc.id);
-                const vigente = docVers.find(v => v.vigente);
+                const vigente = versiones.find(v => v.documento_id === doc.id);
                 const isDocOpen = expandedDocs[doc.id];
+                const docVers = versionesPorDoc[doc.id];
                 return (
                   <div key={doc.id} className="sgi-tree-doc">
                     <div className="sgi-tree-row doc-row">
-                      <button className="sgi-tree-toggle" onClick={() => setExpandedDocs(s => ({ ...s, [doc.id]: !s[doc.id] }))}>
+                      <button className="sgi-tree-toggle" onClick={() => toggleDocExpand(doc.id)}>
                         {isDocOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
                       </button>
                       <FileText size={14} className="sgi-tree-file-icon" />
@@ -199,7 +216,7 @@ const SGITab = () => {
                       {vigente ? <span className="sgi-tree-ver vigente">v{vigente.numero_version}</span> : <span className="sgi-tree-ver none">sin versión</span>}
                       <div className="sgi-tree-actions">
                         <button className="btn-icon-admin" title="Nueva versión" onClick={() => {
-                          const maxVer = docVers.reduce((max, v) => Math.max(max, parseInt(v.numero_version) || 0), 0);
+                          const maxVer = parseInt(vigente?.numero_version) || 0;
                           setEditingVer({ numero_version: String(maxVer + 1), archivo_url: '', notas_cambios: '', fecha_emision: new Date().toISOString().split('T')[0], vigente: true, documento_id: doc.id });
                           setEditMode('ver');
                         }}><Plus size={13} /></button>
@@ -210,7 +227,9 @@ const SGITab = () => {
 
                     {isDocOpen && (
                       <div className="sgi-tree-versions">
-                        {docVers.length === 0 ? (
+                        {docVers === undefined ? (
+                          <div className="sgi-tree-empty">Cargando…</div>
+                        ) : docVers.length === 0 ? (
                           <div className="sgi-tree-empty">Sin versiones</div>
                         ) : docVers.map(ver => (
                           <div key={ver.id} className={`sgi-tree-row ver-row${ver.vigente ? ' vigente' : ''}`}>
@@ -227,7 +246,7 @@ const SGITab = () => {
                                 }}><Download size={13} /></button>
                               )}
                               <button className="btn-icon-admin" title="Editar versión" onClick={() => { setEditingVer({ ...ver }); setEditMode('ver'); }}><Edit2 size={13} /></button>
-                              <button className="btn-icon-admin danger" title="Eliminar versión" onClick={() => handleDeleteVer(ver.id)}><Trash2 size={13} /></button>
+                              <button className="btn-icon-admin danger" title="Eliminar versión" onClick={() => handleDeleteVer(ver.id, doc.id)}><Trash2 size={13} /></button>
                             </div>
                           </div>
                         ))}

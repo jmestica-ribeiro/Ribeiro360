@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GraduationCap, Calendar, Rocket, MessageCircle, LayoutGrid, ShieldCheck, RefreshCw, ImageIcon, CheckCircle, AlertCircle, Search, Trash2, ChevronLeft, ChevronRight, ClipboardCheck, Truck, Tag, Rss, Wrench } from 'lucide-react';
 import { fetchAllUsers, updateUserRoleAndTabs, syncMsUsers, syncMsPhotos, deleteUser } from '../../../services/usuariosService';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -177,34 +177,34 @@ const UsuariosTab = () => {
   const { profile: currentUserProfile } = useAuth();
   const isSuperAdmin = currentUserProfile?.role === 'superadmin';
   const [users, setUsers] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [deletingId, setDeletingId] = useState(null);
   const [confirmId, setConfirmId] = useState(null);
   const [showInactive, setShowInactive] = useState(false);
 
-  useEffect(() => { loadUsers(); }, []);
+  // Debounce del buscador para no disparar una consulta por cada tecla
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  useEffect(() => { setPage(1); }, [debouncedSearch, showInactive]);
+
+  useEffect(() => { loadUsers(); }, [debouncedSearch, showInactive, page]);
 
   const loadUsers = async () => {
     setIsLoading(true);
-    const { data } = await fetchAllUsers();
+    const { data, count } = await fetchAllUsers({ search: debouncedSearch, showInactive, page, pageSize: ITEMS_PER_PAGE });
     setUsers(data);
+    setTotalCount(count);
     setIsLoading(false);
   };
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    return users.filter(u => {
-      if (!showInactive && u.is_active === false) return false;
-      return (u.full_name ?? '').toLowerCase().includes(q) || (u.email ?? '').toLowerCase().includes(q);
-    });
-  }, [users, search, showInactive]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
-  const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
-
-  useEffect(() => { setPage(1); }, [search]);
+  const totalPages = Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE));
 
   const handleRoleChange = async (userId, newRole) => {
     const user = users.find(u => u.id === userId);
@@ -227,7 +227,7 @@ const UsuariosTab = () => {
   };
 
   return (
-    <AdminListPanel title="Usuarios" count={filtered.length}>
+    <AdminListPanel title="Usuarios" count={totalCount}>
       <SyncPanel onSuccess={loadUsers} />
 
       {/* Buscador + filtro inactivos */}
@@ -257,7 +257,7 @@ const UsuariosTab = () => {
       ) : (
         <>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {paginated.map(u => {
+            {users.map(u => {
               const isSelf = u.id === currentUserProfile?.id;
               const currentTabs = u.admin_tabs ?? ALL_TABS;
               const allSelected = ALL_TABS.every(t => currentTabs.includes(t));

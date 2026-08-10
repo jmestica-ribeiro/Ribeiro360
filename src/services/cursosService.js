@@ -110,32 +110,19 @@ export async function saveCurso(cursoData, modulos, visibilidadRules, destinatar
 
   const savedId = courseData[0].id;
 
-  const existingModules = modulos.filter(m => m.id && !m.id.toString().startsWith('temp-'));
-  const newModules = modulos.filter(m => !m.id || m.id.toString().startsWith('temp-'));
-
-  if (existingModules.length > 0) {
-    await Promise.all(
-      existingModules.map(m =>
-        supabase.from('cursos_modulos').update({
-          numero_orden: modulos.indexOf(m) + 1,
-          titulo: m.titulo,
-          descripcion: m.descripcion || null,
-          contenido: typeof m.contenido === 'string' ? m.contenido : JSON.stringify(m.contenido),
-        }).eq('id', m.id)
-      )
-    );
-  }
-
-  if (newModules.length > 0) {
-    await supabase.from('cursos_modulos').insert(
-      newModules.map(m => ({
+  if (modulos.length > 0) {
+    const rows = modulos.map((m, idx) => {
+      const row = {
         curso_id: savedId,
-        numero_orden: modulos.indexOf(m) + 1,
+        numero_orden: idx + 1,
         titulo: m.titulo,
         descripcion: m.descripcion || null,
         contenido: typeof m.contenido === 'string' ? m.contenido : JSON.stringify(m.contenido),
-      }))
-    );
+      };
+      if (m.id && !m.id.toString().startsWith('temp-')) row.id = m.id;
+      return row;
+    });
+    await supabase.from('cursos_modulos').upsert(rows, { onConflict: 'id' });
   }
 
   await supabase.from('cursos_visibilidad').delete().eq('curso_id', savedId);

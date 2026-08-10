@@ -1,13 +1,31 @@
 import { supabase } from '../lib/supabase';
 
-export async function fetchAllUsers() {
-  const { data, error } = await supabase
+/**
+ * Lista usuarios con búsqueda, filtro de inactivos y paginación opcionales,
+ * resueltas server-side (antes traía la tabla completa y paginaba con .slice()
+ * en el cliente). Sin `page`, se comporta como antes y trae la lista completa
+ * (la usan pickers como el de destinatarios de curso en CapacitacionesTab).
+ */
+export async function fetchAllUsers({ search = '', showInactive = false, page = null, pageSize = 10 } = {}) {
+  let query = supabase
     .from('profiles')
-    .select('id, full_name, email, role, admin_tabs, is_active')
-    .not('full_name', 'is', null)
-    .order('full_name');
+    .select('id, full_name, email, role, admin_tabs, is_active', { count: 'exact' })
+    .not('full_name', 'is', null);
+
+  if (!showInactive) query = query.neq('is_active', false);
+
+  const q = search.trim().replace(/[%,]/g, ''); // evita romper el filtro .or de PostgREST
+  if (q) query = query.or(`full_name.ilike.%${q}%,email.ilike.%${q}%`);
+
+  query = query.order('full_name');
+  if (page !== null) {
+    const from = (page - 1) * pageSize;
+    query = query.range(from, from + pageSize - 1);
+  }
+
+  const { data, error, count } = await query;
   if (error) console.error('[usuariosService] fetchAllUsers:', error.message);
-  return { data: data ?? [], error };
+  return { data: data ?? [], count: count ?? data?.length ?? 0, error };
 }
 
 /**
@@ -96,7 +114,8 @@ export async function fetchDirectorioProfiles() {
     .from('profiles')
     .select('id, full_name, email, job_title, department, office_location, avatar_url, phone, whatsapp_consent')
     .neq('is_active', false)
-    .order('full_name', { ascending: true });
+    .order('full_name', { ascending: true })
+    .limit(2000); // tope defensivo: el filtro/paginado de Directorio.jsx es client-side
   if (error) console.error('[usuariosService] fetchDirectorioProfiles:', error.message);
   return { data: data ?? [], error };
 }
