@@ -155,6 +155,16 @@ export async function fetchModulosByCurso(cursoId) {
   return { data: data ?? [], error };
 }
 
+export async function fetchModulosCountByCursos(cursoIds) {
+  if (!cursoIds || cursoIds.length === 0) return { data: [], error: null };
+  const { data, error } = await supabase
+    .from('cursos_modulos')
+    .select('curso_id')
+    .in('curso_id', cursoIds);
+  if (error) console.error('[cursosService] fetchModulosCountByCursos:', error.message);
+  return { data: data ?? [], error };
+}
+
 // ── Progreso ──────────────────────────────────────────────────────────────────
 
 export async function fetchProgresoByCurso(cursoId, userEmail) {

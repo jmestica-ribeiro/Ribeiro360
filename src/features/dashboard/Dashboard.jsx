@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { PlayCircle, Clock, Award, ArrowRight, BarChart2, BookOpen, Folder, Monitor, FileText, Link as LinkIcon, ExternalLink, Globe, CheckCircle2, XCircle, Trophy, Calendar, Users, GraduationCap } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { eventoIsVisible } from '../../lib/visibilidad';
-import { fetchCursosVisibles, fetchResultadosByUser, fetchCursosAprobadosByUser, fetchProgresoByUser, fetchGlobalStats, fetchAccesosRapidos } from '../../services/cursosService';
+import { fetchCursosVisibles, fetchResultadosByUser, fetchCursosAprobadosByUser, fetchProgresoByUser, fetchGlobalStats, fetchAccesosRapidos, fetchModulosCountByCursos } from '../../services/cursosService';
 import { fetchEventosProximos } from '../../services/eventosService';
 import { fetchSocialPreview } from '../../services/socialService';
 import { Image as ImageIcon, Megaphone } from 'lucide-react';
@@ -97,6 +97,7 @@ const Dashboard = () => {
         fetchCursosAprobadosByUser(userEmail),
         fetchProgresoByUser(userEmail),
       ]);
+      const { data: modulosData } = await fetchModulosCountByCursos((allCourses || []).map(c => c.id));
       const certificados = certsData?.length || 0;
       const completedCourseIds = new Set((certsData || []).map(r => r.curso_id));
       const minutosCompletados = (allCourses || [])
@@ -105,8 +106,10 @@ const Dashboard = () => {
       const horasRaw = parseFloat((minutosCompletados / 60).toFixed(2));
       const progressMap = {};
       (progressData || []).forEach(p => { progressMap[p.curso_id] = (progressMap[p.curso_id] || 0) + 1; });
+      const totalModulosMap = {};
+      (modulosData || []).forEach(m => { totalModulosMap[m.curso_id] = (totalModulosMap[m.curso_id] || 0) + 1; });
       const enriched = (allCourses || []).map(course => {
-        const totalModulos = course.modulos?.[0]?.count || 0;
+        const totalModulos = totalModulosMap[course.id] || 0;
         const completados = progressMap[course.id] || 0;
         const progressPct = totalModulos > 0 ? Math.round((completados / totalModulos) * 100) : 0;
         return { ...course, totalModulos, progressPct };

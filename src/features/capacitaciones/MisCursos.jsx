@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BookOpen, Clock, ChevronRight, Award, Play, Filter, Search, CheckCircle2, ChevronLeft } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { fetchCursosVisibles, fetchProgresoByUser, fetchCursosCategorias } from '../../services/cursosService';
+import { fetchCursosVisibles, fetchProgresoByUser, fetchCursosCategorias, fetchModulosCountByCursos } from '../../services/cursosService';
 import CoursePlayer from './CoursePlayer';
 import './MisCursos.css';
 
@@ -45,14 +45,21 @@ const MisCursos = () => {
 
       if (cursosError) throw cursosError;
 
+      const { data: modulosData } = await fetchModulosCountByCursos((cursosData || []).map(c => c.id));
+
       const progressMap = {};
       (progressData || []).forEach(p => { progressMap[p.curso_id] = (progressMap[p.curso_id] || 0) + 1; });
+
+      const totalModulosMap = {};
+      (modulosData || []).forEach(m => { totalModulosMap[m.curso_id] = (totalModulosMap[m.curso_id] || 0) + 1; });
 
       const categMap = Object.fromEntries((categData || []).map(c => [c.id, c]));
 
       const enriched = cursosData.map(course => {
         const completados = progressMap[course.id] || 0;
-        return { ...course, totalModulos: 0, progressPct: completados > 0 ? 50 : 0, categoria: categMap[course.categoria_id] || null };
+        const totalModulos = totalModulosMap[course.id] || 0;
+        const progressPct = totalModulos > 0 ? Math.round((completados / totalModulos) * 100) : 0;
+        return { ...course, totalModulos, progressPct, categoria: categMap[course.categoria_id] || null };
       });
 
       setCourses(enriched);
