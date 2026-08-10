@@ -2,12 +2,12 @@ DROP FUNCTION IF EXISTS get_cursos_visibles();
 
 CREATE OR REPLACE FUNCTION get_cursos_visibles()
 RETURNS TABLE (
-  id            uuid,
-  titulo        text,
-  descripcion   text,
-  imagen_banner text,
+  id                uuid,
+  titulo            text,
+  descripcion       text,
+  imagen_banner     text,
   duracion_estimada text,
-  categoria_id  uuid
+  categoria_id      uuid
 )
 LANGUAGE sql
 SECURITY DEFINER
@@ -22,13 +22,23 @@ AS $$
     c.categoria_id
   FROM cursos c
   WHERE (
+      -- Sin restricciones: ninguna regla de visibilidad ni destinatario → visible para todos
+      NOT EXISTS (
+        SELECT 1 FROM cursos_visibilidad cv2 WHERE cv2.curso_id = c.id
+      )
+      AND NOT EXISTS (
+        SELECT 1 FROM cursos_destinatarios cd2 WHERE cd2.curso_id = c.id
+      )
+    )
+    OR (
       -- Destinatario directo
       EXISTS (
         SELECT 1 FROM cursos_destinatarios cd
         WHERE cd.curso_id = c.id
           AND cd.user_id = auth.uid()
       )
-      OR
+    )
+    OR (
       -- Regla de visibilidad por perfil
       EXISTS (
         SELECT 1
