@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { GraduationCap, Calendar, Rocket, MessageCircle, LayoutGrid, ShieldCheck, RefreshCw, ImageIcon, CheckCircle, AlertCircle, Search, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { GraduationCap, Calendar, Rocket, MessageCircle, LayoutGrid, ShieldCheck, RefreshCw, ImageIcon, CheckCircle, AlertCircle, Search, Trash2, ChevronLeft, ChevronRight, ClipboardCheck, Truck, Tag, Rss, Wrench } from 'lucide-react';
 import { fetchAllUsers, updateUserRoleAndTabs, syncMsUsers, syncMsPhotos, deleteUser } from '../../../services/usuariosService';
 import { useAuth } from '../../../contexts/AuthContext';
 import { AdminListPanel, LoadingSpinner } from '../../../components/common';
 
-const ALL_TABS = ['capacitaciones', 'paf', 'onboarding', 'eventos', 'faq', 'organigrama', 'sgi'];
+const ALL_TABS = ['capacitaciones', 'paf', 'onboarding', 'eventos', 'faq', 'organigrama', 'sgi', 'cert-equipos', 'checklist-items', 'vehiculos', 'familias', 'social', 'herramientas'];
 
 const TAB_ICONS = {
   capacitaciones: <GraduationCap size={14} />,
@@ -14,6 +14,12 @@ const TAB_ICONS = {
   faq:            <MessageCircle size={14} />,
   organigrama:    <LayoutGrid size={14} />,
   sgi:            <ShieldCheck size={14} />,
+  'cert-equipos':    <ClipboardCheck size={14} />,
+  'checklist-items': <ClipboardCheck size={14} />,
+  vehiculos:         <Truck size={14} />,
+  familias:          <Tag size={14} />,
+  social:            <Rss size={14} />,
+  herramientas:      <Wrench size={14} />,
 };
 
 const TAB_LABELS = {
@@ -24,6 +30,12 @@ const TAB_LABELS = {
   faq:            'FAQ',
   organigrama:    'Organigrama',
   sgi:            'SGI',
+  'cert-equipos':    'Cert. Equipos',
+  'checklist-items': 'Checklists Equipo',
+  vehiculos:         'Vehículos',
+  familias:          'Familias Equipo',
+  social:            'Social',
+  herramientas:      'Herramientas',
 };
 
 const ROLE_BADGE = {
