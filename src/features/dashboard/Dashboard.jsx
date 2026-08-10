@@ -64,24 +64,39 @@ const Dashboard = () => {
 
     const loadAccesos = async () => {
       if (cache.accesos.data && (now - cache.accesos.time < CACHE_TTL)) { setAccesos(cache.accesos.data); return; }
-      const { data } = await fetchAccesosRapidos();
-      cache.accesos = { data, time: Date.now() };
-      setAccesos(data);
+      try {
+        const { data } = await fetchAccesosRapidos();
+        cache.accesos = { data, time: Date.now() };
+        setAccesos(data ?? []);
+      } catch (err) {
+        console.error('[Dashboard] loadAccesos:', err);
+        setAccesos([]);
+      }
     };
 
     const loadResultados = async () => {
       if (cache.resultados.data && (now - cache.resultados.time < CACHE_TTL)) { setResultados(cache.resultados.data); return; }
-      const { data } = await fetchResultadosByUser(userEmail, 5);
-      cache.resultados = { data, time: Date.now() };
-      setResultados(data);
+      try {
+        const { data } = await fetchResultadosByUser(userEmail, 5);
+        cache.resultados = { data, time: Date.now() };
+        setResultados(data ?? []);
+      } catch (err) {
+        console.error('[Dashboard] loadResultados:', err);
+        setResultados([]);
+      }
     };
 
     const loadEventos = async () => {
       if (cache.eventos.data && (now - cache.eventos.time < CACHE_TTL)) { setProximosEventos(cache.eventos.data); return; }
-      const { data, visibilidad } = await fetchEventosProximos(10);
-      const filtered = data.filter(e => eventoIsVisible(e.id, visibilidad, profile)).slice(0, 3);
-      cache.eventos = { data: filtered, time: Date.now() };
-      setProximosEventos(filtered);
+      try {
+        const { data, visibilidad } = await fetchEventosProximos(10);
+        const filtered = data.filter(e => eventoIsVisible(e.id, visibilidad, profile)).slice(0, 3);
+        cache.eventos = { data: filtered, time: Date.now() };
+        setProximosEventos(filtered);
+      } catch (err) {
+        console.error('[Dashboard] loadEventos:', err);
+        setProximosEventos([]);
+      }
     };
 
     const loadCursos = async () => {
@@ -92,45 +107,55 @@ const Dashboard = () => {
         setCursosLoaded(true);
         return;
       }
-      const [{ data: allCourses }, { data: certsData }, { data: progressData }] = await Promise.all([
-        fetchCursosVisibles(),
-        fetchCursosAprobadosByUser(userEmail),
-        fetchProgresoByUser(userEmail),
-      ]);
-      const { data: modulosData } = await fetchModulosCountByCursos((allCourses || []).map(c => c.id));
-      const certificados = certsData?.length || 0;
-      const completedCourseIds = new Set((certsData || []).map(r => r.curso_id));
-      const minutosCompletados = (allCourses || [])
-        .filter(c => completedCourseIds.has(c.id))
-        .reduce((acc, c) => acc + (parseInt(c.duracion_estimada) || 0), 0);
-      const horasRaw = parseFloat((minutosCompletados / 60).toFixed(2));
-      const progressMap = {};
-      (progressData || []).forEach(p => { progressMap[p.curso_id] = (progressMap[p.curso_id] || 0) + 1; });
-      const totalModulosMap = {};
-      (modulosData || []).forEach(m => { totalModulosMap[m.curso_id] = (totalModulosMap[m.curso_id] || 0) + 1; });
-      const enriched = (allCourses || []).map(course => {
-        const totalModulos = totalModulosMap[course.id] || 0;
-        const completados = progressMap[course.id] || 0;
-        const progressPct = totalModulos > 0 ? Math.round((completados / totalModulos) * 100) : 0;
-        return { ...course, totalModulos, progressPct };
-      });
-      const recentFive = [...enriched].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
-      const inProgress = enriched.find(c => c.progressPct > 0 && c.progressPct < 100);
-      const notStarted = enriched.find(c => c.progressPct === 0);
-      const resCursoPendiente = inProgress || notStarted || false;
-      const resStats = { cursos: allCourses?.length || 0, certificados, horas: horasRaw };
-      cache.cursos = { data: { stats: resStats, enrichedCourses: recentFive, cursoPendiente: resCursoPendiente }, time: Date.now() };
-      setStats(resStats);
-      setEnrichedCourses(recentFive);
-      setCursoPendiente(resCursoPendiente);
-      setCursosLoaded(true);
+      try {
+        const [{ data: allCourses }, { data: certsData }, { data: progressData }] = await Promise.all([
+          fetchCursosVisibles(),
+          fetchCursosAprobadosByUser(userEmail),
+          fetchProgresoByUser(userEmail),
+        ]);
+        const { data: modulosData } = await fetchModulosCountByCursos((allCourses || []).map(c => c.id));
+        const certificados = certsData?.length || 0;
+        const completedCourseIds = new Set((certsData || []).map(r => r.curso_id));
+        const minutosCompletados = (allCourses || [])
+          .filter(c => completedCourseIds.has(c.id))
+          .reduce((acc, c) => acc + (parseInt(c.duracion_estimada) || 0), 0);
+        const horasRaw = parseFloat((minutosCompletados / 60).toFixed(2));
+        const progressMap = {};
+        (progressData || []).forEach(p => { progressMap[p.curso_id] = (progressMap[p.curso_id] || 0) + 1; });
+        const totalModulosMap = {};
+        (modulosData || []).forEach(m => { totalModulosMap[m.curso_id] = (totalModulosMap[m.curso_id] || 0) + 1; });
+        const enriched = (allCourses || []).map(course => {
+          const totalModulos = totalModulosMap[course.id] || 0;
+          const completados = progressMap[course.id] || 0;
+          const progressPct = totalModulos > 0 ? Math.round((completados / totalModulos) * 100) : 0;
+          return { ...course, totalModulos, progressPct };
+        });
+        const recentFive = [...enriched].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
+        const inProgress = enriched.find(c => c.progressPct > 0 && c.progressPct < 100);
+        const notStarted = enriched.find(c => c.progressPct === 0);
+        const resCursoPendiente = inProgress || notStarted || false;
+        const resStats = { cursos: allCourses?.length || 0, certificados, horas: horasRaw };
+        cache.cursos = { data: { stats: resStats, enrichedCourses: recentFive, cursoPendiente: resCursoPendiente }, time: Date.now() };
+        setStats(resStats);
+        setEnrichedCourses(recentFive);
+        setCursoPendiente(resCursoPendiente);
+      } catch (err) {
+        console.error('[Dashboard] loadCursos:', err);
+        setCursoPendiente(false);
+      } finally {
+        setCursosLoaded(true);
+      }
     };
 
     const loadGlobalStats = async () => {
       if (cache.globalStats.data && (now - cache.globalStats.time < CACHE_TTL)) { setGlobalStats(cache.globalStats.data); return; }
-      const { data } = await fetchGlobalStats();
-      cache.globalStats = { data, time: Date.now() };
-      setGlobalStats(data);
+      try {
+        const { data } = await fetchGlobalStats();
+        cache.globalStats = { data, time: Date.now() };
+        setGlobalStats(data);
+      } catch (err) {
+        console.error('[Dashboard] loadGlobalStats:', err);
+      }
     };
 
     loadAccesos();
@@ -139,7 +164,9 @@ const Dashboard = () => {
     loadCursos();
     loadGlobalStats();
 
-    fetchSocialPreview({ limit: 4 }).then(({ data }) => setSocialPreview(data ?? []));
+    fetchSocialPreview({ limit: 4 })
+      .then(({ data }) => setSocialPreview(data ?? []))
+      .catch(err => console.error('[Dashboard] fetchSocialPreview:', err));
 
   }, [userEmail, profile]);
 
