@@ -161,7 +161,7 @@ const AdminFotoCard = ({ foto, onDelete, etiquetas }) => {
   return (
     <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-color)' }}>
       <div style={{ aspectRatio: '4/3', background: 'var(--bg-secondary)', position: 'relative' }}>
-        <AdminFotoThumb path={foto.imagen_url} alt={foto.titulo} />
+        <AdminFotoThumb src={foto.imagen_signed_url} alt={foto.titulo} />
       </div>
       <div style={{ padding: '10px 12px' }}>
         <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-main)', margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -193,18 +193,11 @@ const AdminFotoCard = ({ foto, onDelete, etiquetas }) => {
   );
 };
 
-import { getFotoSignedUrl } from '../../../services/multimediaService';
-
-const AdminFotoThumb = ({ path, alt }) => {
-  const [src, setSrc] = useState(null);
-  useEffect(() => {
-    let cancelled = false;
-    getFotoSignedUrl(path).then(({ url }) => { if (!cancelled) setSrc(url); });
-    return () => { cancelled = true; };
-  }, [path]);
-  return src
+// La signed URL ya viene resuelta en batch desde fetchFotos (evita 1 llamada por thumbnail)
+const AdminFotoThumb = ({ src, alt }) => (
+  src
     ? <img src={src} alt={alt} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-    : <div style={{ width: '100%', height: '100%', background: 'var(--bg-secondary)' }} />;
-};
+    : <div style={{ width: '100%', height: '100%', background: 'var(--bg-secondary)' }} />
+);
 
 export default MultimediaTab;

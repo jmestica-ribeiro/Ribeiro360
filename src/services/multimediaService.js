@@ -32,7 +32,12 @@ export async function fetchFotos({ etiquetaId, page = 0 } = {}) {
   }
 
   const { data, error } = await query;
-  return { data: data ?? [], error, hasMore: (data?.length ?? 0) === PAGE_SIZE };
+  const fotos = data ?? [];
+
+  const signedUrlMap = await getFotoSignedUrlsMap(fotos.map(f => f.imagen_url));
+  const fotosConUrl = fotos.map(f => ({ ...f, imagen_signed_url: signedUrlMap[f.imagen_url] ?? null }));
+
+  return { data: fotosConUrl, error, hasMore: (data?.length ?? 0) === PAGE_SIZE };
 }
 
 export async function getFotoSignedUrl(path) {
@@ -40,6 +45,17 @@ export async function getFotoSignedUrl(path) {
     .from(BUCKET)
     .createSignedUrl(path, 60 * 60); // 1 hora
   return { url: data?.signedUrl ?? null, error };
+}
+
+// Batchea la generación de signed URLs para una lista de fotos en una sola llamada,
+// en vez de una por foto (evita el patrón N+1 en grillas/feeds).
+async function getFotoSignedUrlsMap(paths) {
+  const validPaths = [...new Set(paths.filter(Boolean))];
+  if (validPaths.length === 0) return {};
+  const { data } = await supabase.storage.from(BUCKET).createSignedUrls(validPaths, 60 * 60);
+  const map = {};
+  (data || []).forEach(s => { if (s.signedUrl) map[s.path] = s.signedUrl; });
+  return map;
 }
 
 export async function uploadFoto({ titulo, descripcion, archivo, etiquetaIds, uploadedBy }) {

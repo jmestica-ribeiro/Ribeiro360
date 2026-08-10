@@ -52,7 +52,7 @@ const FotoCard = ({ foto, onDelete, onClick }) => {
   return (
     <div className="foto-card" onClick={onClick}>
       <div className="foto-card-img-wrap">
-        <FotoImage path={foto.imagen_url} alt={foto.titulo} />
+        <FotoImage src={foto.imagen_signed_url} alt={foto.titulo} />
 
         {/* Overlay hover con acciones */}
         <div className="foto-card-overlay">
@@ -107,21 +107,11 @@ const FotoCard = ({ foto, onDelete, onClick }) => {
   );
 };
 
-// Carga la signed URL y muestra la imagen
-const FotoImage = ({ path, alt }) => {
-  const [src, setSrc] = useState(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    getFotoSignedUrl(path).then(({ url }) => {
-      if (!cancelled) setSrc(url);
-    });
-    return () => { cancelled = true; };
-  }, [path]);
-
-  return src
+// La signed URL ya viene resuelta en batch desde fetchFotos (evita 1 llamada por card)
+const FotoImage = ({ src, alt }) => (
+  src
     ? <img src={src} alt={alt} className="foto-card-img" loading="lazy" />
-    : <div className="foto-card-img-skeleton" />;
-};
+    : <div className="foto-card-img-skeleton" />
+);
 
 export default FotoCard;

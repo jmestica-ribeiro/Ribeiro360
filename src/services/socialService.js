@@ -11,10 +11,13 @@ function getNovedadPublicUrl(path) {
   return data?.publicUrl ?? null;
 }
 
-async function getFotoSignedUrl(path) {
-  if (!path) return null;
-  const { data } = await supabase.storage.from(MULTIMEDIA_BUCKET).createSignedUrl(path, 3600);
-  return data?.signedUrl ?? null;
+async function getFotoSignedUrlsMap(paths) {
+  const validPaths = [...new Set(paths.filter(Boolean))];
+  if (validPaths.length === 0) return {};
+  const { data } = await supabase.storage.from(MULTIMEDIA_BUCKET).createSignedUrls(validPaths, 3600);
+  const map = {};
+  (data || []).forEach(s => { if (s.signedUrl) map[s.path] = s.signedUrl; });
+  return map;
 }
 
 function normalizeNovedad(n, interactions = {}) {
@@ -31,14 +34,13 @@ function normalizeNovedad(n, interactions = {}) {
   };
 }
 
-async function normalizeFoto(f) {
-  const signedUrl = await getFotoSignedUrl(f.imagen_url);
+function normalizeFoto(f, signedUrlMap = {}) {
   return {
     ...f,
     _type: 'foto',
     _sortDate: f.created_at,
     // imagen_url keeps the raw storage path so FotoDetalle can regenerate its own signed URL
-    imagen_signed_url: signedUrl,
+    imagen_signed_url: signedUrlMap[f.imagen_url] ?? null,
   };
 }
 
@@ -93,7 +95,8 @@ export async function fetchSocialFeed({ page = 0, tipo = null } = {}) {
     ? (novedadesRes.data ?? []).map(n => normalizeNovedad(n, novedadInteractions[n.id]))
     : [];
 
-  const fotos = await Promise.all((fotosRes.data ?? []).map(normalizeFoto));
+  const signedUrlMap = await getFotoSignedUrlsMap((fotosRes.data ?? []).map(f => f.imagen_url));
+  const fotos = (fotosRes.data ?? []).map(f => normalizeFoto(f, signedUrlMap));
 
   const all = [...novedades, ...fotos].sort(
     (a, b) => new Date(b._sortDate) - new Date(a._sortDate)
@@ -123,7 +126,8 @@ export async function fetchSocialPreview({ limit = 4 } = {}) {
   ]);
 
   const novedades = (novedadesRes.data ?? []).map(normalizeNovedad);
-  const fotos = await Promise.all((fotosRes.data ?? []).map(normalizeFoto));
+  const signedUrlMap = await getFotoSignedUrlsMap((fotosRes.data ?? []).map(f => f.imagen_url));
+  const fotos = (fotosRes.data ?? []).map(f => normalizeFoto(f, signedUrlMap));
 
   return {
     data: [...novedades, ...fotos]

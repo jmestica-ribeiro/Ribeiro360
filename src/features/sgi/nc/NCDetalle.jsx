@@ -264,19 +264,18 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
     fetchHitosNc(editingAccion.id)
       .then(async ({ data }) => {
         const rows = data || [];
-        // Generar signed URLs para todos los adjuntos
-        const withUrls = await Promise.all(rows.map(async h => {
-          const paths = [h.adjunto_1, h.adjunto_2, h.adjunto_3].filter(Boolean);
-          if (paths.length === 0) return h;
-          const { data: signed } = await getNcSignedUrls(paths, 3600);
-          const urlMap = {};
+        // Generar signed URLs para todos los adjuntos de todos los hitos en una sola llamada
+        const allPaths = rows.flatMap(h => [h.adjunto_1, h.adjunto_2, h.adjunto_3].filter(Boolean));
+        const urlMap = {};
+        if (allPaths.length > 0) {
+          const { data: signed } = await getNcSignedUrls(allPaths, 3600);
           (signed || []).forEach(s => { urlMap[s.path] = s.signedUrl; });
-          return {
-            ...h,
-            adjunto_1_url: h.adjunto_1 ? urlMap[h.adjunto_1] : null,
-            adjunto_2_url: h.adjunto_2 ? urlMap[h.adjunto_2] : null,
-            adjunto_3_url: h.adjunto_3 ? urlMap[h.adjunto_3] : null,
-          };
+        }
+        const withUrls = rows.map(h => ({
+          ...h,
+          adjunto_1_url: h.adjunto_1 ? urlMap[h.adjunto_1] : null,
+          adjunto_2_url: h.adjunto_2 ? urlMap[h.adjunto_2] : null,
+          adjunto_3_url: h.adjunto_3 ? urlMap[h.adjunto_3] : null,
         }));
         setHitos(withUrls);
         setHitosLoading(false);
