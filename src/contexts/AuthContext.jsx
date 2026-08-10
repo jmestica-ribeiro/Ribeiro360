@@ -43,43 +43,48 @@ export const AuthProvider = ({ children }) => {
   const initProfile = async (session) => {
     const userId = session.user.id;
 
-    // Si hay provider_token (login fresco), sincronizar datos de Microsoft Graph
-    if (session.provider_token) {
-      const msData = await fetchMicrosoftProfile(session.provider_token);
-      if (msData) {
-        const msPayload = {
-          email: msData.mail || msData.userPrincipalName || session.user.email,
-          full_name: msData.displayName,
-          job_title: msData.jobTitle || null,
-          department: msData.department || null,
-          office_location: msData.officeLocation || null,
-          avatar_url: session.user.user_metadata?.avatar_url || null,
-        };
-        // upsert ignorando role/admin_tabs — solo actualiza campos de Microsoft
-        await supabase.from('profiles').upsert(
-          { id: userId, ...msPayload },
-          { onConflict: 'id', ignoreDuplicates: false }
-        );
+    try {
+      // Si hay provider_token (login fresco), sincronizar datos de Microsoft Graph
+      if (session.provider_token) {
+        const msData = await fetchMicrosoftProfile(session.provider_token).catch(() => null);
+        if (msData) {
+          const msPayload = {
+            email: msData.mail || msData.userPrincipalName || session.user.email,
+            full_name: msData.displayName,
+            job_title: msData.jobTitle || null,
+            department: msData.department || null,
+            office_location: msData.officeLocation || null,
+            avatar_url: session.user.user_metadata?.avatar_url || null,
+          };
+          // upsert ignorando role/admin_tabs — solo actualiza campos de Microsoft
+          await supabase.from('profiles').upsert(
+            { id: userId, ...msPayload },
+            { onConflict: 'id', ignoreDuplicates: false }
+          );
+        }
       }
-    }
 
-    // Leer perfil (ya sea recién creado o existente)
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
-    if (data) setProfile(data);
-    else {
-      // Fallback: crear perfil mínimo si no existe
-      const fallback = {
-        id: userId,
-        email: session.user.email,
-        full_name: session.user.user_metadata?.full_name || session.user.email,
-      };
-      await supabase.from('profiles').upsert(fallback, { onConflict: 'id' });
-      setProfile(fallback);
-    }
+      // Leer perfil (ya sea recién creado o existente)
+      const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
+      if (data) setProfile(data);
+      else {
+        // Fallback: crear perfil mínimo si no existe
+        const fallback = {
+          id: userId,
+          email: session.user.email,
+          full_name: session.user.user_metadata?.full_name || session.user.email,
+        };
+        await supabase.from('profiles').upsert(fallback, { onConflict: 'id' });
+        setProfile(fallback);
+      }
 
-    // Cargar config de navegación una sola vez por sesión
-    await refreshNavConfig();
-    setIsLoading(false);
+      // Cargar config de navegación una sola vez por sesión
+      await refreshNavConfig();
+    } catch (err) {
+      console.error('[AuthContext] initProfile:', err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const signOut = async () => {
