@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { PlayCircle, Clock, Award, ArrowRight, BarChart2, BookOpen, Folder, Monitor, FileText, Link as LinkIcon, ExternalLink, Globe, CheckCircle2, XCircle, Trophy, Calendar, Users, GraduationCap } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { eventoIsVisible } from '../../lib/visibilidad';
-import { fetchCursosVisibles, fetchResultadosByUser, fetchCursosAprobadosByUser, fetchProgresoByUser, fetchGlobalStats, fetchAccesosRapidos, fetchModulosCountByCursos } from '../../services/cursosService';
+import { fetchDashboardCursosResumen, fetchResultadosByUser, fetchGlobalStats, fetchAccesosRapidos } from '../../services/cursosService';
 import { fetchEventosProximos } from '../../services/eventosService';
 import { fetchSocialPreview } from '../../services/socialService';
 import { Image as ImageIcon, Megaphone } from 'lucide-react';
@@ -108,25 +108,15 @@ const Dashboard = () => {
         return;
       }
       try {
-        const [{ data: allCourses }, { data: certsData }, { data: progressData }] = await Promise.all([
-          fetchCursosVisibles(),
-          fetchCursosAprobadosByUser(userEmail),
-          fetchProgresoByUser(userEmail),
-        ]);
-        const { data: modulosData } = await fetchModulosCountByCursos((allCourses || []).map(c => c.id));
-        const certificados = certsData?.length || 0;
-        const completedCourseIds = new Set((certsData || []).map(r => r.curso_id));
-        const minutosCompletados = (allCourses || [])
-          .filter(c => completedCourseIds.has(c.id))
+        const { data: cursosResumen } = await fetchDashboardCursosResumen();
+        const certificados = (cursosResumen || []).filter(c => c.aprobado).length;
+        const minutosCompletados = (cursosResumen || [])
+          .filter(c => c.aprobado)
           .reduce((acc, c) => acc + (parseInt(c.duracion_estimada) || 0), 0);
         const horasRaw = parseFloat((minutosCompletados / 60).toFixed(2));
-        const progressMap = {};
-        (progressData || []).forEach(p => { progressMap[p.curso_id] = (progressMap[p.curso_id] || 0) + 1; });
-        const totalModulosMap = {};
-        (modulosData || []).forEach(m => { totalModulosMap[m.curso_id] = (totalModulosMap[m.curso_id] || 0) + 1; });
-        const enriched = (allCourses || []).map(course => {
-          const totalModulos = totalModulosMap[course.id] || 0;
-          const completados = progressMap[course.id] || 0;
+        const enriched = (cursosResumen || []).map(course => {
+          const totalModulos = Number(course.total_modulos) || 0;
+          const completados = Number(course.completados) || 0;
           const progressPct = totalModulos > 0 ? Math.round((completados / totalModulos) * 100) : 0;
           return { ...course, totalModulos, progressPct };
         });
@@ -134,7 +124,7 @@ const Dashboard = () => {
         const inProgress = enriched.find(c => c.progressPct > 0 && c.progressPct < 100);
         const notStarted = enriched.find(c => c.progressPct === 0);
         const resCursoPendiente = inProgress || notStarted || false;
-        const resStats = { cursos: allCourses?.length || 0, certificados, horas: horasRaw };
+        const resStats = { cursos: enriched.length, certificados, horas: horasRaw };
         cache.cursos = { data: { stats: resStats, enrichedCourses: recentFive, cursoPendiente: resCursoPendiente }, time: Date.now() };
         setStats(resStats);
         setEnrichedCourses(recentFive);

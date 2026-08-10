@@ -44,6 +44,18 @@ export async function fetchCursosVisibles() {
   return { data: data ?? [], error };
 }
 
+/**
+ * Trae en un solo round-trip los cursos visibles del usuario ya combinados con
+ * módulos totales, módulos completados y si aprobó el curso. Reemplaza el patrón
+ * fetchCursosVisibles + fetchCursosAprobadosByUser + fetchProgresoByUser +
+ * fetchModulosCountByCursos que usaba el Dashboard (4 llamadas -> 1).
+ */
+export async function fetchDashboardCursosResumen() {
+  const { data, error } = await supabase.rpc('get_dashboard_cursos_resumen');
+  if (error) console.error('[cursosService] fetchDashboardCursosResumen:', error.message);
+  return { data: data ?? [], error };
+}
+
 export async function fetchCursosCategorias() {
   const { data, error } = await supabase.from('cursos_categorias').select('*');
   if (error) console.error('[cursosService] fetchCursosCategorias:', error.message);
