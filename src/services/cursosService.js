@@ -1,7 +1,13 @@
 import { supabase } from '../lib/supabase';
 
+function sanitizeFileName(name) {
+  return name
+    .normalize('NFD').replace(/[̀-ͯ]/g, '') // quita acentos
+    .replace(/[^a-zA-Z0-9._-]/g, '_');
+}
+
 export async function uploadArchivoBloque(file) {
-  const safeName = file.name.replace(/\s+/g, '_');
+  const safeName = sanitizeFileName(file.name);
   const path = `capacitaciones/archivos/${Date.now()}-${safeName}`;
   const { error } = await supabase.storage.from('novedades').upload(path, file, { upsert: true });
   if (error) return { url: null, error };
