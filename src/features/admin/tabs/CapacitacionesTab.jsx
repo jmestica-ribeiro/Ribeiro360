@@ -44,6 +44,8 @@ const CapacitacionesTab = () => {
   const [editingModules, setEditingModules] = useState([]);
   const [editingVisibilidad, setEditingVisibilidad] = useState([]);
   const [editingDestinatarios, setEditingDestinatarios] = useState([]);
+  const [originalDestinatarios, setOriginalDestinatarios] = useState([]);
+  const [originalVisibilidad, setOriginalVisibilidad] = useState([]);
   const [editingPreguntas, setEditingPreguntas] = useState([]);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [destinatariosSearch, setDestinatariosSearch] = useState('');
@@ -104,7 +106,9 @@ const CapacitacionesTab = () => {
     setIsLoadingDetail(true);
     setEditingModules([]);
     setEditingVisibilidad([]);
+    setOriginalVisibilidad([]);
     setEditingDestinatarios([]);
+    setOriginalDestinatarios([]);
     setEditingPreguntas([]);
     setDestinatariosSearch('');
 
@@ -112,6 +116,8 @@ const CapacitacionesTab = () => {
     setEditingModules(modulos);
     setEditingVisibilidad(visibilidad);
     setEditingDestinatarios(destinatarios);
+    setOriginalDestinatarios(destinatarios);
+    setOriginalVisibilidad(visibilidad);
     try {
       setEditingPreguntas(course.cuestionario ? JSON.parse(course.cuestionario) : []);
     } catch { setEditingPreguntas([]); }
@@ -135,8 +141,27 @@ const CapacitacionesTab = () => {
     const { data: savedCurso, error } = await saveCurso(coursePayload, editingModules, editingVisibilidad, editingDestinatarios);
     setIsSaving(false);
     if (error) return showToast(error.message, 'error');
+
     if (isNew && savedCurso?.id) {
+      // Curso nuevo: notificar a todos los que coincidan con las reglas + destinatarios
       notificarNuevoCurso({ cursoTitulo: editingData.titulo, cursoId: savedCurso.id, visRules: editingVisibilidad, destinatarios: editingDestinatarios });
+    } else {
+      // Edición: notificar solo a quienes son nuevos destinatarios o matchean reglas nuevas
+      const prevDestIds = new Set(originalDestinatarios.map(d => d.user_id));
+      const nuevosDestinatarios = editingDestinatarios.filter(d => !prevDestIds.has(d.user_id));
+
+      // Reglas de visibilidad que no existían antes (por campo+valor)
+      const prevVisKeys = new Set(originalVisibilidad.map(r => `${r.campo}:${r.valor}`));
+      const nuevasReglas = editingVisibilidad.filter(r => !prevVisKeys.has(`${r.campo}:${r.valor}`));
+
+      if (nuevosDestinatarios.length > 0 || nuevasReglas.length > 0) {
+        notificarNuevoCurso({
+          cursoTitulo: editingData.titulo,
+          cursoId: editingData.id,
+          visRules: nuevasReglas,
+          destinatarios: nuevosDestinatarios,
+        });
+      }
     }
     await reloadCourses();
     handleBack();

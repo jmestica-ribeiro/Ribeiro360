@@ -52,5 +52,5 @@ AS $$
           )
       )
     )
-  ORDER BY c.titulo;
+  ORDER BY c.created_at DESC;
 $$;

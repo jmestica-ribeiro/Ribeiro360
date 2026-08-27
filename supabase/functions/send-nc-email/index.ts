@@ -170,18 +170,99 @@ function buildCursoHtml(fullName: string, cursoTitulo: string, cursoId: string):
 
 function buildPublicacionHtml(fullName: string, titulo: string, tipo: string): string {
   const esAnuncio = tipo === 'anuncio';
-  return emailLayout({
-    primerNombre: fullName?.split(' ')[0] ?? 'Hola',
-    subtitulo: 'Social',
-    mensaje: esAnuncio
-      ? `Nuevo anuncio: "${titulo}"`
-      : `Nueva foto publicada: "${titulo}"`,
-    badgeLabel: 'Tipo',
-    badgeValue: esAnuncio ? 'Anuncio' : 'Foto',
-    link: `${APP_URL}/social`,
-    linkLabel: 'Ver en Social →',
-    footer: 'Este email fue generado automáticamente por Ribeiro 360.',
-  });
+  const nombre = fullName?.split(' ')[0] ?? 'Hola';
+  const emoji = esAnuncio ? '📢' : '📸';
+  const tipoLabel = esAnuncio ? 'un nuevo anuncio' : 'una nueva foto';
+  const accion = esAnuncio ? 'publicó un anuncio' : 'subió una foto';
+
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Novedades en Ribeiro 360</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f0f2f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f2f5;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
+
+          <!-- Logo -->
+          <tr>
+            <td style="padding-bottom:20px;text-align:center;">
+              <img src="https://i.ibb.co/4R17J0h1/logo3.png" alt="Ribeiro" height="32" style="display:inline-block;height:32px;width:auto;" />
+            </td>
+          </tr>
+
+          <!-- Card principal -->
+          <tr>
+            <td style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+
+              <!-- Banner con emoji grande -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="background:linear-gradient(135deg,#1a1a1a 0%,#2d2d2d 100%);padding:36px 32px 28px;text-align:center;">
+                    <div style="font-size:48px;line-height:1;margin-bottom:16px;">${emoji}</div>
+                    <p style="margin:0;font-size:13px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#f5c518;">Ribeiro Social</p>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Cuerpo -->
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="padding:32px 32px 28px;">
+                    <p style="margin:0 0 6px;font-size:14px;color:#9ca3af;">Hola, <strong style="color:#374151;">${nombre}</strong> 👋</p>
+                    <h2 style="margin:0 0 12px;font-size:22px;font-weight:800;color:#111827;line-height:1.25;">
+                      ¡Hay ${tipoLabel} en el feed!
+                    </h2>
+                    <p style="margin:0 0 24px;font-size:15px;color:#6b7280;line-height:1.6;">
+                      Alguien ${accion} en la intranet:
+                    </p>
+
+                    <!-- Cita del título -->
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+                      <tr>
+                        <td style="background:#fafafa;border-left:4px solid #f5c518;border-radius:0 8px 8px 0;padding:14px 18px;">
+                          <p style="margin:0;font-size:16px;font-weight:700;color:#111827;">"${titulo}"</p>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- CTA -->
+                    <table cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="border-radius:10px;overflow:hidden;">
+                          <a href="${APP_URL}/social"
+                             style="display:inline-block;background:#f5c518;color:#1a1a1a;text-decoration:none;font-weight:800;font-size:15px;padding:14px 32px;border-radius:10px;letter-spacing:0.3px;">
+                            Ver en Social &rarr;
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 0 8px;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#9ca3af;">
+                Recibís esto porque sos parte del equipo Ribeiro 🙌
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 }
 
 function buildEventoHtml(fullName: string, eventoTitulo: string, eventoFecha: string, eventoId: string): string {
@@ -422,20 +503,26 @@ serve(async (req: Request) => {
 
     // ── Publicacion Social: todos los usuarios ─────────────────────────────
     if (notifType === 'publicacion') {
-      const { titulo, tipo, id } = body;
+      const { titulo, tipo, id, testEmail } = body;
       if (!titulo) {
         return new Response(JSON.stringify({ error: 'Faltan parámetros PUBLICACION' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       }
 
-      const { data: allProfiles, error: pErr } = await adminClient.from('profiles').select('id, full_name, email').not('email', 'is', null);
-      if (pErr) throw pErr;
+      let targets: { full_name: string; email: string }[];
+      if (testEmail) {
+        targets = [{ full_name: 'Juan', email: testEmail }];
+      } else {
+        const { data: allProfiles, error: pErr } = await adminClient.from('profiles').select('id, full_name, email').not('email', 'is', null);
+        if (pErr) throw pErr;
+        targets = allProfiles ?? [];
+      }
 
       const subject = tipo === 'foto'
         ? `Nueva foto publicada: "${titulo}" · Ribeiro 360`
         : `Nuevo anuncio: "${titulo}" · Ribeiro 360`;
 
       const results = await Promise.allSettled(
-        (allProfiles ?? []).map((p: { id: string; full_name: string; email: string }) =>
+        targets.map((p: { full_name: string; email: string }) =>
           sendEmail(resendKey, p.email, subject, buildPublicacionHtml(p.full_name, titulo, tipo ?? 'anuncio'))
         )
       );

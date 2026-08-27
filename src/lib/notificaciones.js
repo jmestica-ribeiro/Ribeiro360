@@ -163,10 +163,10 @@ export function notificarNuevoEvento({ eventoTitulo, eventoId, eventoFecha, visR
  * Envía email a todos los usuarios cuando se crea un anuncio o se sube una foto en Social.
  * @param {'anuncio'|'foto'} tipo
  */
-export function notificarNuevaPublicacion({ titulo, tipo, id }) {
+export function notificarNuevaPublicacion({ titulo, tipo, id, testEmail } = {}) {
   supabase.functions
     .invoke('send-nc-email', {
-      body: { notifType: 'publicacion', titulo, tipo, id },
+      body: { notifType: 'publicacion', titulo, tipo, id, ...(testEmail ? { testEmail } : {}) },
     })
     .then(({ error: fnErr }) => {
       if (fnErr) console.warn('[notif] publicacion email error:', fnErr.message);

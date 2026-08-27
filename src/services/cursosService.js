@@ -134,9 +134,15 @@ export async function saveCurso(cursoData, modulos, visibilidadRules, destinatar
 
   await supabase.from('cursos_destinatarios').delete().eq('curso_id', savedId);
   if (destinatarios.length > 0) {
-    await supabase.from('cursos_destinatarios').insert(
-      destinatarios.map(d => ({ curso_id: savedId, user_id: d.user_id }))
+    const { error: destErr } = await supabase.from('cursos_destinatarios').insert(
+      destinatarios.map(d => ({
+        curso_id:   savedId,
+        user_id:    d.user_id,
+        tipo:       'usuario',
+        entidad_id: d.user_id,
+      }))
     );
+    if (destErr) console.error('[cursosService] saveCurso destinatarios:', destErr.message);
   }
 
   return { data: courseData[0], error: null };
