@@ -110,19 +110,41 @@ export async function saveCurso(cursoData, modulos, visibilidadRules, destinatar
 
   const savedId = courseData[0].id;
 
-  if (modulos.length > 0) {
-    const rows = modulos.map((m, idx) => {
-      const row = {
-        curso_id: savedId,
-        numero_orden: idx + 1,
-        titulo: m.titulo,
-        descripcion: m.descripcion || null,
-        contenido: typeof m.contenido === 'string' ? m.contenido : JSON.stringify(m.contenido),
-      };
-      if (m.id && !m.id.toString().startsWith('temp-')) row.id = m.id;
-      return row;
-    });
-    await supabase.from('cursos_modulos').upsert(rows, { onConflict: 'id' });
+  // Separar módulos existentes (con UUID real) de módulos nuevos (sin id o con temp-)
+  const existentes = modulos.filter(m => m.id && !m.id.toString().startsWith('temp-'));
+  const nuevos     = modulos.filter(m => !m.id || m.id.toString().startsWith('temp-'));
+  const keepIds    = new Set(existentes.map(m => m.id));
+
+  // Borrar módulos que el usuario eliminó (los que ya no están en la lista)
+  const { data: dbMods } = await supabase.from('cursos_modulos').select('id').eq('curso_id', savedId);
+  const toDelete = (dbMods ?? []).map(r => r.id).filter(id => !keepIds.has(id));
+  if (toDelete.length > 0) {
+    await supabase.from('cursos_modulos').delete().in('id', toDelete);
+  }
+
+  // Actualizar los existentes (preserva sus IDs y el progreso de los usuarios)
+  for (const m of existentes) {
+    const idx = modulos.indexOf(m);
+    const { error: upErr } = await supabase.from('cursos_modulos').update({
+      numero_orden: idx + 1,
+      titulo:       m.titulo,
+      descripcion:  m.descripcion || null,
+      contenido:    typeof m.contenido === 'string' ? m.contenido : JSON.stringify(m.contenido),
+    }).eq('id', m.id);
+    if (upErr) console.error('[cursosService] saveCurso update módulo:', upErr.message);
+  }
+
+  // Insertar módulos nuevos
+  if (nuevos.length > 0) {
+    const rows = nuevos.map(m => ({
+      curso_id:     savedId,
+      numero_orden: modulos.indexOf(m) + 1,
+      titulo:       m.titulo,
+      descripcion:  m.descripcion || null,
+      contenido:    typeof m.contenido === 'string' ? m.contenido : JSON.stringify(m.contenido),
+    }));
+    const { error: insErr } = await supabase.from('cursos_modulos').insert(rows);
+    if (insErr) console.error('[cursosService] saveCurso insert módulos nuevos:', insErr.message);
   }
 
   await supabase.from('cursos_visibilidad').delete().eq('curso_id', savedId);
