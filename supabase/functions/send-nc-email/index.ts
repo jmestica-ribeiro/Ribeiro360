@@ -283,7 +283,7 @@ function buildEventoHtml(fullName: string, eventoTitulo: string, eventoFecha: st
 // ── Visibilidad server-side ───────────────────────────────────────────────────
 
 function matchesVisibilidad(rules: { campo: string; valor: string }[], profile: Record<string, string>): boolean {
-  if (!rules || rules.length === 0) return true;
+  if (!rules || rules.length === 0) return false;
   return rules.every(r => {
     const v = profile[r.campo];
     return v && v.toLowerCase() === r.valor.toLowerCase();
