@@ -305,13 +305,14 @@ export default function IncidenteDetalle() {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    fetchIncidente(id)
-      .then(({ data, error }) => {
+    Promise.all([fetchIncidente(id), fetchAcciones(id)])
+      .then(([{ data, error }, { data: accionesData }]) => {
         if (error) { console.error(error); setLoading(false); setAccessDenied(true); return; }
         if (data) {
           const participantesAnalisis = (() => { try { return Array.isArray(data.participantes_analisis) ? data.participantes_analisis : JSON.parse(data.participantes_analisis || '[]'); } catch { return []; } })();
           const involucradosIds = Array.isArray(data.involucrados) ? data.involucrados.map(i => i?.id).filter(Boolean) : [];
           const responsablesVerif = Array.isArray(data.responsable_verif) ? data.responsable_verif : [];
+          const accionesResponsableIds = (accionesData || []).map(a => a.responsable_id).filter(Boolean);
           const participanteIds = [
             data.emisor_id,
             data.responsable_seguimiento_id,
@@ -319,6 +320,7 @@ export default function IncidenteDetalle() {
             ...participantesAnalisis,
             ...responsablesVerif,
             ...involucradosIds,
+            ...accionesResponsableIds,
           ].filter(Boolean);
           const tieneAcceso = isAdmin || isSgiWriter || participanteIds.includes(user?.id);
           if (!tieneAcceso) { setAccessDenied(true); setLoading(false); return; }

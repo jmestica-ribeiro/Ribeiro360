@@ -747,10 +747,29 @@ export default function NCDetalle() {
     const loadHallazgo = async () => {
       setLoading(true);
       try {
-        const { data, error } = await fetchHallazgo(id);
+        const [{ data, error }, { data: accionesData }] = await Promise.all([
+          fetchHallazgo(id),
+          fetchAccionesNc(id),
+        ]);
 
         if (error) throw error;
         if (data) {
+          const responsableProceso = (() => { try { const p = JSON.parse(data.responsable_proceso); return Array.isArray(p) ? p : []; } catch { return []; } })();
+          const responsableVerif = (() => { try { const p = JSON.parse(data.responsable_verif); return Array.isArray(p) ? p : []; } catch { return []; } })();
+          const participantesAnalisis = Array.isArray(data.participantes_analisis) ? data.participantes_analisis : [];
+          const accionesResponsableIds = (accionesData || []).map(a => a.responsable_id).filter(Boolean);
+          const participanteIds = [
+            data.emisor_id,
+            data.auditor_id,
+            data.responsable_analisis_id,
+            ...responsableProceso,
+            ...responsableVerif,
+            ...participantesAnalisis,
+            ...accionesResponsableIds,
+          ].filter(Boolean);
+          const tieneAcceso = isAdmin || isSgiWriter || participanteIds.includes(user?.id);
+          if (!tieneAcceso) { setAccessDenied(true); setLoading(false); return; }
+
           const paso = data.paso_actual || 1;
           setPasoActual(paso);
           setCurrentStep(paso);
@@ -845,7 +864,7 @@ export default function NCDetalle() {
       }
     };
     loadHallazgo();
-  }, [id]);
+  }, [id, user?.id, isAdmin, isSgiWriter]);
 
   /* ── Toast helper ── */
   const showToast = useCallback((message, type = '') => {
