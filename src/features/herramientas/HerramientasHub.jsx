@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ExternalLink, Search, Wrench, ChevronRight } from 'lucide-react';
+import { ExternalLink, Search, Wrench, ChevronRight, Download, FileText } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { fetchSectores, fetchAllLinks } from '../../services/herramientasService';
+import { fetchSectores, fetchAllLinks, getHerramientaArchivoUrl } from '../../services/herramientasService';
 import { LoadingSpinner, EmptyState } from '../../components/common';
 import './HerramientasHub.css';
 
@@ -144,23 +144,34 @@ const HerramientasHub = () => {
                   ) : (
                     <div className="herramientas-links-grid">
                       {sector.linksFiltered.map((link, linkIdx) => {
+                        const isArchivo = link.tipo === 'archivo';
+
+                        const handleArchivoClick = async (e) => {
+                          e.preventDefault();
+                          const { url, error } = await getHerramientaArchivoUrl(link.file_path);
+                          if (error || !url) return;
+                          window.open(url, '_blank');
+                        };
+
                         return (
                           <a
                             key={link.id}
-                            href={link.url}
-                            target="_blank"
+                            href={isArchivo ? '#' : link.url}
+                            target={isArchivo ? undefined : '_blank'}
                             rel="noopener noreferrer"
                             className="herramienta-link-card"
                             style={{ '--card-accent': col.accent, '--card-bg': col.bg }}
+                            onClick={isArchivo ? handleArchivoClick : undefined}
                           >
                             <div className="herramienta-link-card-glow" />
                             <div className="herramienta-link-top">
                               <div className="herramienta-link-icon">
-                                <DynamicIcon name={link.icono} size={22} color={col.accent} />
+                                {isArchivo
+                                  ? <FileText size={22} color={col.accent} />
+                                  : <DynamicIcon name={link.icono} size={22} color={col.accent} />}
                               </div>
                               <div className="herramienta-link-badge">
-                                <ExternalLink size={11} />
-                                Abrir
+                                {isArchivo ? <><Download size={11} /> Descargar</> : <><ExternalLink size={11} /> Abrir</>}
                               </div>
                             </div>
                             <div className="herramienta-link-body">

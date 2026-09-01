@@ -62,6 +62,27 @@ export async function deleteLink(id) {
   return { error };
 }
 
+export async function uploadHerramientaArchivo(file) {
+  const ext  = file.name.split('.').pop();
+  const path = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error } = await supabase.storage.from('herramientas-archivos').upload(path, file);
+  if (error) console.error('[herramientasService] uploadArchivo:', error.message);
+  return { path: error ? null : path, error };
+}
+
+export async function getHerramientaArchivoUrl(path) {
+  const { data, error } = await supabase.storage
+    .from('herramientas-archivos')
+    .createSignedUrl(path, 3600);
+  return { url: data?.signedUrl ?? null, error };
+}
+
+export async function deleteHerramientaArchivo(path) {
+  const { error } = await supabase.storage.from('herramientas-archivos').remove([path]);
+  if (error) console.error('[herramientasService] deleteArchivo:', error.message);
+  return { error };
+}
+
 export async function swapLinkOrden(a, b) {
   await supabase.from('herramientas_links').update({ orden: b.orden }).eq('id', a.id);
   await supabase.from('herramientas_links').update({ orden: a.orden }).eq('id', b.id);
