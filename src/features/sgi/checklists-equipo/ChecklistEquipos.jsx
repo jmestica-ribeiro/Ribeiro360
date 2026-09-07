@@ -82,7 +82,12 @@ function ChecklistForm({ tipo, vehiculoInicial, onBack, onSaved }) {
   const setObs = (itemId, observacion) =>
     setRespuestas(prev => ({ ...prev, [itemId]: { ...prev[itemId], observacion } }));
 
-  const canSave = header.fecha && Object.values(respuestas).every(r => r.estado !== '');
+  const canSave = header.fecha && items.every(i => {
+    const r = respuestas[i.id];
+    if (!r || r.estado === '') return false;
+    if (i.requiere_texto && !r.observacion?.trim()) return false;
+    return true;
+  });
 
   const handleSave = async () => {
     if (!canSave) return;
@@ -184,10 +189,10 @@ function ChecklistForm({ tipo, vehiculoInicial, onBack, onSaved }) {
                         );
                       })}
                     </div>
-                    {(r.estado === 'regular' || r.estado === 'mal') && (
+                    {(item.requiere_texto || r.estado === 'regular' || r.estado === 'mal') && (
                       <input
                         className="cheq-obs-input"
-                        placeholder="Observación (recomendado)"
+                        placeholder={item.requiere_texto ? 'Especificá... (obligatorio)' : 'Observación (recomendado)'}
                         value={r.observacion}
                         onChange={e => setObs(item.id, e.target.value)}
                       />

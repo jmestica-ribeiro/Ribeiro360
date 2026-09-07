@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, GripVertical, X } from 'lucide-react';
+import { Plus, Trash2, GripVertical, Type } from 'lucide-react';
 import { fetchAllCheqItems, saveCheqItem, deleteCheqItem } from '../../../services/sgiService';
 import { TIPOS_EQUIPO } from '../../sgi/checklists-equipo/tiposEquipo';
 import { LoadingSpinner } from '../../../components/common';
@@ -9,6 +9,7 @@ const ChecklistItemsTab = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [tipoActivo, setTipoActivo] = useState(TIPOS_EQUIPO[0].key);
   const [newNombre, setNewNombre] = useState('');
+  const [newRequiereTexto, setNewRequiereTexto] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
@@ -31,8 +32,9 @@ const ChecklistItemsTab = () => {
     const orden = itemsDelTipo.length > 0
       ? Math.max(...itemsDelTipo.map(i => i.orden)) + 1
       : 1;
-    await saveCheqItem({ tipo_equipo: tipoActivo, nombre, orden, activo: true });
+    await saveCheqItem({ tipo_equipo: tipoActivo, nombre, orden, activo: true, requiere_texto: newRequiereTexto });
     setNewNombre('');
+    setNewRequiereTexto(false);
     await load();
     setSaving(false);
   };
@@ -45,6 +47,11 @@ const ChecklistItemsTab = () => {
 
   const handleToggle = async (item) => {
     await saveCheqItem({ id: item.id, activo: !item.activo });
+    await load();
+  };
+
+  const handleToggleTexto = async (item) => {
+    await saveCheqItem({ id: item.id, requiere_texto: !item.requiere_texto });
     await load();
   };
 
@@ -103,6 +110,17 @@ const ChecklistItemsTab = () => {
           onChange={e => setNewNombre(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleAdd()}
         />
+        <label style={{
+          display: 'flex', alignItems: 'center', gap: 6, fontSize: 12,
+          color: 'var(--text-secondary)', whiteSpace: 'nowrap', cursor: 'pointer',
+        }}>
+          <input
+            type="checkbox"
+            checked={newRequiereTexto}
+            onChange={e => setNewRequiereTexto(e.target.checked)}
+          />
+          Con texto para completar
+        </label>
         <button
           onClick={handleAdd}
           disabled={saving || !newNombre.trim()}
@@ -142,6 +160,20 @@ const ChecklistItemsTab = () => {
               >
                 <GripVertical size={14} style={{ color: 'var(--text-secondary)', flexShrink: 0 }} />
                 <span style={{ flex: 1, fontSize: 13, color: 'var(--text-main)' }}>{item.nombre}</span>
+                <button
+                  title={item.requiere_texto ? 'Quitar texto libre' : 'Requerir texto libre al completar'}
+                  onClick={() => handleToggleTexto(item)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 4,
+                    fontSize: 11, padding: '3px 10px', borderRadius: 20, fontWeight: 600,
+                    border: '1px solid', cursor: 'pointer',
+                    borderColor: item.requiere_texto ? '#bfdbfe' : 'var(--border-color, #e5e7eb)',
+                    background: item.requiere_texto ? '#eff6ff' : 'var(--bg-card)',
+                    color: item.requiere_texto ? '#2563eb' : 'var(--text-secondary)',
+                  }}
+                >
+                  <Type size={11} /> Texto
+                </button>
                 <button
                   title={item.activo ? 'Desactivar' : 'Activar'}
                   onClick={() => handleToggle(item)}

@@ -98,6 +98,7 @@
 | nombre | string | text | Descripción del ítem de verificación |
 | orden | integer | | Orden de aparición en el formulario |
 | activo | boolean | | Si false, no aparece en nuevos checklists |
+| requiere_texto | boolean | | Si true, el formulario exige un texto libre (columna `observacion` de `cheq_respuestas`) para completar el ítem |
 
 ### cheq_checklists
 | Columna | Tipo | Formato | Info |
