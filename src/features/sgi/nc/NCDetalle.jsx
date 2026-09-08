@@ -12,7 +12,7 @@ import {
   fetchAdjuntosByHallazgo, insertAdjuntos,
   fetchAccionesNc, countAccionesByHallazgo, insertAccionNc, updateAccionNc, deleteAccionNc,
   fetchHitosNc, fetchHitosNcResumen, insertHitoNc, deleteHitoNc,
-  uploadNcAdjunto, getNcPublicUrl, getNcSignedUrls,
+  uploadNcAdjunto, getNcSignedUrls,
 } from '../../../services/ncService';
 import { notificarAsignacion, notificarCambioEstadoHallazgo } from '../../../lib/notificaciones';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -851,9 +851,17 @@ export default function NCDetalle() {
           if (verifGuardados.length > 0) setSeleccionarVerif(true);
           else if (data.responsable_verif !== undefined) setSeleccionarVerif(false);
 
-          // Load adjuntos paso 1
+          // Load adjuntos paso 1 y generar signed URLs (el bucket nc-adjuntos es privado)
           const { data: adj } = await fetchAdjuntosByHallazgo(id, 1);
-          if (adj) setSavedAdjuntos(adj);
+          if (adj) {
+            const paths = adj.map(a => a.url).filter(Boolean);
+            const urlMap = {};
+            if (paths.length > 0) {
+              const { data: signed } = await getNcSignedUrls(paths, 3600);
+              (signed || []).forEach(s => { urlMap[s.path] = s.signedUrl; });
+            }
+            setSavedAdjuntos(adj.map(a => ({ ...a, signedUrl: urlMap[a.url] || null })));
+          }
 
         }
       } catch (err) {
@@ -943,8 +951,7 @@ export default function NCDetalle() {
         console.error('Upload error:', upErr);
         continue;
       }
-      const publicUrl = getNcPublicUrl(path);
-      uploaded.push({ hallazgo_id: hallazgoId, nombre: name, url: publicUrl || '', paso: 1 });
+      uploaded.push({ hallazgo_id: hallazgoId, nombre: name, url: path, paso: 1 });
       setUploadProgress(Math.round(((i + 1) / pendingFiles.length) * 100));
     }
     if (uploaded.length > 0) {
@@ -1365,15 +1372,19 @@ export default function NCDetalle() {
             {savedAdjuntos.map(a => (
               <div key={a.id} className="ncd-adjunto-item">
                 <FileText size={15} className="ncd-adjunto-icon" />
-                <a
-                  className="ncd-adjunto-name"
-                  href={a.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  onClick={e => e.stopPropagation()}
-                >
-                  {a.nombre}
-                </a>
+                {a.signedUrl ? (
+                  <a
+                    className="ncd-adjunto-name"
+                    href={a.signedUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    {a.nombre}
+                  </a>
+                ) : (
+                  <span className="ncd-adjunto-name">{a.nombre}</span>
+                )}
                 <span className="ncd-adjunto-size">Guardado</span>
               </div>
             ))}
