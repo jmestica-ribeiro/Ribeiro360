@@ -1048,8 +1048,13 @@ export default function NCDetalle() {
         }
       } else {
         const closing = advance && currentStep === 5;
-        const newPaso = closing ? 5 : advance ? Math.max(pasoActual, currentStep + 1) : pasoActual;
-        const { error } = await updateHallazgo(id, { ...payload, paso_actual: newPaso, ...(closing ? { estado: 'cerrado' } : {}) });
+        // "Guardar borrador" (advance=false) no debe pisar el paso_actual real de la base
+        // con el valor cargado en el estado local, que puede haber quedado desactualizado
+        // si otro usuario avanzó el hallazgo mientras esta pantalla estaba abierta.
+        const { error } = await updateHallazgo(id, {
+          ...payload,
+          ...(closing ? { paso_actual: 5, estado: 'cerrado' } : advance ? { paso_actual: Math.max(pasoActual, currentStep + 1) } : {}),
+        });
         if (error) throw error;
         await uploadPendingFiles(hallazgoId);
         // Notificar nuevas asignaciones
