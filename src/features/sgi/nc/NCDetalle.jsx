@@ -8,9 +8,9 @@ import DocInternoSelector from './DocInternoSelector';
 import './NormaPuntoSelector.css';
 import {
   fetchNcProfiles, fetchNcCentrosDeCostos, fetchNcDocumentosInternos,
-  countHallazgosByTipoAndYear, fetchHallazgo, insertHallazgo, updateHallazgo,
+  countHallazgosByTipoAndYear, fetchHallazgo, insertHallazgoConNumeroUnico, updateHallazgo,
   fetchAdjuntosByHallazgo, insertAdjuntos,
-  fetchAccionesNc, countAccionesByHallazgo, insertAccionNc, updateAccionNc, deleteAccionNc,
+  fetchAccionesNc, insertAccionNcConCodigoUnico, updateAccionNc, deleteAccionNc,
   fetchHitosNc, fetchHitosNcResumen, insertHitoNc, deleteHitoNc,
   uploadNcAdjunto, getNcSignedUrls,
 } from '../../../services/ncService';
@@ -307,16 +307,18 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
           estado,
         });
       } else {
-        const { count } = await countAccionesByHallazgo(hallazgoId);
-        const codigo = `ACC-${String((count || 0) + 1).padStart(4, '0')}`;
-        const { data: inserted } = await insertAccionNc({
-          hallazgo_id: hallazgoId,
-          codigo,
-          descripcion: accionForm.descripcion,
-          responsable_id: accionForm.responsable_id || null,
-          fecha_vencimiento: accionForm.fecha_vencimiento || null,
-          avance: 0,
-          estado: 'pendiente',
+        const { data: inserted } = await insertAccionNcConCodigoUnico({
+          hallazgoId,
+          buildCodigo: (seq) => `ACC-${String(seq).padStart(4, '0')}`,
+          buildPayload: (codigo) => ({
+            hallazgo_id: hallazgoId,
+            codigo,
+            descripcion: accionForm.descripcion,
+            responsable_id: accionForm.responsable_id || null,
+            fecha_vencimiento: accionForm.fecha_vencimiento || null,
+            avance: 0,
+            estado: 'pendiente',
+          }),
         });
         accionId = inserted?.id;
       }
@@ -1034,7 +1036,15 @@ export default function NCDetalle() {
 
       if (isNew) {
         const newPaso = advance ? 2 : 1;
-        const { data, error } = await insertHallazgo({ ...payload, paso_actual: newPaso, estado: 'abierto', created_by: user?.id });
+        const year = new Date().getFullYear();
+        const prefix = TIPO_PREFIX[form.tipo] || form.tipo;
+        const { numero: _numero, ...payloadSinNumero } = payload;
+        const { data, error } = await insertHallazgoConNumeroUnico({
+          tipo: form.tipo,
+          year,
+          buildNumero: (seq) => `${prefix}-${year}-${String(seq).padStart(3, '0')}`,
+          buildPayload: (numero) => ({ ...payloadSinNumero, numero, paso_actual: newPaso, estado: 'abierto', created_by: user?.id }),
+        });
         if (error) throw error;
         hallazgoId = data.id;
         await uploadPendingFiles(hallazgoId);
@@ -1816,17 +1826,19 @@ export default function NCDetalle() {
 
       // Si no fue eficaz → crear acción rectificativa y volver al paso 4
       if (v.eficaz === false) {
-        const { count } = await countAccionesByHallazgo(id);
-        const codigo = `ACC-${String((count || 0) + 1).padStart(4, '0')}`;
-        const { data: inserted } = await insertAccionNc({
-          hallazgo_id: id,
-          codigo,
-          descripcion: `[RECTIFICATIVA] ${v.detalle || 'Acción no fue eficaz — requiere nueva acción correctiva.'}`,
-          responsable_id: rectifForm.responsable_id || null,
-          fecha_vencimiento: rectifForm.fecha_vencimiento || null,
-          avance: 0,
-          estado: 'pendiente',
-          tipo: 'rectificativa',
+        const { data: inserted } = await insertAccionNcConCodigoUnico({
+          hallazgoId: id,
+          buildCodigo: (seq) => `ACC-${String(seq).padStart(4, '0')}`,
+          buildPayload: (codigo) => ({
+            hallazgo_id: id,
+            codigo,
+            descripcion: `[RECTIFICATIVA] ${v.detalle || 'Acción no fue eficaz — requiere nueva acción correctiva.'}`,
+            responsable_id: rectifForm.responsable_id || null,
+            fecha_vencimiento: rectifForm.fecha_vencimiento || null,
+            avance: 0,
+            estado: 'pendiente',
+            tipo: 'rectificativa',
+          }),
         });
         if (rectifForm.responsable_id && inserted?.id) {
           await notificarAsignacion({

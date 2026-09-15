@@ -9,8 +9,8 @@ import { notificarAccionIncidente } from '../../../lib/notificaciones';
 import { AccessDeniedModal } from '../../../components/common';
 import {
   fetchIncidentesProfiles, fetchCentrosDeCostos,
-  countIncidentesByYear, fetchIncidente, insertIncidente, updateIncidente,
-  fetchAcciones, countAccionesByIncidente, insertAccion, updateAccion, deleteAccion,
+  countIncidentesByYear, fetchIncidente, insertIncidenteConNumeroUnico, updateIncidente,
+  fetchAcciones, insertAccionConCodigoUnico, updateAccion, deleteAccion,
   fetchAccionesRectificativas, updateVerifAccion,
   fetchHitos, fetchHitosResumen, insertHito, deleteHito,
   fetch5P, insert5P, delete5P,
@@ -457,19 +457,29 @@ export default function IncidenteDetalle() {
         foto_4: fotoPaths[3] || null,
         foto_5: fotoPaths[4] || null,
         foto_6: fotoPaths[5] || null,
-        estado:      'abierto',
-        paso_actual: advance ? 2 : 1,
       };
 
       if (isNew) {
-        const { data, error } = await insertIncidente(payload);
+        const year = new Date().getFullYear();
+        const { numero: _numero, ...payloadSinNumero } = payload;
+        const { data, error } = await insertIncidenteConNumeroUnico({
+          year,
+          buildNumero: (seq) => `INC-${year}-${String(seq).padStart(3, '0')}`,
+          buildPayload: (numero) => ({ ...payloadSinNumero, numero, estado: 'abierto', paso_actual: advance ? 2 : 1 }),
+        });
         if (error) throw error;
         showToast('Incidente creado correctamente');
         navigate(`/sgi/incidentes/${data.id}`, { replace: true });
       } else {
-        const { error } = await updateIncidente(id, payload);
+        // No pisar `estado` (podría reabrir un incidente cerrado) ni retroceder
+        // `paso_actual` con el estado local, que puede estar desactualizado si
+        // otro usuario avanzó el incidente mientras esta pantalla estaba abierta.
+        const { error } = await updateIncidente(id, {
+          ...payload,
+          ...(advance ? { paso_actual: Math.max(pasoActual, 2) } : {}),
+        });
         if (error) throw error;
-        if (advance) { setPasoActual(2); setCurrentStep(2); }
+        if (advance) { setPasoActual(p => Math.max(p, 2)); setCurrentStep(2); }
         showToast(advance ? 'Paso 1 completado' : 'Guardado correctamente');
       }
     } catch (err) {
@@ -485,8 +495,7 @@ export default function IncidenteDetalle() {
     if (!id) return;
     setSaving(true);
     try {
-      const nextPaso = advance ? Math.max(pasoActual, 3) : pasoActual;
-      const { error } = await updateIncidente(id, { paso_actual: nextPaso });
+      const { error } = await updateIncidente(id, advance ? { paso_actual: Math.max(pasoActual, 3) } : {});
       if (error) throw error;
       if (advance) { setPasoActual(p => Math.max(p, 3)); setCurrentStep(3); }
       showToast(advance ? 'Paso 2 completado' : 'Evidencias guardadas');
@@ -503,11 +512,10 @@ export default function IncidenteDetalle() {
     if (!step2.responsable_analisis_id) { showToast('Seleccioná un responsable de análisis', 'error'); return; }
     setSaving(true);
     try {
-      const nextPaso = advance ? 4 : 3;
       const { error } = await updateIncidente(id, {
         responsable_analisis_id:  step2.responsable_analisis_id,
         participantes_analisis:   JSON.stringify(step2.participantes),
-        paso_actual:              Math.max(pasoActual, nextPaso),
+        ...(advance ? { paso_actual: Math.max(pasoActual, 4) } : {}),
       });
       if (error) throw error;
       if (advance) { setPasoActual(p => Math.max(p, 4)); setCurrentStep(4); }
@@ -525,8 +533,6 @@ export default function IncidenteDetalle() {
     if (!id) return;
     setSaving(true);
     try {
-      const nextPaso = advance ? Math.max(pasoActual, 5) : pasoActual;
-
       // Subir adjunto pendiente si es un File
       let adjuntoPath = step3.adjunto;
       if (step3.adjunto instanceof File) {
@@ -545,7 +551,7 @@ export default function IncidenteDetalle() {
         acr_causa_raiz:        step3.causa_raiz || null,
         acr_sistemico_causas:  step3.sistemico_causas,
         acr_adjunto:           adjuntoPath || null,
-        paso_actual:           nextPaso,
+        ...(advance ? { paso_actual: Math.max(pasoActual, 5) } : {}),
       });
       if (error) throw error;
       if (advance) { setPasoActual(p => Math.max(p, 5)); setCurrentStep(5); }
@@ -563,11 +569,10 @@ export default function IncidenteDetalle() {
     if (!id) return;
     setSaving(true);
     try {
-      const nextPaso = advance ? Math.max(pasoActual, 6) : pasoActual;
       const { error } = await updateIncidente(id, {
         responsable_verif:    form.responsable_verif,
         lecciones_aprendidas: form.lecciones_aprendidas || null,
-        paso_actual:          nextPaso,
+        ...(advance ? { paso_actual: Math.max(pasoActual, 6) } : {}),
       });
       if (error) throw error;
       if (advance) { setPasoActual(p => Math.max(p, 6)); setCurrentStep(6); }
@@ -623,18 +628,20 @@ export default function IncidenteDetalle() {
           showToast('Ya existe una acción rectificativa en curso para esta acción.', 'warning');
         } else {
           // No hay rectificativas — crear una nueva
-          const { count } = await countAccionesByIncidente(id);
-          const codigo = `ACC-${String((count || 0) + 1).padStart(4, '0')}`;
-          await insertAccion({
-            incidente_id:      id,
-            codigo,
-            descripcion:       `[RECTIFICATIVA] ${v.detalle || 'Acción no fue eficaz — requiere nueva acción correctiva.'}`,
-            responsable_id:    rectifForm.responsable_id || null,
-            fecha_vencimiento: rectifForm.fecha_vencimiento || null,
-            avance:            0,
-            estado:            'pendiente',
-            tipo:              'rectificativa',
-            parent_accion_id:  accionId,
+          await insertAccionConCodigoUnico({
+            incidenteId: id,
+            buildCodigo: (seq) => `ACC-${String(seq).padStart(4, '0')}`,
+            buildPayload: (codigo) => ({
+              incidente_id:      id,
+              codigo,
+              descripcion:       `[RECTIFICATIVA] ${v.detalle || 'Acción no fue eficaz — requiere nueva acción correctiva.'}`,
+              responsable_id:    rectifForm.responsable_id || null,
+              fecha_vencimiento: rectifForm.fecha_vencimiento || null,
+              avance:            0,
+              estado:            'pendiente',
+              tipo:              'rectificativa',
+              parent_accion_id:  accionId,
+            }),
           });
           setRectifForm({ responsable_id: '', fecha_vencimiento: '' });
           await updateIncidente(id, { paso_actual: 5 });
@@ -1272,16 +1279,18 @@ function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, ac
     try {
       let accionId = editingAccion?.id;
       if (!accionId) {
-        const { count } = await countAccionesByIncidente(incidenteId);
-        const codigo = `ACC-${String((count || 0) + 1).padStart(4, '0')}`;
-        const { data: inserted } = await insertAccion({
-          incidente_id: incidenteId,
-          codigo,
-          descripcion: accionForm.descripcion,
-          responsable_id: accionForm.responsable_id || null,
-          fecha_vencimiento: accionForm.fecha_vencimiento || null,
-          avance: 0,
-          estado: 'pendiente',
+        const { data: inserted } = await insertAccionConCodigoUnico({
+          incidenteId,
+          buildCodigo: (seq) => `ACC-${String(seq).padStart(4, '0')}`,
+          buildPayload: (codigo) => ({
+            incidente_id: incidenteId,
+            codigo,
+            descripcion: accionForm.descripcion,
+            responsable_id: accionForm.responsable_id || null,
+            fecha_vencimiento: accionForm.fecha_vencimiento || null,
+            avance: 0,
+            estado: 'pendiente',
+          }),
         });
         accionId = inserted?.id;
         if (accionForm.responsable_id && incidenteNumero) {

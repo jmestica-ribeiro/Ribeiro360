@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, X, FileText, Check, Loader2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
-import { countIncidentesByYear, insertIncidente, uploadIncAdjunto } from '../../../services/incidentesService';
+import { insertIncidenteConNumeroUnico, uploadIncAdjunto } from '../../../services/incidentesService';
 import './IncidenteEvento.css';
 
 const TIPOS_EVENTO = [
@@ -70,26 +70,26 @@ export default function IncidenteEventoWIP() {
     setSaving(true);
     try {
       const year = new Date().getFullYear();
-      const { count } = await countIncidentesByYear(year);
-      const numero = `EV-${year}-${String(count + 1).padStart(3, '0')}`;
 
-      const payload = {
-        tipo:                'Evento',
-        numero,
-        nombre_reporta:      form.nombre_reporta.trim(),
-        fecha:               form.fecha,
-        hora_evento:         form.hora_evento.trim(),
-        tipo_incidente:      form.tipo_incidente,
-        gerencia:            form.gerencia.trim() || null,
-        lugar:               form.lugar.trim(),
-        involucrados:        form.afectado.trim() ? [{ nombre: form.afectado.trim() }] : [],
-        descripcion:         form.descripcion.trim(),
-        acciones_inmediatas: form.acciones_inmediatas.trim(),
-        emisor_id:           profile?.id ?? null,
-        estado:              'registrado',
-      };
-
-      const { data: nuevo, error: insErr } = await insertIncidente(payload);
+      const { data: nuevo, error: insErr } = await insertIncidenteConNumeroUnico({
+        year,
+        buildNumero: (seq) => `EV-${year}-${String(seq).padStart(3, '0')}`,
+        buildPayload: (numero) => ({
+          tipo:                'Evento',
+          numero,
+          nombre_reporta:      form.nombre_reporta.trim(),
+          fecha:               form.fecha,
+          hora_evento:         form.hora_evento.trim(),
+          tipo_incidente:      form.tipo_incidente,
+          gerencia:            form.gerencia.trim() || null,
+          lugar:               form.lugar.trim(),
+          involucrados:        form.afectado.trim() ? [{ nombre: form.afectado.trim() }] : [],
+          descripcion:         form.descripcion.trim(),
+          acciones_inmediatas: form.acciones_inmediatas.trim(),
+          emisor_id:           profile?.id ?? null,
+          estado:              'registrado',
+        }),
+      });
       if (insErr) throw insErr;
 
       // Subir adjuntos

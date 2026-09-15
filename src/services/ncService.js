@@ -64,6 +64,24 @@ export async function insertHallazgo(payload) {
   return { data, error };
 }
 
+// `numero` se genera contando registros existentes; si dos usuarios crean un
+// hallazgo casi al mismo tiempo pueden calcular el mismo número. La tabla tiene
+// un UNIQUE(numero) que rechaza el duplicado (código 23505): reintentamos
+// recalculando el número hasta `maxAttempts` veces antes de rendirnos.
+export async function insertHallazgoConNumeroUnico({ tipo, year, buildNumero, buildPayload, maxAttempts = 5 }) {
+  let lastError = null;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const { count, error: countError } = await countHallazgosByTipoAndYear(tipo, year);
+    if (countError) return { data: null, error: countError };
+    const numero = buildNumero(count + 1 + attempt);
+    const { data, error } = await insertHallazgo(buildPayload(numero));
+    if (!error) return { data, error: null };
+    if (error.code !== '23505') return { data: null, error };
+    lastError = error;
+  }
+  return { data: null, error: lastError };
+}
+
 export async function updateHallazgo(id, payload) {
   const { error } = await supabase
     .from('nc_hallazgos')
@@ -118,6 +136,22 @@ export async function insertAccionNc(payload) {
     .single();
   if (error) console.error('[ncService] insertAccionNc:', error.message);
   return { data, error };
+}
+
+// Mismo problema de concurrencia que insertHallazgoConNumeroUnico, pero para el
+// código ACC-NNNN de una acción dentro de un hallazgo (UNIQUE(hallazgo_id, codigo)).
+export async function insertAccionNcConCodigoUnico({ hallazgoId, buildCodigo, buildPayload, maxAttempts = 5 }) {
+  let lastError = null;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const { count, error: countError } = await countAccionesByHallazgo(hallazgoId);
+    if (countError) return { data: null, error: countError };
+    const codigo = buildCodigo(count + 1 + attempt);
+    const { data, error } = await insertAccionNc(buildPayload(codigo));
+    if (!error) return { data, error: null };
+    if (error.code !== '23505') return { data: null, error };
+    lastError = error;
+  }
+  return { data: null, error: lastError };
 }
 
 export async function updateAccionNc(id, payload) {

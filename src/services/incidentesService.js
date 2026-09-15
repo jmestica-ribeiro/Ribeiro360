@@ -66,6 +66,24 @@ export async function insertIncidente(payload) {
   return { data, error };
 }
 
+// `numero` (INC-YYYY-NNN o EV-YYYY-NNN) se genera contando registros existentes;
+// si dos usuarios crean un incidente/evento casi al mismo tiempo pueden calcular
+// el mismo número. La tabla tiene UNIQUE(numero): reintentamos recalculando el
+// número hasta `maxAttempts` veces antes de rendirnos.
+export async function insertIncidenteConNumeroUnico({ year, buildNumero, buildPayload, maxAttempts = 5 }) {
+  let lastError = null;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const { count, error: countError } = await countIncidentesByYear(year);
+    if (countError) return { data: null, error: countError };
+    const numero = buildNumero(count + 1 + attempt);
+    const { data, error } = await insertIncidente(buildPayload(numero));
+    if (!error) return { data, error: null };
+    if (error.code !== '23505') return { data: null, error };
+    lastError = error;
+  }
+  return { data: null, error: lastError };
+}
+
 export async function updateIncidente(id, payload) {
   const { error } = await supabase
     .from('inc_incidentes')
@@ -104,6 +122,22 @@ export async function insertAccion(payload) {
     .single();
   if (error) console.error('[incidentesService] insertAccion:', error.message);
   return { data, error };
+}
+
+// Mismo problema de concurrencia que insertIncidenteConNumeroUnico, pero para el
+// código ACC-NNNN de una acción dentro de un incidente (UNIQUE(incidente_id, codigo)).
+export async function insertAccionConCodigoUnico({ incidenteId, buildCodigo, buildPayload, maxAttempts = 5 }) {
+  let lastError = null;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const { count, error: countError } = await countAccionesByIncidente(incidenteId);
+    if (countError) return { data: null, error: countError };
+    const codigo = buildCodigo(count + 1 + attempt);
+    const { data, error } = await insertAccion(buildPayload(codigo));
+    if (!error) return { data, error: null };
+    if (error.code !== '23505') return { data: null, error };
+    lastError = error;
+  }
+  return { data: null, error: lastError };
 }
 
 export async function updateAccion(id, payload) {

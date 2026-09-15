@@ -108,18 +108,31 @@ export async function saveSgiDocumento(docPayload, versionData) {
         ...(versionData.archivo_url && { archivo_url: versionData.archivo_url }),
       }).eq('id', versionData._ver_id);
     } else {
-      if (!isControlado) {
-        await supabase.from('sgi_versiones').update({ vigente: false }).eq('documento_id', savedDocId);
+      // Insertamos siempre con vigente:false y luego, si corresponde, usamos el RPC
+      // sgi_set_version_vigente para marcarla vigente y desmarcar el resto en una
+      // sola transacción atómica (evita que dos guardados concurrentes del mismo
+      // documento dejen 0 o 2 versiones vigentes).
+      const { data: nuevaVersion, error: verError } = await supabase
+        .from('sgi_versiones')
+        .insert({
+          documento_id: savedDocId,
+          numero_version: versionData.numero_version,
+          fecha_emision: versionData.fecha_emision || null,
+          notas_cambios: versionData.notas_cambios || null,
+          vigente: false,
+          estado_aprobacion: isControlado ? 'en_revision' : 'aprobado',
+          ...(versionData.archivo_url && { archivo_url: versionData.archivo_url }),
+        })
+        .select('id')
+        .single();
+      if (verError) console.error('[sgiService] saveSgiDocumento (insert version):', verError.message);
+      if (!isControlado && nuevaVersion?.id) {
+        const { error: rpcError } = await supabase.rpc('sgi_set_version_vigente', {
+          p_documento_id: savedDocId,
+          p_version_id: nuevaVersion.id,
+        });
+        if (rpcError) console.error('[sgiService] saveSgiDocumento (set vigente):', rpcError.message);
       }
-      await supabase.from('sgi_versiones').insert({
-        documento_id: savedDocId,
-        numero_version: versionData.numero_version,
-        fecha_emision: versionData.fecha_emision || null,
-        notas_cambios: versionData.notas_cambios || null,
-        vigente: !isControlado,
-        estado_aprobacion: isControlado ? 'en_revision' : 'aprobado',
-        ...(versionData.archivo_url && { archivo_url: versionData.archivo_url }),
-      });
     }
   }
 
@@ -149,18 +162,21 @@ export async function uploadSgiArchivo(documentoId, version, file) {
 
 export async function saveSgiVersion(payload) {
   const { id, ...fields } = payload;
-  if (fields.vigente) {
-    await supabase
-      .from('sgi_versiones')
-      .update({ vigente: false })
-      .eq('documento_id', fields.documento_id)
-      .neq('id', id ?? '');
-  }
   const query = id
     ? supabase.from('sgi_versiones').update(fields).eq('id', id).select()
     : supabase.from('sgi_versiones').insert(fields).select();
   const { data, error } = await query;
-  if (error) console.error('[sgiService] saveSgiVersion:', error.message);
+  if (error) { console.error('[sgiService] saveSgiVersion:', error.message); return { data, error }; }
+  // RPC atómica: marca esta versión vigente y desmarca el resto del documento
+  // en una sola transacción, evitando la condición de carrera de dos updates separados.
+  const targetId = id ?? data?.[0]?.id;
+  if (fields.vigente && targetId) {
+    const { error: rpcError } = await supabase.rpc('sgi_set_version_vigente', {
+      p_documento_id: fields.documento_id,
+      p_version_id: targetId,
+    });
+    if (rpcError) console.error('[sgiService] saveSgiVersion (set vigente):', rpcError.message);
+  }
   return { data, error };
 }
 
@@ -320,7 +336,6 @@ export async function reviewSgiVersion(versionId, reviewerProfile, comentario = 
 }
 
 export async function approveSgiVersion(versionId, documentoId, approverProfile, comentario = null) {
-  await supabase.from('sgi_versiones').update({ vigente: false }).eq('documento_id', documentoId);
   const { data, error } = await supabase
     .from('sgi_versiones')
     .update({
@@ -333,7 +348,13 @@ export async function approveSgiVersion(versionId, documentoId, approverProfile,
     })
     .eq('id', versionId)
     .select();
-  if (error) console.error('[sgiService] approveSgiVersion:', error.message);
+  if (error) { console.error('[sgiService] approveSgiVersion:', error.message); return { data, error }; }
+  // RPC atómica: desmarca el resto de versiones del documento en una sola transacción.
+  const { error: rpcError } = await supabase.rpc('sgi_set_version_vigente', {
+    p_documento_id: documentoId,
+    p_version_id: versionId,
+  });
+  if (rpcError) console.error('[sgiService] approveSgiVersion (set vigente):', rpcError.message);
   return { data, error };
 }
 
