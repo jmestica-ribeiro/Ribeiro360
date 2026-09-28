@@ -5,14 +5,6 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { insertIncidenteConNumeroUnico, uploadIncAdjunto } from '../../../services/incidentesService';
 import './IncidenteEvento.css';
 
-const TIPOS_EVENTO = [
-  'Vehicular o activo',
-  'Accidente Personal',
-  'Ambiental',
-  'Alto Potencial',
-  'Otro',
-];
-
 const MAX_ADJUNTOS = 5;
 const ACCEPT = '.xlsx,.xls,.ppt,.pptx,.pdf,.jpg,.jpeg,.png,.webp,.gif,.mp4,.mov,.mp3';
 
@@ -24,7 +16,6 @@ export default function IncidenteEventoWIP() {
     nombre_reporta:     profile?.full_name ?? '',
     fecha:              new Date().toISOString().split('T')[0],
     hora_evento:        '',
-    tipo_incidente:     '',
     gerencia:           '',
     lugar:              '',
     afectado:           '',
@@ -47,7 +38,6 @@ export default function IncidenteEventoWIP() {
     if (!form.nombre_reporta.trim()) e.nombre_reporta = 'Requerido';
     if (!form.fecha)                 e.fecha           = 'Requerido';
     if (!form.hora_evento.trim())    e.hora_evento     = 'Requerido';
-    if (!form.tipo_incidente)        e.tipo_incidente  = 'Seleccioná un tipo';
     if (!form.lugar.trim())          e.lugar           = 'Requerido';
     if (!form.descripcion.trim())    e.descripcion     = 'Requerido';
     if (!form.acciones_inmediatas.trim()) e.acciones_inmediatas = 'Requerido';
@@ -80,7 +70,6 @@ export default function IncidenteEventoWIP() {
           nombre_reporta:      form.nombre_reporta.trim(),
           fecha:               form.fecha,
           hora_evento:         form.hora_evento.trim(),
-          tipo_incidente:      form.tipo_incidente,
           gerencia:            form.gerencia.trim() || null,
           lugar:               form.lugar.trim(),
           involucrados:        form.afectado.trim() ? [{ nombre: form.afectado.trim() }] : [],
@@ -130,14 +119,14 @@ export default function IncidenteEventoWIP() {
         </button>
         <div>
           <h1 className="ev-title">Registrar Evento</h1>
-          <p className="ev-subtitle">Reporte inicial de incidente — Ribeiro</p>
+          <p className="ev-subtitle">Reporte inicial de evento — Ribeiro</p>
         </div>
       </div>
 
       <form className="ev-form" onSubmit={handleSubmit} noValidate>
 
         {/* 1. Nombre quien reporta */}
-        <Field n={1} label="Apellido y nombre de quien carga el incidente" required error={errors.nombre_reporta}>
+        <Field n={1} label="Apellido y nombre de quien carga el evento" required error={errors.nombre_reporta}>
           <input
             className={`ev-input${errors.nombre_reporta ? ' ev-input--error' : ''}`}
             value={form.nombre_reporta}
@@ -147,7 +136,7 @@ export default function IncidenteEventoWIP() {
         </Field>
 
         {/* 2. Fecha */}
-        <Field n={2} label="Fecha de ocurrencia del incidente" required error={errors.fecha}>
+        <Field n={2} label="Fecha de ocurrencia del evento" required error={errors.fecha}>
           <input
             type="date"
             className={`ev-input${errors.fecha ? ' ev-input--error' : ''}`}
@@ -157,46 +146,34 @@ export default function IncidenteEventoWIP() {
         </Field>
 
         {/* 3. Hora */}
-        <Field n={3} label="Hora aproximada de ocurrencia del incidente" required error={errors.hora_evento}>
+        <Field n={3} label="Hora aproximada de ocurrencia del evento" required error={errors.hora_evento}>
           <input
-            className={`ev-input${errors.hora_evento ? ' ev-input--error' : ''}`}
+            type="time"
+            className={`ev-input ev-input-time${errors.hora_evento ? ' ev-input--error' : ''}`}
             value={form.hora_evento}
             onChange={e => set('hora_evento', e.target.value)}
-            placeholder="Ej: 14:30 hs"
           />
         </Field>
 
-        {/* 4. Tipo */}
-        <Field n={4} label="Tipo de Incidente" required error={errors.tipo_incidente}>
-          <div className="ev-radios">
-            {TIPOS_EVENTO.map(t => (
-              <label key={t} className="ev-radio-label">
-                <input
-                  type="radio"
-                  name="tipo_incidente"
-                  value={t}
-                  checked={form.tipo_incidente === t}
-                  onChange={() => set('tipo_incidente', t)}
-                />
-                <span className="ev-radio-dot" />
-                {t}
-              </label>
-            ))}
-          </div>
-        </Field>
-
-        {/* 5. Gerencia / Área */}
-        <Field n={5} label="Gerencia / Área involucrada">
-          <input
+        {/* 4. Gerencia / Área */}
+        <Field n={4} label="Gerencia / Área involucrada">
+          <select
             className="ev-input"
             value={form.gerencia}
             onChange={e => set('gerencia', e.target.value)}
-            placeholder="Escriba su respuesta"
-          />
+          >
+            <option value="">Seleccioná una opción</option>
+            <option value="Servicios">Servicios</option>
+            <option value="Obras">Obras</option>
+            <option value="CMASS">CMASS</option>
+            <option value="Administración, Finanzas y TI">Administración, Finanzas y TI</option>
+            <option value="RRHH">RRHH</option>
+            <option value="Institucional">Institucional</option>
+          </select>
         </Field>
 
-        {/* 6. Lugar */}
-        <Field n={6} label="Lugar de ocurrencia del incidente" required error={errors.lugar}>
+        {/* 5. Lugar */}
+        <Field n={5} label="Lugar de ocurrencia del evento" required error={errors.lugar}>
           <input
             className={`ev-input${errors.lugar ? ' ev-input--error' : ''}`}
             value={form.lugar}
@@ -205,8 +182,8 @@ export default function IncidenteEventoWIP() {
           />
         </Field>
 
-        {/* 7. Afectado */}
-        <Field n={7} label="Apellido y Nombre del personal afectado (si corresponde)">
+        {/* 6. Afectado */}
+        <Field n={6} label="Apellido y Nombre del personal afectado (si corresponde)">
           <input
             className="ev-input"
             value={form.afectado}
@@ -215,8 +192,8 @@ export default function IncidenteEventoWIP() {
           />
         </Field>
 
-        {/* 8. Descripción */}
-        <Field n={8} label="Descripción del incidente" required error={errors.descripcion}>
+        {/* 7. Descripción */}
+        <Field n={7} label="Descripción del evento" required error={errors.descripcion}>
           <textarea
             className={`ev-input ev-textarea${errors.descripcion ? ' ev-input--error' : ''}`}
             value={form.descripcion}
@@ -226,8 +203,8 @@ export default function IncidenteEventoWIP() {
           />
         </Field>
 
-        {/* 9. Acciones inmediatas */}
-        <Field n={9} label="Acciones inmediatas realizadas" required error={errors.acciones_inmediatas}>
+        {/* 8. Acciones inmediatas */}
+        <Field n={8} label="Acciones inmediatas realizadas" required error={errors.acciones_inmediatas}>
           <textarea
             className={`ev-input ev-textarea${errors.acciones_inmediatas ? ' ev-input--error' : ''}`}
             value={form.acciones_inmediatas}
@@ -237,8 +214,8 @@ export default function IncidenteEventoWIP() {
           />
         </Field>
 
-        {/* 10. Adjuntos */}
-        <Field n={10} label="Carga de fotos y archivos adjuntos relacionados con el incidente">
+        {/* 9. Adjuntos */}
+        <Field n={9} label="Carga de fotos y archivos adjuntos relacionados con el evento">
           <div
             className="ev-dropzone"
             onClick={() => adjuntos.length < MAX_ADJUNTOS && fileRef.current?.click()}

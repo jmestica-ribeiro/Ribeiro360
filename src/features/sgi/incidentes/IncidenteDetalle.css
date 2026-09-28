@@ -1086,6 +1086,29 @@ body.dark-theme .incd-toast.warning {
 .incd-chip-clasif.active[data-val='Crítica']   { border-color: #E71D36; background: rgba(231,29,54,0.1);  color: #E71D36; }
 .incd-chip-clasif.active[data-val='Mayor']     { border-color: #8B5CF6; background: rgba(139,92,246,0.1); color: #7c3aed; }
 
+/* ── Toggle SI/NO (Alto Potencial) ──────────────────────────────────────────── */
+.incd-toggle-group {
+  display: flex;
+  gap: 8px;
+}
+.incd-toggle-btn {
+  padding: 6px 20px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.incd-toggle-btn.active {
+  border-color: var(--primary-color);
+  background: rgba(var(--primary-rgb, 59,130,246), 0.1);
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
 /* ── Tooltip ─────────────────────────────────────────────────────────────────── */
 .incd-tooltip-wrap {
   position: relative;

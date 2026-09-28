@@ -39,6 +39,7 @@ const CLASIF_COLORS = {
 
 const TIPOS_INCIDENTE = ['Personal', 'Vehicular', 'Ambiental', 'Industrial'];
 const CLASIFICACIONES = ['Ninguna', 'Menor', 'Relevante', 'Crítica', 'Mayor'];
+const GERENCIAS = ['Servicios', 'Obras', 'CMASS', 'Administración, Finanzas y TI', 'RRHH', 'Institucional'];
 const MAX_FOTOS = 6;
 
 const TIPOS_LESION = ['Corte / Laceración', 'Golpe / Contusión', 'Quemadura', 'Caída', 'Aplastamiento', 'Fractura', 'Torcedura / Esguince', 'Inhalación / Intoxicación', 'Proyección', 'Atrapamiento', 'Salpicadura', 'Otro'];
@@ -57,6 +58,7 @@ const EMPTY_FORM = {
   contrato_na:              false,
   tipo_incidente:           '',
   clasificacion:            '',
+  alto_potencial:           null,
   descripcion:              '',
   responsable_seguimiento_id: '',
   gerencia:                 '',
@@ -342,6 +344,7 @@ export default function IncidenteDetalle() {
             contrato_na:                data.nro_contrato === 'N/A',
             tipo_incidente:             data.tipo_incidente          || '',
             clasificacion:              data.clasificacion           || '',
+            alto_potencial:             data.alto_potencial          ?? null,
             descripcion:                data.descripcion             || '',
             equipo_analisis:            (() => { try { return Array.isArray(data.equipo_analisis) ? data.equipo_analisis : JSON.parse(data.equipo_analisis || '[]'); } catch { return []; } })(),
             responsable_seguimiento_id: data.responsable_seguimiento_id || '',
@@ -440,6 +443,7 @@ export default function IncidenteDetalle() {
         nro_contrato:               form.contrato_na ? 'N/A' : (form.nro_contrato || null),
         tipo_incidente:             form.tipo_incidente  || null,
         clasificacion:              form.clasificacion   || null,
+        alto_potencial:             ['Ninguna','Menor','Relevante'].includes(form.clasificacion) ? form.alto_potencial : null,
         descripcion:                form.descripcion,
         responsable_seguimiento_id: form.responsable_seguimiento_id || null,
         gerencia:                   form.gerencia        || null,
@@ -1575,6 +1579,29 @@ function Step1({ form, setForm, profiles, clientes, gerencias, sitios, pendingFo
               ))}
             </div>
           </div>
+
+          {/* Toggle Alto Potencial — solo para Ninguna / Menor / Relevante */}
+          {['Ninguna', 'Menor', 'Relevante'].includes(form.clasificacion) && (
+            <div className="incd-form-group">
+              <label className="incd-form-label">¿Puede ser considerado de Alto Potencial?</label>
+              <div className="incd-toggle-group">
+                <button
+                  type="button"
+                  className={`incd-toggle-btn${form.alto_potencial === true ? ' active' : ''}`}
+                  onClick={() => set('alto_potencial', true)}
+                >
+                  Sí
+                </button>
+                <button
+                  type="button"
+                  className={`incd-toggle-btn${form.alto_potencial === false ? ' active' : ''}`}
+                  onClick={() => set('alto_potencial', false)}
+                >
+                  No
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1609,7 +1636,7 @@ function Step1({ form, setForm, profiles, clientes, gerencias, sitios, pendingFo
             <label className="incd-form-label">Gerencia</label>
             <select className="incd-form-input" value={form.gerencia} onChange={e => set('gerencia', e.target.value)}>
               <option value="">— Seleccionar —</option>
-              {gerencias.map(g => <option key={g} value={g}>{g}</option>)}
+              {GERENCIAS.map(g => <option key={g} value={g}>{g}</option>)}
             </select>
           </div>
           <div className="incd-form-group">
