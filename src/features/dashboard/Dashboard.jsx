@@ -255,7 +255,7 @@ const Dashboard = () => {
       </motion.section>
 
       {/* Ecosistema de Software */}
-      <motion.section className="section" {...fadeUp(0.15)}>
+      <motion.section className="section ecosistema-section" {...fadeUp(0.15)}>
         <div className="section-header">
           <h2>Ecosistema de Software</h2>
         </div>
