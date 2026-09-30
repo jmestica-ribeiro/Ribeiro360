@@ -586,10 +586,13 @@ function EcosistemaHub() {
 
         {/* Logo central */}
         <circle cx={cx} cy={cy} r={52} fill="#111827" />
-        <text x={cx} y={cy + 13} textAnchor="middle" fontSize="30" fontWeight="800"
-          fill="#F2B300" fontFamily="IBM Plex Sans, system-ui, sans-serif" letterSpacing="-1">
-          ER
-        </text>
+        <image
+          href="https://i.ibb.co/4R17J0h1/logo3.png"
+          x={cx - 38} y={cy - 38}
+          width="76" height="76"
+          preserveAspectRatio="xMidYMid meet"
+          style={{ borderRadius: '50%' }}
+        />
 
         {/* Etiqueta "Ribeiro 360" */}
         <rect x={cx - 42} y={cy + 60} width={84} height={22} rx="11"
