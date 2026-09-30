@@ -612,7 +612,7 @@ function EcosistemaHub() {
         </defs>
       </svg>
       <img
-        src="https://i.ibb.co/4R17J0h1/logo3.png"
+        src="https://i.postimg.cc/xdjr8nhT/logo3-(1).png"
         alt="Ribeiro logo"
         className="ecosistema-logo-img"
       />
