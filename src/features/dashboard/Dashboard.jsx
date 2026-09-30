@@ -515,12 +515,12 @@ const Dashboard = () => {
 
 /* ── Ecosistema Hub ─────────────────────────────────────────────────────────── */
 const NODOS = [
-  { label: 'Maquinaria',          estado: 'Disponible',    angle: 90  },
-  { label: 'SIGEP',               estado: 'Disponible',    angle: 30  },
-  { label: 'CMASS',               estado: 'En desarrollo', angle: -30 },
-  { label: 'Suite de Proveedores',estado: 'Disponible',    angle: -90 },
-  { label: 'Reserva de recursos', estado: 'En desarrollo', angle: -150},
-  { label: 'Resultados',          estado: 'Disponible',    angle: 150 },
+  { label: 'Maquinaria',          estado: 'Disponible',    angle: 90,   url: 'https://maquinaria.ribeiro.ar' },
+  { label: 'SIGEP',               estado: 'Disponible',    angle: 30,   url: 'https://sigep.ribeiro-ar' },
+  { label: 'CMASS',               estado: 'En desarrollo', angle: -30,  url: null },
+  { label: 'Suite de Proveedores',estado: 'Disponible',    angle: -90,  url: 'https://www.ribeiro.ar/portal/login' },
+  { label: 'Reserva de recursos', estado: 'En desarrollo', angle: -150, url: null },
+  { label: 'Resultados',          estado: 'Disponible',    angle: 150,  url: 'https://resultados.maquinaria.ar' },
 ];
 
 function EcosistemaHub() {
@@ -529,6 +529,7 @@ function EcosistemaHub() {
 
   return (
     <div className="ecosistema-wrap">
+      <div className="ecosistema-container">
       <svg viewBox="0 0 500 500" className="ecosistema-svg" aria-label="Ecosistema de software Ribeiro 360">
         {/* Anillos concéntricos */}
         <circle cx={cx} cy={cy} r={72} fill="none" stroke="var(--ecosistema-ring)" strokeWidth="1.5" />
@@ -551,16 +552,17 @@ function EcosistemaHub() {
         })}
 
         {/* Tarjetas de nodos */}
-        {NODOS.map(({ label, estado, angle }) => {
+        {NODOS.map(({ label, estado, angle, url }) => {
           const rad = (angle * Math.PI) / 180;
           const nx = cx + Math.cos(rad) * R;
           const ny = cy - Math.sin(rad) * R;
           const w = 118, h = 52;
           const available = estado === 'Disponible';
-          return (
-            <g key={label}>
+          const cardContent = (
+            <>
               <rect x={nx - w / 2} y={ny - h / 2} width={w} height={h} rx="8"
-                fill="var(--ecosistema-card-bg)" stroke="var(--ecosistema-card-border)" strokeWidth="1"
+                fill="var(--ecosistema-card-bg)" stroke={url ? '#F2B300' : 'var(--ecosistema-card-border)'}
+                strokeWidth={url ? '1.5' : '1'}
                 filter="url(#card-shadow)" />
               {label === 'Suite de Proveedores' ? (
                 <text x={nx} textAnchor="middle" fontSize="11" fontWeight="600"
@@ -580,19 +582,19 @@ function EcosistemaHub() {
                 fill={available ? '#23824A' : '#9CA3AF'} fontFamily="IBM Plex Sans, system-ui, sans-serif">
                 {estado}
               </text>
-            </g>
+            </>
+          );
+          return url ? (
+            <a key={label} href={url} target="_blank" rel="noopener noreferrer" style={{ cursor: 'pointer' }}>
+              <g>{cardContent}</g>
+            </a>
+          ) : (
+            <g key={label}>{cardContent}</g>
           );
         })}
 
         {/* Logo central */}
         <circle cx={cx} cy={cy} r={52} fill="#111827" />
-        <image
-          href="https://i.ibb.co/4R17J0h1/logo3.png"
-          x={cx - 38} y={cy - 38}
-          width="76" height="76"
-          preserveAspectRatio="xMidYMid meet"
-          style={{ borderRadius: '50%' }}
-        />
 
         {/* Etiqueta "Ribeiro 360" */}
         <rect x={cx - 42} y={cy + 60} width={84} height={22} rx="11"
@@ -609,6 +611,12 @@ function EcosistemaHub() {
           </filter>
         </defs>
       </svg>
+      <img
+        src="https://i.ibb.co/4R17J0h1/logo3.png"
+        alt="Ribeiro logo"
+        className="ecosistema-logo-img"
+      />
+      </div>
     </div>
   );
 }

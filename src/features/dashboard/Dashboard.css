@@ -1181,8 +1181,26 @@ body.dark-theme .quick-card {
   padding: 8px 0 16px;
 }
 
-.ecosistema-svg {
+.ecosistema-container {
+  position: relative;
   width: 100%;
   max-width: 520px;
+}
+
+.ecosistema-svg {
+  width: 100%;
   height: auto;
+  display: block;
+}
+
+.ecosistema-logo-img {
+  position: absolute;
+  /* centro = 50% del SVG viewBox (250/500) tanto en X como en Y */
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -56%);
+  width: 13%;   /* ~68px sobre 520px max-width */
+  height: auto;
+  border-radius: 50%;
+  pointer-events: none;
 }
