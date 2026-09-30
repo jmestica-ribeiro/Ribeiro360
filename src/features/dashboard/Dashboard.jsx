@@ -254,6 +254,14 @@ const Dashboard = () => {
         )}
       </motion.section>
 
+      {/* Ecosistema de Software */}
+      <motion.section className="section" {...fadeUp(0.15)}>
+        <div className="section-header">
+          <h2>Ecosistema de Software</h2>
+        </div>
+        <EcosistemaHub />
+      </motion.section>
+
       {/* Social Preview */}
       {socialPreview.length > 0 && (
         <motion.section className="section" {...fadeUp(0.2)}>
@@ -504,5 +512,102 @@ const Dashboard = () => {
     </div>
   );
 };
+
+/* ── Ecosistema Hub ─────────────────────────────────────────────────────────── */
+const NODOS = [
+  { label: 'Maquinaria',          estado: 'Disponible',    angle: 90  },
+  { label: 'SIGEP',               estado: 'Disponible',    angle: 30  },
+  { label: 'CMASS',               estado: 'En desarrollo', angle: -30 },
+  { label: 'Suite de Proveedores',estado: 'Disponible',    angle: -90 },
+  { label: 'Reserva de recursos', estado: 'En desarrollo', angle: -150},
+  { label: 'Resultados',          estado: 'Disponible',    angle: 150 },
+];
+
+function EcosistemaHub() {
+  const R = 200; // radio en px (viewBox 500x500, centro 250,250)
+  const cx = 250, cy = 250;
+
+  return (
+    <div className="ecosistema-wrap">
+      <svg viewBox="0 0 500 500" className="ecosistema-svg" aria-label="Ecosistema de software Ribeiro 360">
+        {/* Anillos concéntricos */}
+        <circle cx={cx} cy={cy} r={72} fill="none" stroke="var(--ecosistema-ring)" strokeWidth="1.5" />
+        <circle cx={cx} cy={cy} r={110} fill="none" stroke="var(--ecosistema-ring)" strokeWidth="1" strokeDasharray="4 6" />
+
+        {/* Líneas hacia nodos */}
+        {NODOS.map(({ angle }) => {
+          const rad = (angle * Math.PI) / 180;
+          return (
+            <line
+              key={angle}
+              x1={cx + Math.cos(rad) * 60}
+              y1={cy - Math.sin(rad) * 60}
+              x2={cx + Math.cos(rad) * (R - 62)}
+              y2={cy - Math.sin(rad) * (R - 62)}
+              stroke="#F2B300"
+              strokeWidth="1.8"
+            />
+          );
+        })}
+
+        {/* Tarjetas de nodos */}
+        {NODOS.map(({ label, estado, angle }) => {
+          const rad = (angle * Math.PI) / 180;
+          const nx = cx + Math.cos(rad) * R;
+          const ny = cy - Math.sin(rad) * R;
+          const w = 118, h = 52;
+          const available = estado === 'Disponible';
+          return (
+            <g key={label}>
+              <rect x={nx - w / 2} y={ny - h / 2} width={w} height={h} rx="8"
+                fill="var(--ecosistema-card-bg)" stroke="var(--ecosistema-card-border)" strokeWidth="1"
+                filter="url(#card-shadow)" />
+              {label === 'Suite de Proveedores' ? (
+                <text x={nx} textAnchor="middle" fontSize="11" fontWeight="600"
+                  fill="var(--text-main)" fontFamily="IBM Plex Sans, system-ui, sans-serif">
+                  <tspan x={nx} dy={ny - 15}>Suite de</tspan>
+                  <tspan x={nx} dy="13">Proveedores</tspan>
+                </text>
+              ) : (
+                <text x={nx} y={ny - 7} textAnchor="middle" fontSize="11.5" fontWeight="600"
+                  fill="var(--text-main)" fontFamily="IBM Plex Sans, system-ui, sans-serif">
+                  {label}
+                </text>
+              )}
+              <circle cx={nx - 26} cy={ny + 10} r="4"
+                fill={available ? '#23824A' : '#9CA3AF'} />
+              <text x={nx - 18} y={ny + 14} fontSize="9.5"
+                fill={available ? '#23824A' : '#9CA3AF'} fontFamily="IBM Plex Sans, system-ui, sans-serif">
+                {estado}
+              </text>
+            </g>
+          );
+        })}
+
+        {/* Logo central */}
+        <circle cx={cx} cy={cy} r={52} fill="#111827" />
+        <text x={cx} y={cy + 13} textAnchor="middle" fontSize="30" fontWeight="800"
+          fill="#F2B300" fontFamily="IBM Plex Sans, system-ui, sans-serif" letterSpacing="-1">
+          ER
+        </text>
+
+        {/* Etiqueta "Ribeiro 360" */}
+        <rect x={cx - 42} y={cy + 60} width={84} height={22} rx="11"
+          fill="var(--ecosistema-card-bg)" stroke="var(--ecosistema-card-border)" strokeWidth="1" />
+        <text x={cx} y={cy + 75} textAnchor="middle" fontSize="10" fontWeight="500"
+          fill="var(--text-muted)" fontFamily="IBM Plex Sans, system-ui, sans-serif">
+          Ribeiro 360
+        </text>
+
+        {/* Sombra suave para tarjetas */}
+        <defs>
+          <filter id="card-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#00000018" />
+          </filter>
+        </defs>
+      </svg>
+    </div>
+  );
+}
 
 export default Dashboard;

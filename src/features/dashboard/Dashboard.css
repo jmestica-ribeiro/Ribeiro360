@@ -1163,3 +1163,26 @@ body.dark-theme .quick-card {
   }
 }
 
+
+/* === Ecosistema Hub === */
+:root {
+  --ecosistema-ring: rgba(14, 116, 144, 0.18);
+  --ecosistema-card-bg: var(--bg-card, #ffffff);
+  --ecosistema-card-border: var(--border-color, #e5e7eb);
+}
+.dark {
+  --ecosistema-ring: rgba(14, 116, 144, 0.3);
+}
+
+.ecosistema-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 0 16px;
+}
+
+.ecosistema-svg {
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+}
