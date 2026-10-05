@@ -520,7 +520,7 @@ const NODOS = [
   { label: 'CMASS',               estado: 'En desarrollo', angle: -30,  url: null },
   { label: 'Suite de Proveedores',estado: 'Disponible',    angle: -90,  url: 'https://www.ribeiro.ar/portal/login' },
   { label: 'Reserva de recursos', estado: 'En desarrollo', angle: -150, url: null },
-  { label: 'Resultados',          estado: 'Disponible',    angle: 150,  url: 'https://resultados.maquinaria.ar' },
+  { label: 'Resultados',          estado: 'Disponible',    angle: 150,  url: 'https://resultados.ribeiro.ar' },
 ];
 
 function EcosistemaHub() {
