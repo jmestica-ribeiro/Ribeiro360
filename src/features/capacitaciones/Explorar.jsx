@@ -10,6 +10,7 @@ import PortalServiciosCompartidos from './portales/PortalServiciosCompartidos';
 import PortalOperaciones from './portales/PortalOperaciones';
 import PortalObras from './portales/PortalObras';
 import PortalTecnologia from './portales/PortalTecnologia';
+import PortalCIO from './portales/PortalCIO';
 
 // ----------------------------------------------------------------------
 // REGISTRO DE PORTALES
@@ -44,6 +45,11 @@ const PORTALES_HARDCODEADOS = {
     titulo: 'Portal de Tecnología',
     descripcion: 'Recursos y herramientas del área de Tecnología.',
     componente: <PortalTecnologia />,
+  },
+  'CIO': {
+    titulo: 'Portal CIO — Tecnología e Innovación',
+    descripcion: 'Infraestructura, ciberseguridad, datos y herramientas de TI.',
+    componente: <PortalCIO />,
   },
 };
 
