@@ -28,11 +28,11 @@ const PLATAFORMAS = [
     emoji: '⛏️',
   },
   {
-    label: 'MIA Reply',
-    desc: 'Asistente de inteligencia artificial para gestión interna.',
+    label: 'Seguimiento de Flota',
+    desc: 'Monitoreo y seguimiento en tiempo real de la flota de vehículos.',
     url: 'https://mia-reply-pdt-anne.trycloudflare.com/',
     gradient: 'linear-gradient(135deg, #4a1942 0%, #7c3aed 100%)',
-    emoji: '🤖',
+    emoji: '🚛',
   },
 ];
 

@@ -48,7 +48,7 @@ const PORTALES_HARDCODEADOS = {
   },
   'CIO': {
     titulo: 'Portal CIO — Tecnología e Innovación',
-    descripcion: 'Infraestructura, ciberseguridad, datos y herramientas de TI.',
+    descripcion: 'Centro Integral de Operaciones: gestión y monitoreo de los trabajos, flota, sistemas y procesos de la compañía.',
     componente: <PortalCIO />,
   },
 };
