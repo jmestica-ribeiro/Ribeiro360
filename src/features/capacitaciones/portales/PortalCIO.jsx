@@ -58,23 +58,23 @@ function PlatformCard({ label, desc, url, gradient, emoji, tag }) {
         onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
       >
         {/* Banner de color */}
-        <div style={{ background: gradient, height: '80px', position: 'relative', display: 'flex', alignItems: 'flex-end', padding: '0 20px 12px' }}>
-          <div style={{ fontSize: '36px', lineHeight: 1 }}>{emoji}</div>
+        <div style={{ background: gradient, height: '150px', position: 'relative', display: 'flex', alignItems: 'flex-end', padding: '0 28px 18px' }}>
+          <div style={{ fontSize: '64px', lineHeight: 1 }}>{emoji}</div>
           <span style={{
             position: 'absolute', top: '12px', right: '14px',
             background: 'rgba(255,255,255,0.2)', color: '#fff',
-            fontSize: '10px', fontWeight: '700', padding: '3px 10px',
+            fontSize: '12px', fontWeight: '700', padding: '4px 12px',
             borderRadius: '20px', letterSpacing: '0.5px',
           }}>{tag}</span>
         </div>
 
         {/* Body */}
-        <div style={{ padding: '16px 20px 18px' }}>
+        <div style={{ padding: '22px 28px 26px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-            <span style={{ fontWeight: '800', fontSize: '15px', color: 'var(--text-main)' }}>{label}</span>
+            <span style={{ fontWeight: '800', fontSize: '20px', color: 'var(--text-main)' }}>{label}</span>
             <ExternalLink size={14} color="var(--text-muted)" />
           </div>
-          <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.5' }}>{desc}</p>
+          <p style={{ margin: 0, fontSize: '15px', color: 'var(--text-muted)', lineHeight: '1.5' }}>{desc}</p>
         </div>
       </div>
     </a>
@@ -84,7 +84,7 @@ function PlatformCard({ label, desc, url, gradient, emoji, tag }) {
 const PortalCIO = () => (
   <div className="portal-cio">
     <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '24px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '24px' }}>
         {PLATAFORMAS.map((p, i) => (
           <PlatformCard key={i} {...p} />
         ))}
