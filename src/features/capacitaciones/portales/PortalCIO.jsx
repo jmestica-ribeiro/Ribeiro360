@@ -1,10 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { ExternalLink, Monitor, RefreshCw } from 'lucide-react';
+import React from 'react';
+import { ExternalLink } from 'lucide-react';
 import '../Explorar.css';
 
-// ----------------------------------------------------------------------
-// PLATAFORMAS
-// ----------------------------------------------------------------------
 const PLATAFORMAS = [
   {
     label: 'Maquinaria',
@@ -12,6 +9,7 @@ const PLATAFORMAS = [
     url: 'https://maquinaria.ribeiro.ar',
     gradient: 'linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%)',
     emoji: '🏗️',
+    tag: 'Gestión',
   },
   {
     label: 'Resultados',
@@ -19,6 +17,7 @@ const PLATAFORMAS = [
     url: 'https://resultados.ribeiro.ar',
     gradient: 'linear-gradient(135deg, #134e4a 0%, #0f766e 100%)',
     emoji: '📊',
+    tag: 'Reportes',
   },
   {
     label: 'Cantera App',
@@ -26,6 +25,7 @@ const PLATAFORMAS = [
     url: 'https://cantera-app-woad.vercel.app/',
     gradient: 'linear-gradient(135deg, #78350f 0%, #d97706 100%)',
     emoji: '⛏️',
+    tag: 'Operaciones',
   },
   {
     label: 'Seguimiento de Flota',
@@ -33,170 +33,58 @@ const PLATAFORMAS = [
     url: 'https://mia-reply-pdt-anne.trycloudflare.com/',
     gradient: 'linear-gradient(135deg, #4a1942 0%, #7c3aed 100%)',
     emoji: '🚛',
+    tag: 'Flota',
   },
 ];
 
-// ----------------------------------------------------------------------
-// PREVIEW CARD — iframe lazy + fallback si el sitio bloquea embedding
-// ----------------------------------------------------------------------
-function PlatformCard({ label, desc, url, gradient, emoji }) {
-  const iframeRef = useRef(null);
-  const containerRef = useRef(null);
-  const [visible, setVisible] = useState(false);
-  const [iframeError, setIframeError] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-
-  // Carga diferida por IntersectionObserver
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
-      { rootMargin: '300px' }
-    );
-    if (containerRef.current) observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  // Detectar si el iframe fue bloqueado (X-Frame-Options)
-  const handleIframeLoad = () => {
-    setLoaded(true);
-    try {
-      // Si se puede acceder al contentDocument, no fue bloqueado
-      // Si fue bloqueado, el navegador lo deja vacío pero no lanza error en onLoad
-      const doc = iframeRef.current?.contentDocument;
-      if (doc && doc.body && doc.body.innerHTML === '') {
-        setIframeError(true);
-      }
-    } catch {
-      setIframeError(true);
-    }
-  };
-
+function PlatformCard({ label, desc, url, gradient, emoji, tag }) {
   return (
-    <div style={{
-      background: 'var(--bg-secondary)',
-      border: '1px solid var(--border-color)',
-      borderRadius: '14px',
-      overflow: 'hidden',
-      boxShadow: 'var(--shadow-sm)',
-      display: 'flex',
-      flexDirection: 'column',
-    }}>
-      {/* Header */}
-      <div style={{ background: gradient, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '8px', padding: '5px 8px', fontSize: '16px' }}>
-            {emoji}
-          </div>
-          <div>
-            <div style={{ color: '#fff', fontWeight: '800', fontSize: '14px' }}>{label}</div>
-            <div style={{ color: 'rgba(255,255,255,0.65)', fontSize: '11px', marginTop: '1px' }}>{desc}</div>
-          </div>
-        </div>
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: '6px',
-            background: 'rgba(255,255,255,0.18)', color: '#fff',
-            padding: '7px 14px', borderRadius: '8px',
-            fontWeight: '700', fontSize: '12px', textDecoration: 'none',
-            whiteSpace: 'nowrap', flexShrink: 0,
-            transition: 'background 0.15s',
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
-        >
-          <ExternalLink size={13} /> Abrir
-        </a>
-      </div>
-
-      {/* Preview area */}
-      <div
-        ref={containerRef}
-        style={{ position: 'relative', height: '340px', background: '#f8faff', overflow: 'hidden' }}
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{ textDecoration: 'none', display: 'block' }}
+    >
+      <div style={{
+        background: 'var(--bg-secondary)',
+        border: '1px solid var(--border-color)',
+        borderRadius: '16px',
+        overflow: 'hidden',
+        boxShadow: 'var(--shadow-sm)',
+        cursor: 'pointer',
+        transition: 'transform 0.15s, box-shadow 0.15s',
+      }}
+        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
+        onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
       >
-        {!visible && (
-          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px', color: '#9ca3af' }}>
-            <Monitor size={28} />
-            <span style={{ fontSize: '12px' }}>Cargando vista previa…</span>
+        {/* Banner de color */}
+        <div style={{ background: gradient, height: '80px', position: 'relative', display: 'flex', alignItems: 'flex-end', padding: '0 20px 12px' }}>
+          <div style={{ fontSize: '36px', lineHeight: 1 }}>{emoji}</div>
+          <span style={{
+            position: 'absolute', top: '12px', right: '14px',
+            background: 'rgba(255,255,255,0.2)', color: '#fff',
+            fontSize: '10px', fontWeight: '700', padding: '3px 10px',
+            borderRadius: '20px', letterSpacing: '0.5px',
+          }}>{tag}</span>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '16px 20px 18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+            <span style={{ fontWeight: '800', fontSize: '15px', color: 'var(--text-main)' }}>{label}</span>
+            <ExternalLink size={14} color="var(--text-muted)" />
           </div>
-        )}
-
-        {visible && !iframeError && (
-          <>
-            {!loaded && (
-              <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px', color: '#9ca3af', zIndex: 1 }}>
-                <RefreshCw size={22} style={{ animation: 'spin 1s linear infinite' }} />
-                <span style={{ fontSize: '12px' }}>Conectando con {label}…</span>
-              </div>
-            )}
-            <iframe
-              ref={iframeRef}
-              src={url}
-              title={label}
-              onLoad={handleIframeLoad}
-              onError={() => setIframeError(true)}
-              style={{
-                width: '170%',
-                height: '170%',
-                border: 'none',
-                transformOrigin: 'top left',
-                transform: 'scale(0.588)',
-                opacity: loaded ? 1 : 0,
-                transition: 'opacity 0.3s',
-                pointerEvents: 'none',
-              }}
-              sandbox="allow-scripts allow-same-origin allow-forms"
-            />
-          </>
-        )}
-
-        {visible && iframeError && (
-          <FallbackPreview label={label} url={url} emoji={emoji} gradient={gradient} />
-        )}
+          <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.5' }}>{desc}</p>
+        </div>
       </div>
-    </div>
+    </a>
   );
 }
 
-// Fallback cuando el sitio bloquea el iframe
-function FallbackPreview({ label, url, emoji, gradient }) {
-  return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px' }}>
-      <div style={{ width: 60, height: 60, borderRadius: '16px', background: gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px' }}>
-        {emoji}
-      </div>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '4px' }}>{label}</div>
-        <div style={{ fontSize: '12px', color: 'var(--text-muted)', maxWidth: '200px' }}>
-          Este sitio no permite vista previa embebida.
-        </div>
-      </div>
-      <a
-        href={url}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={{
-          display: 'inline-flex', alignItems: 'center', gap: '8px',
-          background: 'var(--primary-color)', color: '#1a1a1a',
-          padding: '10px 20px', borderRadius: '10px',
-          fontWeight: '700', fontSize: '13px', textDecoration: 'none',
-        }}
-      >
-        <ExternalLink size={14} /> Abrir en nueva pestaña
-      </a>
-    </div>
-  );
-}
-
-// ----------------------------------------------------------------------
-// COMPONENTE PRINCIPAL
-// ----------------------------------------------------------------------
 const PortalCIO = () => (
   <div className="portal-cio">
-    <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '8px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(420px, 1fr))', gap: '24px', paddingTop: '24px' }}>
+    <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' }}>
         {PLATAFORMAS.map((p, i) => (
           <PlatformCard key={i} {...p} />
         ))}
