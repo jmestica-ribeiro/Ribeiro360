@@ -14,6 +14,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { notificarDocumentoSGI } from '../../lib/notificaciones';
 import './SGI.css';
 import './SGIDocument.css';
+import { Select } from '../../components/common';
 
 const getCatSlug = (nombre) =>
   nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-');
@@ -275,18 +276,15 @@ const SGIDocument = () => {
                       <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
                         Gerente aprobador
                       </label>
-                      <select
+                      <Select
+                        size="sm"
                         value={overrideAprobadorId || documento.aprobador_id || ''}
-                        onChange={e => setOverrideAprobadorId(e.target.value)}
-                        style={{ fontSize: 13, padding: '7px 10px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'var(--text-main)', width: '100%', maxWidth: 320 }}
-                      >
-                        <option value="">— Sin asignar —</option>
-                        {gerentes.map(g => (
-                          <option key={g.id} value={g.id}>
-                            {g.full_name}{g.department ? ` (${g.department})` : ''}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={setOverrideAprobadorId}
+                        placeholder="— Sin asignar —"
+                        clearable
+                        options={gerentes.map(g => ({ value: g.id, label: `${g.full_name}${g.department ? ` (${g.department})` : ''}` }))}
+                        aria-label="Aprobador"
+                      />
                     </div>
                     <div className="sgi-aprobacion-btn-row">
                       <button className="btn-sgi-aprobacion-primary" onClick={() => setActionMode('review')}>

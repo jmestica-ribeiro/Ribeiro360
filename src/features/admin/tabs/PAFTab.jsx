@@ -3,11 +3,13 @@ import { Plus, Save, Edit2, Trash2, Calendar } from 'lucide-react';
 import { CheckCircle, HelpCircle, X } from 'lucide-react';
 import { fetchPAF, createPafPlan, savePafItem, deletePafItem } from '../../../services/pafService';
 import { fetchCursos, fetchCursosCategorias } from '../../../services/cursosService';
-import { LoadingSpinner, useToast } from '../../../components/common';
+import { LoadingSpinner, useToast, Select } from '../../../components/common';
+import { useConfirm } from '../../../contexts/ConfirmContext';
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
 const PAFTab = () => {
+  const confirm = useConfirm();
   const { showToast } = useToast();
   const [planes, setPlanes] = useState([]);
   const [items, setItems] = useState([]);
@@ -69,7 +71,7 @@ const PAFTab = () => {
   };
 
   const handleDeleteItem = async (id) => {
-    if (!window.confirm('¿Eliminar esta capacitación del plan?')) return;
+    if (!(await confirm({ message: '¿Eliminar esta capacitación del plan?', destructive: true }))) return;
     await deletePafItem(id);
     await loadPAF();
   };
@@ -96,15 +98,15 @@ const PAFTab = () => {
         onChange={e => setEditingItem({ ...editingItem, titulo: e.target.value })}
         autoFocus={autoFocus}
       />
-      <select
-        className="form-control"
-        style={{ marginBottom: '8px', fontSize: '12px', width: '100%', boxSizing: 'border-box' }}
-        value={editingItem.categoria_id || ''}
-        onChange={e => setEditingItem({ ...editingItem, categoria_id: e.target.value || null })}
-      >
-        <option value="">Sin categoría</option>
-        {categories.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-      </select>
+      <div style={{ marginBottom: '8px' }}>
+        <Select
+          size="sm"
+          value={String(editingItem.categoria_id || '')}
+          onChange={v => setEditingItem({ ...editingItem, categoria_id: v || null })}
+          placeholder="Sin categoría"
+          options={[{ value: '', label: 'Sin categoría' }, ...categories.map(c => ({ value: String(c.id), label: c.nombre }))]}
+        />
+      </div>
       <input
         className="form-control"
         style={{ marginBottom: '10px', fontSize: '12px', width: '100%', boxSizing: 'border-box' }}

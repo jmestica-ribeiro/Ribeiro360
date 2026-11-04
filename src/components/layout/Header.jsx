@@ -16,6 +16,7 @@ const Header = ({ onToggleMenu }) => {
   const [qrOpen, setQrOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const menuRef = useRef(null);
+  const bellRef = useRef(null);
 
   const firstName = profile?.full_name?.split(' ')[0] || 'Usuario';
   const jobTitle = profile?.job_title || '';
@@ -60,17 +61,17 @@ const Header = ({ onToggleMenu }) => {
   return (
     <header className="header">
       <div className="header-left">
-        <button className="menu-trigger" onClick={onToggleMenu}>
+        <button className="menu-trigger" onClick={onToggleMenu} aria-label="Abrir menú">
           <Menu size={24} />
         </button>
       </div>
 
       <div className="header-right" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <button className="notification-btn" title="Cambiar tema" onClick={toggleTheme}>
+        <button className="notification-btn" title="Cambiar tema" aria-label="Cambiar tema" onClick={toggleTheme}>
           {isDarkMode ? <Sun size={20} className="text-muted" /> : <Moon size={20} className="text-muted" />}
         </button>
 
-        <button className="notification-btn" title="Generar QR de esta página" onClick={() => setQrOpen(true)}>
+        <button className="notification-btn" title="Generar QR de esta página" aria-label="Generar QR de esta página" onClick={() => setQrOpen(true)}>
           <QrCode size={20} className="text-muted" />
         </button>
 
@@ -81,7 +82,15 @@ const Header = ({ onToggleMenu }) => {
           />
         )}
 
-        <button className="notification-btn" onClick={handleBellClick} title="Notificaciones">
+        <button
+          ref={bellRef}
+          className="notification-btn"
+          onClick={handleBellClick}
+          title="Notificaciones"
+          aria-label={count > 0 ? `Notificaciones, ${count} sin leer` : 'Notificaciones'}
+          aria-haspopup="dialog"
+          aria-expanded={notifOpen}
+        >
           <Bell size={22} className="text-muted" />
           {count > 0 && (
             <span className="badge">{count > 9 ? '9+' : count}</span>
@@ -92,6 +101,8 @@ const Header = ({ onToggleMenu }) => {
           <NotificacionesModal
             notificaciones={notificaciones}
             isLoading={isLoading}
+            onMarkAllRead={markAsRead}
+            anchorRef={bellRef}
             onClose={handleCloseNotif}
           />
         )}

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useConfirm } from '../../contexts/ConfirmContext';
 import {
   fetchSgiCategoriasActivas,
   fetchSgiDocsCounts,
@@ -21,6 +22,7 @@ import {
   fetchGerentes,
 } from '../../services/sgiService';
 import './SGI.css';
+import { Select } from '../../components/common';
 
 const ICON_MAP = { FileText, BookOpen, ClipboardList, Folder, ShieldCheck };
 
@@ -41,6 +43,7 @@ const SGI = () => {
   const { categoria: categoriaSlug } = useParams();
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const confirm = useConfirm();
   const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
   const canUploadSgi = isAdmin || profile?.can_upload_sgi === true;
 
@@ -219,7 +222,7 @@ const SGI = () => {
   };
 
   const handleDeleteDoc = async (docId) => {
-    if (!window.confirm('¿Eliminar este documento y todas sus versiones?')) return;
+    if (!(await confirm({ message: '¿Eliminar este documento y todas sus versiones?', destructive: true }))) return;
     await softDeleteSgiDocumento(docId);
     fetchDocuments(); fetchCategories();
   };
@@ -568,10 +571,7 @@ const SGI = () => {
                     </div>
                     <div className="sgi-form-group">
                       <label>Tipo de documento</label>
-                      <select value={docForm.tipo_documento} onChange={e => setDocForm(f => ({ ...f, tipo_documento: e.target.value }))}>
-                        <option>Procedimiento</option><option>Manual</option><option>Instructivo</option>
-                        <option>Registro</option><option>Formato</option><option>Programa</option><option>Estándar</option><option>Otro</option>
-                      </select>
+                      <Select value={docForm.tipo_documento} onChange={v => setDocForm(f => ({ ...f, tipo_documento: v }))} options={['Procedimiento', 'Manual', 'Instructivo', 'Registro', 'Formato', 'Programa', 'Estándar', 'Otro']} aria-label="Tipo de documento" />
                     </div>
                     <div className="sgi-form-group">
                       <label>Etiquetas</label>
@@ -649,34 +649,25 @@ const SGI = () => {
                   <div className="sgi-form-two-col">
                     <div className="sgi-form-group">
                       <label>Acceso</label>
-                      <select value={docForm.acceso} onChange={e => setDocForm(f => ({ ...f, acceso: e.target.value }))}>
-                        <option>No Confidencial</option><option>Confidencial</option><option>Restringido</option>
-                      </select>
+                      <Select value={docForm.acceso} onChange={v => setDocForm(f => ({ ...f, acceso: v }))} options={['No Confidencial', 'Confidencial', 'Restringido']} aria-label="Acceso" />
                     </div>
                     <div className="sgi-form-group">
                       <label>Documento Controlado</label>
-                      <select value={docForm.documento_controlado ? 'si' : 'no'} onChange={e => setDocForm(f => ({ ...f, documento_controlado: e.target.value === 'si' }))}>
-                        <option value="no">No requiere aprobación</option>
-                        <option value="si">Sí, requiere aprobación</option>
-                      </select>
+                      <Select value={docForm.documento_controlado ? 'si' : 'no'} onChange={v => setDocForm(f => ({ ...f, documento_controlado: v === 'si' }))} options={[{ value: 'no', label: 'No requiere aprobación' }, { value: 'si', label: 'Sí, requiere aprobación' }]} aria-label="Documento controlado" />
                     </div>
                   </div>
                   {docForm.documento_controlado && (
                     <>
                       <div className="sgi-form-group" style={{ marginTop: 12 }}>
                         <label>Gerente aprobador <span style={{ color: '#E71D36' }}>*</span></label>
-                        <select
+                        <Select
                           value={docForm.aprobador_id}
-                          onChange={e => setDocForm(f => ({ ...f, aprobador_id: e.target.value }))}
-                          style={{ borderColor: !docForm.aprobador_id ? '#E71D36' : undefined }}
-                        >
-                          <option value="">— Seleccionar gerente —</option>
-                          {gerentes.map(g => (
-                            <option key={g.id} value={g.id}>
-                              {g.full_name}{g.department ? ` (${g.department})` : ''}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={v => setDocForm(f => ({ ...f, aprobador_id: v }))}
+                          error={!docForm.aprobador_id}
+                          placeholder="— Seleccionar gerente —"
+                          options={gerentes.map(g => ({ value: g.id, label: `${g.full_name}${g.department ? ` (${g.department})` : ''}` }))}
+                          aria-label="Gerente aprobador"
+                        />
                         {!docForm.aprobador_id && (
                           <span style={{ fontSize: 11, color: '#E71D36', marginTop: 4, display: 'block' }}>
                             Requerido para documentos controlados

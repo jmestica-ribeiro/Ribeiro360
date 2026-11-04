@@ -336,7 +336,7 @@
   align-items: center;
   gap: 10px;
   background: #1a1a1a;
-  color: #F2DC00;
+  color: var(--primary-color);
   border: none;
   padding: 14px 28px;
   border-radius: 12px;

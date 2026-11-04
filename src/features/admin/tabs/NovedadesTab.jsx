@@ -11,10 +11,12 @@ import {
 } from '../../../services/novedadesService';
 import { useToast } from '../../../components/common';
 import { notificarNuevaPublicacion } from '../../../lib/notificaciones';
+import { useConfirm } from '../../../contexts/ConfirmContext';
 
 const EMPTY_FORM = { titulo: '', link_url: '', activo: true, fecha_hasta: '' };
 
 const NovedadesTab = () => {
+  const confirm = useConfirm();
   const { showToast } = useToast();
   const [novedades, setNovedades] = useState([]);
   const [loaded, setLoaded] = useState(false);
@@ -67,7 +69,7 @@ const NovedadesTab = () => {
   };
 
   const handleDelete = async (nov) => {
-    if (!window.confirm('¿Eliminar esta novedad?')) return;
+    if (!(await confirm({ message: '¿Eliminar esta novedad?', destructive: true }))) return;
     await deleteNovedad(nov.id, nov.imagen_url);
     await loadNovedades();
   };

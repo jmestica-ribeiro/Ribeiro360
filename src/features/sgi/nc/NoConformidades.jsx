@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardList, Plus, AlertCircle } from 'lucide-react';
+import { Select } from '../../../components/common';
 import { fetchNcHallazgosAbiertos, fetchNcGerencias, fetchNcHallazgos } from '../../../services/sgiService';
 import './NoConformidades.css';
 
@@ -175,14 +176,7 @@ export default function NoConformidades() {
 
           {/* Gerencia */}
           <div className="nc-select-wrap">
-            <select
-              className="nc-filter-select"
-              value={gerenciaFilter}
-              onChange={e => setGerenciaFilter(e.target.value)}
-            >
-              <option value="">Todas las gerencias</option>
-              {gerencias.map(g => <option key={g} value={g}>{g}</option>)}
-            </select>
+            <Select size="sm" value={gerenciaFilter} onChange={setGerenciaFilter} options={[{ value: '', label: 'Todas las gerencias' }, ...gerencias]} aria-label="Gerencia" />
             {gerenciaFilter && (
               <button className="nc-filter-clear" onClick={() => setGerenciaFilter('')} title="Limpiar gerencia">✕</button>
             )}

@@ -37,7 +37,7 @@
 }
 
 .rte-btn.active {
-  background: var(--primary-color, #F2DC00);
+  background: var(--primary-color, var(--primary-color));
   color: #111827;
 }
 

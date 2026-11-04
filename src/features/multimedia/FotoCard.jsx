@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Download, Trash2, Tag } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useConfirm } from '../../contexts/ConfirmContext';
 import { toggleLike, getFotoSignedUrl } from '../../services/multimediaService';
 
 const FotoCard = ({ foto, onDelete, onClick }) => {
   const { session, profile } = useAuth();
+  const confirm = useConfirm();
   const userId = session?.user?.id;
   const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
 
@@ -42,9 +44,9 @@ const FotoCard = ({ foto, onDelete, onClick }) => {
     setDownloading(false);
   };
 
-  const handleDelete = (e) => {
+  const handleDelete = async (e) => {
     e.stopPropagation();
-    if (window.confirm(`¿Eliminar "${foto.titulo}"?`)) onDelete(foto.id, foto.imagen_url);
+    if (await confirm({ message: `¿Eliminar "${foto.titulo}"?`, destructive: true })) onDelete(foto.id, foto.imagen_url);
   };
 
   const etiquetas = foto.etiquetas?.map(e => e.etiqueta).filter(Boolean) ?? [];

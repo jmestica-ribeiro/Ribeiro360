@@ -3,12 +3,14 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import PageTransition from './components/layout/PageTransition';
 import { useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { ConfirmProvider } from './contexts/ConfirmContext';
 import { PageLoader } from './components/common';
 import './App.css';
 
 // Siempre cargados — parte del shell principal
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
+import MobileTabBar from './components/layout/MobileTabBar';
 
 // Lazy — se cargan solo cuando el usuario navega a esa ruta
 const Dashboard       = lazy(() => import('./features/dashboard/Dashboard'));
@@ -107,9 +109,9 @@ function AnimatedRoutes() {
 }
 
 function AppLayout() {
-  const isMobile = window.innerWidth < 768;
+  const isCompact = window.innerWidth <= 1024;
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(isMobile);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(isCompact);
 
   return (
     <div className={`layout ${isSidebarOpen ? 'sidebar-open' : ''} ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
@@ -127,6 +129,7 @@ function AppLayout() {
           </Suspense>
         </main>
       </div>
+      <MobileTabBar onOpenMenu={() => setIsSidebarOpen(true)} />
       {isSidebarOpen && <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)}></div>}
     </div>
   );
@@ -135,6 +138,7 @@ function AppLayout() {
 function App() {
   return (
     <ToastProvider>
+      <ConfirmProvider>
       <Routes>
         <Route path="/login" element={<LoginRoute />} />
         <Route path="/*" element={
@@ -143,6 +147,7 @@ function App() {
           </ProtectedRoute>
         } />
       </Routes>
+      </ConfirmProvider>
     </ToastProvider>
   );
 }

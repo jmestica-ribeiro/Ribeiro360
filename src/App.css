@@ -1,6 +1,7 @@
 .layout {
   display: flex;
   min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
   background-color: var(--bg-color);
   position: relative;
@@ -12,8 +13,10 @@
   flex-direction: column;
   margin-left: 280px;
   min-width: 0;
+  overflow-x: clip;
   max-width: calc(100% - 280px);
   min-height: 100vh;
+  min-height: 100dvh;
   transition: margin-left var(--transition), max-width var(--transition);
   position: relative;
   background-color: var(--bg-color);
@@ -45,6 +48,10 @@
     max-width: 100%;
   }
   
+  .main-content {
+    padding-bottom: calc(64px + var(--safe-bottom));
+  }
+
   .dashboard-container {
     padding: 16px;
   }
@@ -61,6 +68,7 @@
 
 .app-loading {
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;

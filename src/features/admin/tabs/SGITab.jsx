@@ -15,11 +15,14 @@ import {
 } from '../../../services/sgiService';
 import { EmptyState, useToast } from '../../../components/common';
 import { fetchSgiUploaders, updateCanUploadSgi } from '../../../services/usuariosService';
+import { useConfirm } from '../../../contexts/ConfirmContext';
+import { Select } from '../../../components/common';
 
 const EMPTY_CAT = { nombre: '', icono: 'Folder', color: '#6366f1', descripcion: '', orden: 0, activo: true, parent_id: null, nivel_piramide: '' };
 const EMPTY_DOC = { titulo: '', codigo: '', descripcion: '', categoria_id: null, tipo_documento: 'Otro', acceso: 'No Confidencial', lugar_ubicacion: '', periodo_retencion: '', etiquetas: '', documento_controlado: false, activo: true, _ver_id: null, numero_version: '0', fecha_emision: new Date().toISOString().split('T')[0], notas_cambios: '' };
 
 const SGITab = () => {
+  const confirm = useConfirm();
   const { showToast } = useToast();
   const [categorias, setCategorias] = useState([]);
   const [documentos, setDocumentos] = useState([]);
@@ -85,7 +88,7 @@ const SGITab = () => {
   };
 
   const handleDeleteCat = async (id) => {
-    if (!window.confirm('¿Eliminar esta categoría y todos sus documentos?')) return;
+    if (!(await confirm({ message: '¿Eliminar esta categoría y todos sus documentos?', destructive: true }))) return;
     await deleteSgiCategoria(id);
     await loadSGI();
   };
@@ -122,7 +125,7 @@ const SGITab = () => {
   };
 
   const handleDeleteDoc = async (id) => {
-    if (!window.confirm('¿Eliminar este documento y todas sus versiones?')) return;
+    if (!(await confirm({ message: '¿Eliminar este documento y todas sus versiones?', destructive: true }))) return;
     await softDeleteSgiDocumento(id);
     await loadSGI();
   };
@@ -159,7 +162,7 @@ const SGITab = () => {
   };
 
   const handleDeleteVer = async (id, documentoId) => {
-    if (!window.confirm('¿Eliminar esta versión?')) return;
+    if (!(await confirm({ message: '¿Eliminar esta versión?', destructive: true }))) return;
     await deleteSgiVersion(id);
     await Promise.all([loadSGI(), refreshVersionesDoc(documentoId)]);
   };
@@ -277,10 +280,8 @@ const SGITab = () => {
           </div>
           <div className="form-group">
             <label>Carpeta Padre</label>
-            <select className="form-control" value={editingCat.parent_id || ''} onChange={e => setEditingCat(d => ({ ...d, parent_id: e.target.value || null }))}>
-              <option value="">(Ninguna - Carpeta Principal)</option>
-              {categorias.filter(c => c.id !== editingCat.id).map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-            </select>
+            <Select value={String(editingCat.parent_id || '')} onChange={v => setEditingCat(d => ({ ...d, parent_id: v || null }))} placeholder="(Ninguna - Carpeta Principal)"
+              options={[{ value: '', label: '(Ninguna - Carpeta Principal)' }, ...categorias.filter(c => c.id !== editingCat.id).map(c => ({ value: String(c.id), label: c.nombre }))]} />
           </div>
         </div>
         <div className="form-row">
@@ -336,28 +337,24 @@ const SGITab = () => {
             <div className="form-group"><label>Título *</label><input className="form-control" value={editingDoc.titulo} onChange={e => setEditingDoc(d => ({ ...d, titulo: e.target.value }))} placeholder="Título del documento" /></div>
             <div className="form-group">
               <label>Revisión</label>
-              <select className="form-control" value={editingDoc.numero_version || '0'} onChange={e => setEditingDoc(d => ({ ...d, numero_version: e.target.value }))}>
-                {Array.from({ length: 11 }, (_, i) => <option key={i} value={String(i)}>{i}</option>)}
-              </select>
+              <Select value={String(editingDoc.numero_version || '0')} onChange={v => setEditingDoc(d => ({ ...d, numero_version: v }))}
+                options={Array.from({ length: 11 }, (_, i) => ({ value: String(i), label: String(i) }))} />
             </div>
             <div className="form-group"><label>Fecha</label><input type="date" className="form-control" value={editingDoc.fecha_emision || ''} onChange={e => setEditingDoc(d => ({ ...d, fecha_emision: e.target.value }))} /></div>
             <div className="form-group">
               <label>Tipo de documento</label>
-              <select className="form-control" value={editingDoc.tipo_documento || 'Otro'} onChange={e => setEditingDoc(d => ({ ...d, tipo_documento: e.target.value }))}>
-                <option>Procedimiento</option><option>Manual</option><option>Instructivo</option><option>Registro</option><option>Formato</option><option>Otro</option>
-              </select>
+              <Select value={editingDoc.tipo_documento || 'Otro'} onChange={v => setEditingDoc(d => ({ ...d, tipo_documento: v }))}
+                options={['Procedimiento', 'Manual', 'Instructivo', 'Registro', 'Formato', 'Otro']} />
             </div>
             <div className="form-group">
               <label>Acceso</label>
-              <select className="form-control" value={editingDoc.acceso || 'No Confidencial'} onChange={e => setEditingDoc(d => ({ ...d, acceso: e.target.value }))}>
-                <option>No Confidencial</option><option>Confidencial</option><option>Restringido</option>
-              </select>
+              <Select value={editingDoc.acceso || 'No Confidencial'} onChange={v => setEditingDoc(d => ({ ...d, acceso: v }))}
+                options={['No Confidencial', 'Confidencial', 'Restringido']} />
             </div>
             <div className="form-group">
               <label>Documento Controlado</label>
-              <select className="form-control" value={editingDoc.documento_controlado ? 'si' : 'no'} onChange={e => setEditingDoc(d => ({ ...d, documento_controlado: e.target.value === 'si' }))}>
-                <option value="no">No requiere aprobación</option><option value="si">Sí, requiere aprobación</option>
-              </select>
+              <Select value={editingDoc.documento_controlado ? 'si' : 'no'} onChange={v => setEditingDoc(d => ({ ...d, documento_controlado: v === 'si' }))}
+                options={[{ value: 'no', label: 'No requiere aprobación' }, { value: 'si', label: 'Sí, requiere aprobación' }]} />
             </div>
           </div>
           <div>

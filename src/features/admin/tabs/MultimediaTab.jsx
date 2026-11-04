@@ -10,8 +10,10 @@ import {
 import { EmptyState, useToast } from '../../../components/common';
 import { useAuth } from '../../../contexts/AuthContext';
 import SubirFoto from '../../multimedia/SubirFoto';
+import { useConfirm } from '../../../contexts/ConfirmContext';
 
 const MultimediaTab = () => {
+  const confirm = useConfirm();
   const { session } = useAuth();
   const { showToast } = useToast();
   const [fotos, setFotos] = useState([]);
@@ -32,7 +34,7 @@ const MultimediaTab = () => {
   };
 
   const handleDeleteFoto = async (id, imagenUrl) => {
-    if (!window.confirm('¿Eliminar esta foto? La acción no se puede deshacer.')) return;
+    if (!(await confirm({ message: '¿Eliminar esta foto? La acción no se puede deshacer.', destructive: true }))) return;
     const { error } = await deleteFoto(id, imagenUrl);
     if (error) return showToast('Error al eliminar la foto', 'error');
     setFotos(prev => prev.filter(f => f.id !== id));
@@ -50,7 +52,7 @@ const MultimediaTab = () => {
   };
 
   const handleDeleteEtiqueta = async (id) => {
-    if (!window.confirm('¿Eliminar esta etiqueta? Se quitará de todas las fotos.')) return;
+    if (!(await confirm({ message: '¿Eliminar esta etiqueta? Se quitará de todas las fotos.', destructive: true }))) return;
     const { error } = await deleteEtiqueta(id);
     if (error) return showToast('Error al eliminar la etiqueta', 'error');
     setEtiquetas(prev => prev.filter(e => e.id !== id));

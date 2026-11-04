@@ -1,83 +1,188 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { CheckCircle, AlertCircle, AlertTriangle, X } from 'lucide-react';
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { CheckCircle, AlertCircle, AlertTriangle, Info, Loader2, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import './Toast.css';
 
 const ToastContext = createContext(null);
 
 const ICONS = {
-  success: <CheckCircle size={18} />,
-  error:   <AlertCircle size={18} />,
-  warning: <AlertTriangle size={18} />,
+  success: CheckCircle,
+  error: AlertCircle,
+  warning: AlertTriangle,
+  info: Info,
+  loading: Loader2,
 };
 
-const COLORS = {
-  success: { bg: '#f0fdf4', border: '#bbf7d0', icon: '#16a34a', text: '#15803d' },
-  error:   { bg: '#fef2f2', border: '#fecaca', icon: '#dc2626', text: '#b91c1c' },
-  warning: { bg: '#fffbeb', border: '#fde68a', icon: '#d97706', text: '#b45309' },
-};
+const DURATIONS = { success: 4000, info: 4000, warning: 6000, error: 7000, loading: Infinity };
+const MAX_VISIBLE = 3;
+let seq = 0;
 
-const DURATION = 4000;
+function ToastItem({ toast, index, expanded, onDismiss, onPause, onResume }) {
+  const Icon = ICONS[toast.type] || Info;
+  const depth = index; // 0 = más nuevo (frente)
+  return (
+    <motion.li
+      layout
+      className={`toast toast-${toast.type}`}
+      role={toast.type === 'error' ? 'alert' : 'status'}
+      initial={{ opacity: 0, y: 24, scale: 0.96 }}
+      animate={{
+        opacity: expanded || depth === 0 ? 1 : Math.max(0.5, 1 - depth * 0.25),
+        y: 0,
+        scale: expanded ? 1 : 1 - depth * 0.04,
+      }}
+      exit={{ opacity: 0, scale: 0.94, transition: { duration: 0.15 } }}
+      transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+      drag="x"
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.6}
+      onDragEnd={(_, info) => {
+        if (Math.abs(info.offset.x) > 90 || Math.abs(info.velocity.x) > 500) onDismiss(toast.id);
+      }}
+      onPointerDown={onPause}
+      onPointerUp={onResume}
+      style={{ zIndex: 100 - depth }}
+    >
+      <span className="toast-icon">
+        <Icon size={18} className={toast.type === 'loading' ? 'toast-spin' : undefined} />
+      </span>
+      <div className="toast-body">
+        {toast.title && <p className="toast-title">{toast.title}</p>}
+        {toast.description && <p className="toast-desc">{toast.description}</p>}
+        {toast.action && (
+          <button
+            type="button"
+            className="toast-action"
+            onClick={() => { toast.action.onClick?.(); onDismiss(toast.id); }}
+          >
+            {toast.action.label}
+          </button>
+        )}
+      </div>
+      <button type="button" className="toast-close" aria-label="Cerrar notificación" onClick={() => onDismiss(toast.id)}>
+        <X size={14} />
+      </button>
+    </motion.li>
+  );
+}
 
-export const ToastProvider = ({ children }) => {
+export const ToastProvider = ({ children, position = 'auto' }) => {
   const [toasts, setToasts] = useState([]);
+  const [expanded, setExpanded] = useState(false);
+  const timers = useRef(new Map()); // id -> { timeout, remaining, startedAt }
+
+  const clear = (id) => {
+    const t = timers.current.get(id);
+    if (t) clearTimeout(t.timeout);
+    timers.current.delete(id);
+  };
 
   const dismiss = useCallback((id) => {
+    clear(id);
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  const showToast = useCallback((message, type = 'error') => {
-    const id = Date.now();
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => dismiss(id), DURATION);
+  const schedule = useCallback((id, ms) => {
+    if (!Number.isFinite(ms)) return;
+    clear(id);
+    timers.current.set(id, { timeout: setTimeout(() => dismiss(id), ms), remaining: ms, startedAt: Date.now() });
   }, [dismiss]);
 
+  const pauseAll = useCallback(() => {
+    timers.current.forEach((t, id) => {
+      clearTimeout(t.timeout);
+      t.remaining -= Date.now() - t.startedAt;
+      timers.current.set(id, t);
+    });
+  }, []);
+
+  const resumeAll = useCallback(() => {
+    timers.current.forEach((t, id) => {
+      if (t.remaining > 0) schedule(id, t.remaining);
+    });
+  }, [schedule]);
+
+  // Pausar cuando la pestaña no está visible
+  useEffect(() => {
+    const onVis = () => (document.hidden ? pauseAll() : resumeAll());
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [pauseAll, resumeAll]);
+
+  useEffect(() => () => timers.current.forEach(t => clearTimeout(t.timeout)), []);
+
+  const push = useCallback((type, input, opts = {}) => {
+    const base = typeof input === 'string' ? { title: input } : (input || {});
+    const id = opts.id ?? `t${++seq}`;
+    const duration = opts.duration ?? base.duration ?? (base.action ? Math.max(DURATIONS[type], 8000) : DURATIONS[type]);
+    const next = { ...base, ...opts, id, type };
+    setToasts(prev => {
+      const exists = prev.some(t => t.id === id);
+      return exists ? prev.map(t => (t.id === id ? next : t)) : [next, ...prev];
+    });
+    schedule(id, duration);
+    return id;
+  }, [schedule]);
+
+  const toast = useMemo(() => {
+    const api = {
+      success: (m, o) => push('success', m, o),
+      error: (m, o) => push('error', m, o),
+      warning: (m, o) => push('warning', m, o),
+      info: (m, o) => push('info', m, o),
+      loading: (m, o) => push('loading', m, o),
+      dismiss,
+      promise: (promise, { loading, success, error }) => {
+        const id = push('loading', loading);
+        const resolve = (v, tpl, type) => {
+          const content = typeof tpl === 'function' ? tpl(v) : tpl;
+          push(type, content, { id });
+        };
+        promise.then(v => resolve(v, success, 'success'), e => resolve(e, error, 'error'));
+        return promise;
+      },
+    };
+    return api;
+  }, [push, dismiss]);
+
+  // Compatibilidad con la API previa: showToast(mensaje, tipo)
+  const showToast = useCallback((message, type = 'error') => push(type, message), [push]);
+
+  const value = useMemo(() => ({ toast, showToast }), [toast, showToast]);
+  const visible = toasts.slice(0, MAX_VISIBLE);
+
   return (
-    <ToastContext.Provider value={{ showToast }}>
+    <ToastContext.Provider value={value}>
       {children}
-      <div style={{
-        position: 'fixed',
-        bottom: '24px',
-        right: '24px',
-        zIndex: 9999,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '10px',
-        pointerEvents: 'none',
-      }}>
-        {toasts.map(toast => {
-          const c = COLORS[toast.type] || COLORS.error;
-          return (
-            <div key={toast.id} style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '10px',
-              background: c.bg,
-              border: `1px solid ${c.border}`,
-              borderRadius: '12px',
-              padding: '12px 16px',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
-              minWidth: '280px',
-              maxWidth: '380px',
-              pointerEvents: 'all',
-              animation: 'toast-in 0.2s ease',
-            }}>
-              <span style={{ color: c.icon, flexShrink: 0, marginTop: '1px' }}>
-                {ICONS[toast.type]}
-              </span>
-              <p style={{ flex: 1, fontSize: '14px', fontWeight: '500', color: c.text, margin: 0, lineHeight: '1.4' }}>
-                {toast.message}
-              </p>
-              <button
-                onClick={() => dismiss(toast.id)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: c.icon, padding: 0, flexShrink: 0, opacity: 0.7, display: 'flex' }}
-              >
-                <X size={15} />
-              </button>
-            </div>
-          );
-        })}
+      <div
+        className={`toast-region toast-pos-${position}`}
+        onMouseEnter={() => { setExpanded(true); pauseAll(); }}
+        onMouseLeave={() => { setExpanded(false); resumeAll(); }}
+        onFocus={pauseAll}
+        onBlur={resumeAll}
+      >
+        <ul className={`toast-stack${expanded ? ' expanded' : ''}`} aria-live="polite" aria-relevant="additions">
+          <AnimatePresence initial={false} mode="popLayout">
+            {visible.map((t, i) => (
+              <ToastItem
+                key={t.id}
+                toast={t}
+                index={i}
+                expanded={expanded}
+                onDismiss={dismiss}
+                onPause={pauseAll}
+                onResume={resumeAll}
+              />
+            ))}
+          </AnimatePresence>
+        </ul>
       </div>
     </ToastContext.Provider>
   );
 };
 
-export const useToast = () => useContext(ToastContext);
+export const useToast = () => {
+  const ctx = useContext(ToastContext);
+  if (!ctx) throw new Error('useToast debe usarse dentro de <ToastProvider>');
+  return ctx;
+};

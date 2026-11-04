@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Calendar, X } from 'lucide-react';
 import { fetchEventosByDateRange, fetchEventosCategorias, fetchEventosVisibilidad } from '../../services/eventosService';
+import { Select } from '../../components/common';
 import { useAuth } from '../../contexts/AuthContext';
 import './Eventos.css';
 
@@ -152,29 +153,22 @@ export default function Eventos() {
 
         {/* Dropdown for Mobile */}
         <div className="eventos-category-dropdown">
-           <div className="custom-select-wrapper">
-              <select 
-                value={activeCategoria} 
-                onChange={(e) => setActiveCategoria(e.target.value)}
-              >
-                <option value="todas">Todas las categorías</option>
-                {categorias.map(cat => {
-                   const count = eventos.filter((e) => {
+           <Select
+              aria-label="Categoría"
+              value={activeCategoria}
+              onChange={setActiveCategoria}
+              options={[
+                { value: 'todas', label: 'Todas las categorías' },
+                ...categorias.map(cat => {
+                  const count = eventos.filter((e) => {
                     if (e.categoria_id !== cat.id) return false;
                     const d = new Date(e.fecha + 'T00:00:00');
                     return d.getFullYear() === year && d.getMonth() === month;
                   }).length;
-                  return (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.nombre} {count > 0 ? `(${count})` : ''}
-                    </option>
-                  );
-                })}
-              </select>
-              <div className="custom-select-icon">
-                <ChevronRight size={18} style={{ transform: 'rotate(90deg)' }} />
-              </div>
-           </div>
+                  return { value: cat.id, label: `${cat.nombre} ${count > 0 ? `(${count})` : ''}`.trim() };
+                }),
+              ]}
+           />
         </div>
       </div>
 

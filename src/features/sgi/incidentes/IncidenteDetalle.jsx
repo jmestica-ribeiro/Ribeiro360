@@ -5,8 +5,10 @@ import { ArrowLeft, Check, Clock, ChevronRight, Loader2, Search, User, Upload, X
 import IncidenteInformePDF from './IncidenteInformePDF';
 import SistemicoPicker from './SistemicoPicker';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useConfirm } from '../../../contexts/ConfirmContext';
+import { useToast } from '../../../contexts/ToastContext';
 import { notificarAccionIncidente } from '../../../lib/notificaciones';
-import { AccessDeniedModal } from '../../../components/common';
+import { AccessDeniedModal, Select } from '../../../components/common';
 import {
   fetchIncidentesProfiles, fetchCentrosDeCostos,
   countIncidentesByYear, fetchIncidente, insertIncidenteConNumeroUnico, updateIncidente,
@@ -210,6 +212,7 @@ function PersonPickerModal({ profiles, onSelect, onClose, title, multi = false, 
 
 /* ── Main Component ─────────────────────────────────────────────────────────── */
 export default function IncidenteDetalle() {
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -723,7 +726,7 @@ export default function IncidenteDetalle() {
                     {a.tipo !== 'rectificativa' && (isAdmin || user?.id === form.emisor_id || user?.id === step2.responsable_analisis_id) && (
                       <button className="ncd-accion-delete" title="Eliminar acción" onClick={async e => {
                         e.stopPropagation();
-                        if (!window.confirm(`¿Eliminar ${a.codigo}? Esta operación no se puede deshacer.`)) return;
+                        if (!(await confirm({ message: `¿Eliminar ${a.codigo}? Esta operación no se puede deshacer.`, destructive: true }))) return;
                         const { error } = await deleteAccion(a.id);
                         if (error) { showToast('Error al eliminar la acción', 'error'); return; }
                         loadAcciones();
@@ -995,7 +998,7 @@ export default function IncidenteDetalle() {
                   {incEstado === 'cerrado' ? (
                     <button className="ncd-btn-secondary"
                       onClick={async () => {
-                        if (!window.confirm('¿Reabrir este incidente?')) return;
+                        if (!(await confirm({ message: '¿Reabrir este incidente?', destructive: false }))) return;
                         await updateIncidente(id, { estado: 'abierto' });
                         setIncEstado('abierto');
                         showToast('Incidente reabierto', 'success');
@@ -1005,7 +1008,7 @@ export default function IncidenteDetalle() {
                   ) : (
                     <button className="ncd-btn-primary" style={{ background: '#16a34a', padding: '10px 24px', fontSize: 14, gap: 8 }}
                       onClick={async () => {
-                        if (!window.confirm('¿Cerrar definitivamente este incidente? Esta acción no se puede deshacer.')) return;
+                        if (!(await confirm({ message: '¿Cerrar definitivamente este incidente? Esta acción no se puede deshacer.', destructive: true }))) return;
                         await updateIncidente(id, { estado: 'cerrado', paso_actual: 6 });
                         setIncEstado('cerrado');
                         showToast('Incidente cerrado correctamente', 'success');
@@ -1124,7 +1127,7 @@ export default function IncidenteDetalle() {
         {!isNew && incEstado === 'cerrado' && isAdmin && (
           <button className="incd-pdf-btn" style={{ background: '#fef3c7', color: '#92400e', borderColor: '#fcd34d' }}
             onClick={async () => {
-              if (!window.confirm('¿Reabrir este incidente?')) return;
+              if (!(await confirm({ message: '¿Reabrir este incidente?', destructive: false }))) return;
               await updateIncidente(id, { estado: 'abierto' });
               setIncEstado('abierto');
               showToast('Incidente reabierto', 'success');
@@ -1183,7 +1186,7 @@ export default function IncidenteDetalle() {
                 onSave={() => handleSavePaso2(false)}
                 onSaveAndAdvance={() => handleSavePaso2(true)}
                 onCerrar={async () => {
-                  if (!window.confirm('¿Cerrar este incidente sin continuar la investigación? Esta acción no se puede deshacer.')) return;
+                  if (!(await confirm({ message: '¿Cerrar este incidente sin continuar la investigación? Esta acción no se puede deshacer.', destructive: true }))) return;
                   setSaving(true);
                   try {
                     const { error } = await updateIncidente(id, { estado: 'cerrado', paso_actual: 6, sin_investigacion: true });
@@ -1258,6 +1261,8 @@ function IncStep6Hitos({ accionId }) {
 
 /* ── IncAccionModal ───────────────────────────────────────────────────────────── */
 function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, accionPicker, setAccionPicker, onClose, onSaved, onHitoSaved, incidenteId, incidenteNumero, isAdmin, currentUserId }) {
+  const confirm = useConfirm();
+  const { toast: appToast } = useToast();
   const [saving, setSaving]           = useState(false);
   const [hitos, setHitos]             = useState([]);
   const [hitosLoading, setHitosLoading] = useState(false);
@@ -1353,10 +1358,10 @@ function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, ac
 
   const handleDeleteHito = async (hitoId) => {
     const canDelete = isAdmin || currentUserId === editingAccion?.responsable_id;
-    if (!canDelete) { alert('No tenés permisos para eliminar este hito.'); return; }
-    if (!window.confirm('¿Eliminar este hito? Esta operación no se puede deshacer.')) return;
+    if (!canDelete) { appToast.warning('No tenés permisos para eliminar este hito.'); return; }
+    if (!(await confirm({ message: '¿Eliminar este hito? Esta operación no se puede deshacer.', destructive: true }))) return;
     const { error } = await deleteHito(hitoId);
-    if (error) { alert('Error al eliminar el hito.'); return; }
+    if (error) { appToast.error('Error al eliminar el hito.'); return; }
     const { data } = await fetchHitos(editingAccion.id);
     setHitos(data || []);
     onHitoSaved?.();
@@ -1634,17 +1639,11 @@ function Step1({ form, setForm, profiles, clientes, gerencias, sitios, pendingFo
         <div className="incd-form-row">
           <div className="incd-form-group">
             <label className="incd-form-label">Gerencia</label>
-            <select className="incd-form-input" value={form.gerencia} onChange={e => set('gerencia', e.target.value)}>
-              <option value="">— Seleccionar —</option>
-              {GERENCIAS.map(g => <option key={g} value={g}>{g}</option>)}
-            </select>
+            <Select value={form.gerencia} onChange={v => set('gerencia', v)} options={GERENCIAS} placeholder="— Seleccionar —" aria-label="Gerencia" />
           </div>
           <div className="incd-form-group">
             <label className="incd-form-label">Sitio / Sucursal</label>
-            <select className="incd-form-input" value={form.sitio} onChange={e => set('sitio', e.target.value)}>
-              <option value="">— Seleccionar —</option>
-              {sitios.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+            <Select value={form.sitio} onChange={v => set('sitio', v)} options={sitios} placeholder="— Seleccionar —" aria-label="Sitio / Sucursal" />
           </div>
         </div>
 
@@ -1662,10 +1661,7 @@ function Step1({ form, setForm, profiles, clientes, gerencias, sitios, pendingFo
         <div className="incd-form-row">
           <div className="incd-form-group">
             <label className="incd-form-label">Cliente</label>
-            <select className="incd-form-input" value={form.cliente_id} onChange={e => set('cliente_id', e.target.value)}>
-              <option value="">— Sin cliente —</option>
-              {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-            </select>
+            <Select value={form.cliente_id} onChange={v => set('cliente_id', v)} options={clientes.map(c => ({ value: c.id, label: c.nombre }))} placeholder="— Sin cliente —" clearable aria-label="Cliente" />
           </div>
           <div className="incd-form-group">
             <label className="incd-form-label">Contrato</label>
@@ -1803,10 +1799,7 @@ function Step1({ form, setForm, profiles, clientes, gerencias, sitios, pendingFo
             <div className="incd-form-row">
               <div className="incd-form-group">
                 <label className="incd-form-label">Tipo de lesión</label>
-                <select className="incd-form-input" value={form.tipo_lesion} onChange={e => set('tipo_lesion', e.target.value)}>
-                  <option value="">— Sin lesión / No aplica —</option>
-                  {TIPOS_LESION.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
+                <Select value={form.tipo_lesion} onChange={v => set('tipo_lesion', v)} options={TIPOS_LESION} placeholder="— Sin lesión / No aplica —" clearable aria-label="Tipo de lesión" />
               </div>
               <div className="incd-form-group">
                 <label className="incd-form-label">
@@ -2315,6 +2308,8 @@ const CATEGORIAS_5P = [
 ];
 
 function Cinco5PSection({ incidenteId, onCountChange }) {
+  const confirm = useConfirm();
+  const { toast: appToast } = useToast();
   const { user } = useAuth();
   const [evidencias, setEvidencias]       = useState([]);
   const [loading, setLoading]             = useState(true);
@@ -2379,9 +2374,9 @@ function Cinco5PSection({ incidenteId, onCountChange }) {
 
   const handleDelete = async (ev) => {
     if (ev.created_by && ev.created_by !== user?.id) {
-      alert('Solo podés eliminar registros que vos mismo creaste.'); return;
+      appToast.warning('Solo podés eliminar registros que vos mismo creaste.'); return;
     }
-    if (!window.confirm('¿Eliminar este registro? Esta operación no se puede deshacer.')) return;
+    if (!(await confirm({ message: '¿Eliminar este registro? Esta operación no se puede deshacer.', destructive: true }))) return;
     const { error } = await delete5P(ev.id);
     if (!error) setEvidencias(prev => prev.filter(r => r.id !== ev.id));
   };
@@ -2498,6 +2493,8 @@ function Cinco5PSection({ incidenteId, onCountChange }) {
 
 /* ── Timeline Section ───────────────────────────────────────────────────────── */
 function TimelineSection({ incidenteId, onCountChange }) {
+  const confirm = useConfirm();
+  const { toast: appToast } = useToast();
   const { user } = useAuth();
   const today = new Date().toISOString().split('T')[0];
 
@@ -2541,9 +2538,9 @@ function TimelineSection({ incidenteId, onCountChange }) {
   /* ── Eliminar ── */
   const handleDelete = async (row) => {
     if (row.created_by && row.created_by !== user?.id) {
-      alert('Solo podés eliminar entradas que vos mismo creaste.'); return;
+      appToast.warning('Solo podés eliminar entradas que vos mismo creaste.'); return;
     }
-    if (!window.confirm('¿Eliminar esta entrada del timeline?')) return;
+    if (!(await confirm({ message: '¿Eliminar esta entrada del timeline?', destructive: true }))) return;
     const { error } = await deleteTimeline(row.id);
     if (!error) setRows(r => r.filter(x => x.id !== row.id));
   };

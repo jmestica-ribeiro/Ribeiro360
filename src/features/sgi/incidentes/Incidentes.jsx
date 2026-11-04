@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Plus, AlertCircle } from 'lucide-react';
+import { Select } from '../../../components/common';
 import { fetchIncidentesAbiertos, fetchIncidentesGerencias, fetchIncidentesSitios, fetchIncidentes } from '../../../services/sgiService';
 import './Incidentes.css';
 
@@ -167,28 +168,14 @@ export default function Incidentes() {
           </div>
 
           <div className="inc-select-wrap">
-            <select
-              className="inc-filter-select"
-              value={gerenciaFilter}
-              onChange={e => setGerenciaFilter(e.target.value)}
-            >
-              <option value="">Todas las gerencias</option>
-              {gerencias.map(g => <option key={g} value={g}>{g}</option>)}
-            </select>
+            <Select size="sm" value={gerenciaFilter} onChange={setGerenciaFilter} options={[{ value: '', label: 'Todas las gerencias' }, ...gerencias]} aria-label="Gerencia" />
             {gerenciaFilter && (
               <button className="inc-filter-clear" onClick={() => setGerenciaFilter('')} title="Limpiar gerencia">✕</button>
             )}
           </div>
 
           <div className="inc-select-wrap">
-            <select
-              className="inc-filter-select"
-              value={sitioFilter}
-              onChange={e => setSitioFilter(e.target.value)}
-            >
-              <option value="">Todos los sitios</option>
-              {sitios.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+            <Select size="sm" value={sitioFilter} onChange={setSitioFilter} options={[{ value: '', label: 'Todos los sitios' }, ...sitios]} aria-label="Sitio" />
             {sitioFilter && (
               <button className="inc-filter-clear" onClick={() => setSitioFilter('')} title="Limpiar sitio">✕</button>
             )}

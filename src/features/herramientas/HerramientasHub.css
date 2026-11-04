@@ -42,7 +42,7 @@
   width: 46px;
   height: 46px;
   border-radius: 12px;
-  background: #f2dc00;
+  background: var(--primary-color);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -80,7 +80,7 @@
 .herramientas-hero-stat-val {
   font-size: 24px;
   font-weight: 900;
-  color: #f2dc00;
+  color: var(--primary-color);
   line-height: 1;
 }
 

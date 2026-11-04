@@ -364,7 +364,7 @@ body.dark-theme .ncd-step-item.completed .ncd-step-indicator {
   padding: 10px 14px;
   font-size: 14px;
   color: var(--text-main);
-  background: #ffffff;
+  background: var(--bg-input);
   transition: var(--transition);
   font-family: inherit;
   outline: none;
@@ -892,7 +892,7 @@ body.dark-theme .ncd-fuente-item.checked {
 }
 
 .ncd-picker-modal {
-  background: #ffffff;
+  background: var(--bg-card);
   border-radius: 14px;
   width: 100%;
   max-width: 440px;
@@ -966,7 +966,7 @@ body.dark-theme .ncd-fuente-item.checked {
 
 .ncd-picker-search input:focus {
   border-color: var(--primary-color);
-  background: #fff;
+  background: var(--bg-input);
 }
 
 .ncd-picker-list {
@@ -1288,7 +1288,7 @@ body.dark-theme .ncd-fuente-item.checked {
   padding: 10px;
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-sm);
-  background: #ffffff;
+  background: var(--bg-input);
 }
 
 body.dark-theme .ncd-step2-selected {
@@ -1538,7 +1538,7 @@ body.dark-theme .ncd-step2-selected {
   padding: 10px 14px;
   font-size: 14px;
   color: var(--text-main);
-  background: #ffffff;
+  background: var(--bg-input);
   font-family: inherit;
   outline: none;
   width: 100%;

@@ -3,8 +3,11 @@ import { Plus, Trash2, Tag } from 'lucide-react';
 import { fetchFamilias, saveFamilia, deleteFamilia, fetchModelosCodigos } from '../../../services/vehiculosService';
 import { TIPOS_EQUIPO } from '../../sgi/checklists-equipo/tiposEquipo';
 import { LoadingSpinner } from '../../../components/common';
+import { useConfirm } from '../../../contexts/ConfirmContext';
+import { Select } from '../../../components/common';
 
 const FamiliasTab = () => {
+  const confirm = useConfirm();
   const [familias, setFamilias]     = useState([]);
   const [modelos, setModelos]       = useState([]);
   const [isLoading, setIsLoading]   = useState(true);
@@ -37,7 +40,7 @@ const FamiliasTab = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('¿Eliminar este mapeo?')) return;
+    if (!(await confirm({ message: '¿Eliminar este mapeo?', destructive: true }))) return;
     await deleteFamilia(id);
     await load();
   };
@@ -74,38 +77,28 @@ const FamiliasTab = () => {
           <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
             Modelo_Codigo
           </label>
-          <select
-            style={{
-              width: '100%', padding: '7px 10px', borderRadius: 7, fontSize: 13,
-              border: '1px solid var(--border-color,#e5e7eb)',
-              background: 'var(--bg-main)', color: 'var(--text-main)', outline: 'none',
-            }}
-            value={form.modelo_codigo}
-            onChange={e => setForm(f => ({ ...f, modelo_codigo: e.target.value }))}
-          >
-            <option value="">— Seleccionar modelo —</option>
-            {modelosSinFamilia.map(m => <option key={m} value={m}>{m}</option>)}
-            {form.modelo_codigo && !modelosSinFamilia.includes(form.modelo_codigo) && (
-              <option value={form.modelo_codigo}>{form.modelo_codigo}</option>
-            )}
-          </select>
+          <Select
+            size="sm"
+            value={form.modelo_codigo || ''}
+            onChange={v => setForm(f => ({ ...f, modelo_codigo: v }))}
+            placeholder="— Seleccionar modelo —"
+            options={[
+              ...modelosSinFamilia,
+              ...(form.modelo_codigo && !modelosSinFamilia.includes(form.modelo_codigo) ? [form.modelo_codigo] : []),
+            ]}
+          />
         </div>
         <div style={{ flex: 1 }}>
           <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
             Tipo de checklist
           </label>
-          <select
-            style={{
-              width: '100%', padding: '7px 10px', borderRadius: 7, fontSize: 13,
-              border: '1px solid var(--border-color,#e5e7eb)',
-              background: 'var(--bg-main)', color: 'var(--text-main)', outline: 'none',
-            }}
-            value={form.tipo_equipo}
-            onChange={e => setForm(f => ({ ...f, tipo_equipo: e.target.value }))}
-          >
-            <option value="">— Seleccionar tipo —</option>
-            {TIPOS_EQUIPO.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
-          </select>
+          <Select
+            size="sm"
+            value={form.tipo_equipo || ''}
+            onChange={v => setForm(f => ({ ...f, tipo_equipo: v }))}
+            placeholder="— Seleccionar tipo —"
+            options={TIPOS_EQUIPO.map(t => ({ value: t.key, label: t.label }))}
+          />
         </div>
         <button
           onClick={handleAdd}

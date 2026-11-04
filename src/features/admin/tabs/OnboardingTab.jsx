@@ -5,10 +5,12 @@ import { fetchOnboardingSteps, fetchOnboardingBloques, saveOnboardingStep, delet
 import { updateBlockInList, updateBlockMetaInList } from '../../../lib/blockUtils';
 import BlocksEditor from '../shared/BlocksEditor';
 import { LoadingSpinner, useToast } from '../../../components/common';
+import { useConfirm } from '../../../contexts/ConfirmContext';
 
 const EMPTY_STEP = { titulo: '', subtitulo: '', icono: 'building', activo: true };
 
 const OnboardingTab = () => {
+  const confirm = useConfirm();
   const { showToast } = useToast();
   const [steps, setSteps] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,7 +60,7 @@ const OnboardingTab = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('¿Eliminar este paso?')) return;
+    if (!(await confirm({ message: '¿Eliminar este paso?', destructive: true }))) return;
     await deleteOnboardingStep(id);
     await loadSteps();
   };

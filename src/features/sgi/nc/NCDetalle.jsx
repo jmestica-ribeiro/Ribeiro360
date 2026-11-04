@@ -16,7 +16,8 @@ import {
 } from '../../../services/ncService';
 import { notificarAsignacion, notificarCambioEstadoHallazgo } from '../../../lib/notificaciones';
 import { useAuth } from '../../../contexts/AuthContext';
-import { AccessDeniedModal } from '../../../components/common';
+import { useConfirm } from '../../../contexts/ConfirmContext';
+import { AccessDeniedModal, Select } from '../../../components/common';
 import './NCDetalle.css';
 
 /* ── Constants ──────────────────────────────────────────────────────────────── */
@@ -601,6 +602,7 @@ export default function NCDetalle() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { user, profile, isAdmin, isSgiWriter } = useAuth();
+  const confirm = useConfirm();
   const isNew = !id;
 
   /* ── State ── */
@@ -1213,23 +1215,15 @@ export default function NCDetalle() {
           </div>
           <div className="ncd-form-group">
             <label htmlFor="gerencia">Gerencia</label>
-            <select id="gerencia" value={form.gerencia} onChange={e => setField('gerencia', e.target.value)}>
-              <option value="">— Seleccionar —</option>
-              {gerencias.map(g => <option key={g} value={g}>{g}</option>)}
-            </select>
+            <Select id="gerencia" value={form.gerencia} onChange={v => setField('gerencia', v)} options={gerencias} placeholder="— Seleccionar —" aria-label="Gerencia" />
           </div>
           <div className="ncd-form-group">
             <label htmlFor="sitio">Sitio</label>
-            <select id="sitio" value={form.sitio} onChange={e => setField('sitio', e.target.value)}>
-              <option value="">— Seleccionar —</option>
-              {sitios.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
+            <Select id="sitio" value={form.sitio} onChange={v => setField('sitio', v)} options={sitios} placeholder="— Seleccionar —" aria-label="Sitio" />
           </div>
           <div className="ncd-form-group">
             <label htmlFor="area">Área</label>
-            <select id="area" value={form.area} onChange={e => setField('area', e.target.value)}>
-              <option value="">— Seleccionar —</option>
-            </select>
+            <Select id="area" value={form.area} onChange={v => setField('area', v)} options={[]} placeholder="— Seleccionar —" emptyText="Sin áreas disponibles" aria-label="Área" />
           </div>
           <div className="ncd-form-group">
             <label htmlFor="obra">Obra</label>
@@ -1279,9 +1273,7 @@ export default function NCDetalle() {
           </div>
           <div className="ncd-form-group">
             <label htmlFor="cliente">Cliente</label>
-            <select id="cliente" value={form.cliente_id} onChange={e => setField('cliente_id', e.target.value)}>
-              <option value="">— Seleccionar —</option>
-              {(() => {
+            <Select id="cliente" value={form.cliente_id} onChange={v => setField('cliente_id', v)} placeholder="— Seleccionar —" aria-label="Cliente" options={(() => {
                 const LABELS = {
                   interno: 'Interno',
                   mantenimiento_servicios: 'Operaciones y Servicios',
@@ -1294,13 +1286,9 @@ export default function NCDetalle() {
                   acc[cat].push(c);
                   return acc;
                 }, {});
-                return Object.entries(grouped).map(([cat, items]) => (
-                  <optgroup key={cat} label={LABELS[cat] || cat}>
-                    {items.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                  </optgroup>
-                ));
-              })()}
-            </select>
+                return Object.entries(grouped).flatMap(([cat, items]) =>
+                  items.map(c => ({ value: c.id, label: c.nombre, group: LABELS[cat] || cat })));
+              })()} />
           </div>
           <div className="ncd-form-group">
             <label>Auditor</label>
@@ -1685,7 +1673,7 @@ export default function NCDetalle() {
                         title="Eliminar acción"
                         onClick={async e => {
                           e.stopPropagation();
-                          if (!window.confirm(`¿Eliminar ${a.codigo}?`)) return;
+                          if (!(await confirm({ message: `¿Eliminar ${a.codigo}?`, destructive: true }))) return;
                           await deleteAccionNc(a.id);
                           fetchAcciones();
                         }}

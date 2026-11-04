@@ -10,6 +10,8 @@ import {
   uploadHerramientaArchivo, deleteHerramientaArchivo,
 } from '../../../services/herramientasService';
 import { useToast } from '../../../components/common';
+import { useConfirm } from '../../../contexts/ConfirmContext';
+import { Select } from '../../../components/common';
 
 // Subconjunto de íconos Lucide disponibles para elegir
 const ICON_OPTIONS = [
@@ -24,6 +26,7 @@ const EMPTY_SECTOR = { nombre: '', icono: 'Wrench', orden: 0, activo: true };
 const EMPTY_LINK   = { nombre: '', url: '', descripcion: '', icono: 'Link', orden: 0, activo: true, sector_id: null, tipo: 'link', file_path: null };
 
 const HerramientasTab = () => {
+  const confirm = useConfirm();
   const { showToast } = useToast();
   const [loaded, setLoaded]       = useState(false);
   const [sectores, setSectores]   = useState([]);
@@ -86,7 +89,7 @@ const HerramientasTab = () => {
   };
 
   const handleDeleteSector = async (s) => {
-    if (!window.confirm(`¿Eliminar el sector "${s.nombre}" y todos sus links?`)) return;
+    if (!(await confirm({ message: `¿Eliminar el sector "${s.nombre}" y todos sus links?`, destructive: true }))) return;
     await deleteSector(s.id);
     if (activeSector === s.id) setActiveSector(null);
     await load();
@@ -161,7 +164,7 @@ const HerramientasTab = () => {
   };
 
   const handleDeleteLink = async (l) => {
-    if (!window.confirm(`¿Eliminar "${l.nombre}"?`)) return;
+    if (!(await confirm({ message: `¿Eliminar "${l.nombre}"?`, destructive: true }))) return;
     if (l.tipo === 'archivo' && l.file_path) await deleteHerramientaArchivo(l.file_path);
     await deleteLink(l.id);
     await load();
@@ -275,9 +278,7 @@ const HerramientasTab = () => {
                 </div>
                 <div>
                   <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Ícono</label>
-                  <select className="form-control" value={sectorForm.icono} onChange={e => setSectorForm(f => ({ ...f, icono: e.target.value }))}>
-                    {ICON_OPTIONS.map(ic => <option key={ic} value={ic}>{ic}</option>)}
-                  </select>
+                  <Select value={sectorForm.icono} onChange={v => setSectorForm(f => ({ ...f, icono: v }))} options={ICON_OPTIONS} />
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -354,9 +355,7 @@ const HerramientasTab = () => {
                 </div>
                 <div>
                   <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Ícono</label>
-                  <select className="form-control" value={linkForm.icono} onChange={e => setLinkForm(f => ({ ...f, icono: e.target.value }))}>
-                    {ICON_OPTIONS.map(ic => <option key={ic} value={ic}>{ic}</option>)}
-                  </select>
+                  <Select value={linkForm.icono} onChange={v => setLinkForm(f => ({ ...f, icono: v }))} options={ICON_OPTIONS} />
                 </div>
               </div>
 

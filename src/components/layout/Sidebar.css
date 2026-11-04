@@ -1,6 +1,7 @@
 .sidebar {
   width: 280px;
   height: 100vh;
+  height: 100dvh;
   background: linear-gradient(180deg, #141414 0%, #0f0f0f 100%);
   border-right: 1px solid transparent;
   background-clip: padding-box;
@@ -327,7 +328,14 @@
     transform: translateX(-100%);
     width: 280px !important; /* Mobile doesn't use collapsed state */
     animation: none;
+    padding-bottom: calc(24px + var(--safe-bottom));
+    padding-top: calc(24px + var(--safe-top));
   }
+
+  .sidebar .nav-item,
+  .sidebar .nav-subitem { min-height: var(--tap-min); }
+
+  .sidebar-nav { overflow-y: auto; overscroll-behavior: contain; }
 
   .sidebar.open {
     transform: translateX(0);

@@ -113,7 +113,7 @@
 .hero-content h1 {
   font-size: 38px;
   font-weight: 800;
-  color: #1a1a1a;
+  color: var(--text-main);
   margin-bottom: 8px;
   line-height: 1.15;
   position: relative;
@@ -121,7 +121,7 @@
 }
 
 .hero-content h1 span {
-  color: #1a1a1a;
+  color: var(--text-main);
 }
 
 .hero-content p {
@@ -142,7 +142,7 @@
   align-items: center;
   gap: 8px;
   background: #1a1a1a;
-  color: #F2DC00;
+  color: var(--primary-color);
   border: none;
   border-radius: 50px;
   padding: 11px 22px;
@@ -338,7 +338,7 @@ body.dark-theme .stat-card {
 .quick-card-label {
   font-size: 12px;
   font-weight: 800;
-  color: #F2DC00;
+  color: var(--primary-color);
   text-align: right;
   line-height: 1.2;
   max-width: 100px;
@@ -361,7 +361,7 @@ body.dark-theme .stat-card {
 }
 
 .quick-card:hover .quick-icon {
-  color: #F2DC00;
+  color: var(--primary-color);
   transform: scale(1.1);
 }
 

@@ -57,7 +57,7 @@
   width: 80px;
   height: 80px;
   border-radius: 24px;
-  background: #F2DC00;
+  background: var(--primary-color);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -83,7 +83,7 @@
 }
 
 .onboarding-felicit-name {
-  color: var(--primary-color, #F2DC00);
+  color: var(--primary-color, var(--primary-color));
   -webkit-text-stroke: 1px rgba(0,0,0,0.15);
 }
 
@@ -118,7 +118,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--primary-color, #F2DC00);
+  background: var(--primary-color, var(--primary-color));
   color: #111827;
   font-weight: 800;
   font-size: 15px;
@@ -467,7 +467,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: var(--primary-color, #F2DC00);
+  background: var(--primary-color, var(--primary-color));
   color: #111827;
   font-weight: 800;
   font-size: 15px;
@@ -655,7 +655,7 @@
   margin-bottom: 24px;
   padding: 16px 20px;
   background: var(--bg-hover, #f9fafb);
-  border-left: 3px solid var(--primary-color, #F2DC00);
+  border-left: 3px solid var(--primary-color, var(--primary-color));
   border-radius: 0 8px 8px 0;
 }
 
@@ -679,7 +679,7 @@
 .step-servicio-card:hover {
   box-shadow: 0 6px 20px rgba(0,0,0,0.08);
   transform: translateY(-2px);
-  border-color: var(--primary-color, #F2DC00);
+  border-color: var(--primary-color, var(--primary-color));
 }
 
 .step-servicio-titulo {
@@ -701,7 +701,7 @@
 .step-servicio-sep {
   width: 32px;
   height: 3px;
-  background: var(--primary-color, #F2DC00);
+  background: var(--primary-color, var(--primary-color));
   border-radius: 2px;
   margin: 4px 0;
 }

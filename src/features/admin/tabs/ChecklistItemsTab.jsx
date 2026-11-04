@@ -3,8 +3,10 @@ import { Plus, Trash2, GripVertical, Type } from 'lucide-react';
 import { fetchAllCheqItems, saveCheqItem, deleteCheqItem } from '../../../services/sgiService';
 import { TIPOS_EQUIPO } from '../../sgi/checklists-equipo/tiposEquipo';
 import { LoadingSpinner } from '../../../components/common';
+import { useConfirm } from '../../../contexts/ConfirmContext';
 
 const ChecklistItemsTab = () => {
+  const confirm = useConfirm();
   const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [tipoActivo, setTipoActivo] = useState(TIPOS_EQUIPO[0].key);
@@ -40,7 +42,7 @@ const ChecklistItemsTab = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('¿Eliminar este ítem?')) return;
+    if (!(await confirm({ message: '¿Eliminar este ítem?', destructive: true }))) return;
     await deleteCheqItem(id);
     await load();
   };

@@ -5,4 +5,6 @@ export { FormBackHeader } from './FormBackHeader';
 export { VisibilidadEditor } from './VisibilidadEditor';
 export { AccessDeniedModal } from './AccessDeniedModal';
 export { useToast } from '../../contexts/ToastContext';
+export { useConfirm } from '../../contexts/ConfirmContext';
 export { default as CustomSelect } from './CustomSelect';
+export { Select, Combobox, MultiSelect } from './Select';

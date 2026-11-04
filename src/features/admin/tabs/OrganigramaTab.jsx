@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Save, ChevronLeft } from 'lucide-react';
 import { fetchOrgNodos, saveOrgNodo, deleteOrgNodo } from '../../../services/organigramaService';
 import { AdminListPanel, EmptyState, useToast } from '../../../components/common';
+import { useConfirm } from '../../../contexts/ConfirmContext';
+import { Select } from '../../../components/common';
 
 const EMPTY_NODO = { nombre: '', cargo: '', area: '', area_color: '#cccccc', parent_id: null, foto_url: '', numero_orden: 0, activo: true };
 
 const OrganigramaTab = () => {
+  const confirm = useConfirm();
   const { showToast } = useToast();
   const [orgNodos, setOrgNodos] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
@@ -43,7 +46,7 @@ const OrganigramaTab = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('¿Eliminar este nodo?')) return;
+    if (!(await confirm({ message: '¿Eliminar este nodo?', destructive: true }))) return;
     await deleteOrgNodo(id);
     await loadNodos();
   };
@@ -82,12 +85,8 @@ const OrganigramaTab = () => {
           <div className="form-row">
             <div className="form-group">
               <label>Reporta a (nodo padre)</label>
-              <select className="form-control" value={editingData.parent_id || ''} onChange={e => setEditingData(d => ({ ...d, parent_id: e.target.value || null }))}>
-                <option value="">— Sin padre (raíz) —</option>
-                {parents.map(n => (
-                  <option key={n.id} value={n.id}>{n.nombre} — {n.cargo}</option>
-                ))}
-              </select>
+              <Select value={String(editingData.parent_id || '')} onChange={v => setEditingData(d => ({ ...d, parent_id: v || null }))} placeholder="— Sin padre (raíz) —"
+                options={[{ value: '', label: '— Sin padre (raíz) —' }, ...parents.map(n => ({ value: String(n.id), label: `${n.nombre} — ${n.cargo}` }))]} />
             </div>
             <div className="form-group">
               <label>Orden</label>

@@ -5,7 +5,7 @@ import {
   fetchEquiposMedicion, saveEquipoMedicion, deleteEquipoMedicion,
   uploadCeqAdjunto, getCeqAdjuntoSignedUrl,
 } from '../../../services/sgiService';
-import { LoadingSpinner, EmptyState } from '../../../components/common';
+import { LoadingSpinner, EmptyState, Select } from '../../../components/common';
 import './CertEquipos.css';
 
 const TIPOS_EQUIPO = [
@@ -609,10 +609,7 @@ export default function CertEquipos() {
               <div className="ceq-form-grid">
                 <label className="ceq-field ceq-field--required">
                   <span>Tipo</span>
-                  <select name="tipo" value={form.tipo} onChange={handleChange} required>
-                    <option value="">Seleccioná un tipo…</option>
-                    {TIPOS_EQUIPO.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                  <Select name="tipo" value={form.tipo} onChange={v => handleChange({ target: { name: 'tipo', value: v } })} options={TIPOS_EQUIPO} placeholder="Seleccioná un tipo…" aria-label="Tipo" />
                 </label>
                 <label className="ceq-field">
                   <span>Marca</span>
@@ -632,11 +629,7 @@ export default function CertEquipos() {
                 </label>
                 <label className="ceq-field">
                   <span>Intervalo de verificación</span>
-                  <select name="intervalo_verificacion" value={form.intervalo_verificacion} onChange={handleChange}>
-                    <option value="Anual">Anual</option>
-                    <option value="Semestral">Semestral</option>
-                    <option value="Quinquenal">Quinquenal</option>
-                  </select>
+                  <Select name="intervalo_verificacion" value={form.intervalo_verificacion} onChange={v => handleChange({ target: { name: 'intervalo_verificacion', value: v } })} options={['Anual', 'Semestral', 'Quinquenal']} aria-label="Intervalo de verificación" />
                 </label>
                 <label className="ceq-field">
                   <span>N° Certificado</span>

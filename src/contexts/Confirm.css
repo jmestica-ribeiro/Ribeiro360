@@ -1,0 +1,68 @@
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background: var(--overlay-bg);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+}
+
+.confirm-sheet {
+  width: min(100%, 400px);
+  background: var(--surface-elevated);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-6);
+  text-align: center;
+}
+
+.confirm-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto var(--space-3);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+.confirm-icon.destructive { background: var(--destructive-bg); color: var(--destructive); }
+
+.confirm-title { font-size: var(--fs-headline); line-height: var(--lh-headline); font-weight: 700; }
+.confirm-message { margin-top: var(--space-2); font-size: var(--fs-callout); line-height: var(--lh-callout); color: var(--text-muted); }
+
+.confirm-actions { display: flex; gap: var(--space-3); margin-top: var(--space-6); }
+
+.confirm-btn {
+  flex: 1;
+  min-height: var(--tap-min);
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-hover);
+  color: var(--text-main);
+  font-size: var(--fs-callout);
+  font-weight: 600;
+  cursor: pointer;
+}
+.confirm-btn.primary { background: var(--primary-color); border-color: transparent; color: #1A1A1A; }
+.confirm-btn.primary.destructive { background: var(--destructive); color: #fff; }
+
+@media (hover: hover) {
+  .confirm-btn:hover { filter: brightness(0.96); }
+}
+
+/* Móvil: bottom sheet */
+@media (max-width: 640px) {
+  .confirm-overlay { align-items: flex-end; padding: 0; }
+  .confirm-sheet {
+    width: 100%;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    padding-bottom: calc(var(--space-6) + var(--safe-bottom));
+  }
+}

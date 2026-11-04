@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, X, FileText, Check, Loader2, AlertCircle } from 'lucide-react';
+import { Select } from '../../../components/common';
 import { useAuth } from '../../../contexts/AuthContext';
 import { insertIncidenteConNumeroUnico, uploadIncAdjunto } from '../../../services/incidentesService';
 import './IncidenteEvento.css';
@@ -157,19 +158,13 @@ export default function IncidenteEventoWIP() {
 
         {/* 4. Gerencia / Área */}
         <Field n={4} label="Gerencia / Área involucrada">
-          <select
-            className="ev-input"
+          <Select
             value={form.gerencia}
-            onChange={e => set('gerencia', e.target.value)}
-          >
-            <option value="">Seleccioná una opción</option>
-            <option value="Servicios">Servicios</option>
-            <option value="Obras">Obras</option>
-            <option value="CMASS">CMASS</option>
-            <option value="Administración, Finanzas y TI">Administración, Finanzas y TI</option>
-            <option value="RRHH">RRHH</option>
-            <option value="Institucional">Institucional</option>
-          </select>
+            onChange={v => set('gerencia', v)}
+            options={['Servicios', 'Obras', 'CMASS', 'Administración, Finanzas y TI', 'RRHH', 'Institucional']}
+            placeholder="Seleccioná una opción"
+            aria-label="Gerencia"
+          />
         </Field>
 
         {/* 5. Lugar */}

@@ -33,6 +33,47 @@
   
   /* Transitions */
   --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+  /* ── Design tokens ───────────────────────────────────────────────────── */
+  /* Spacing (escala 4px) */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px; --space-10: 40px;
+  --space-12: 48px; --space-16: 64px;
+
+  /* Radios por jerarquía */
+  --radius-xs: 6px; --radius-md: 10px; --radius-lg: 14px; --radius-xl: 20px;
+
+  /* Tipografía por rol */
+  --fs-caption: 12px;  --lh-caption: 16px;
+  --fs-callout: 14px;  --lh-callout: 20px;
+  --fs-body: 15px;     --lh-body: 22px;
+  --fs-headline: 17px; --lh-headline: 24px;
+  --fs-title: clamp(20px, 1.4vw + 16px, 26px); --lh-title: 1.25;
+  --fs-display: clamp(26px, 2.4vw + 18px, 40px); --lh-display: 1.15;
+
+  /* Colores semánticos de estado */
+  --success: #16A34A; --success-bg: #F0FDF4; --success-border: #BBF7D0;
+  --warning: #D97706; --warning-bg: #FFFBEB; --warning-border: #FDE68A;
+  --destructive: #DC2626; --destructive-bg: #FEF2F2; --destructive-border: #FECACA;
+  --info: #2563EB; --info-bg: #EFF6FF; --info-border: #BFDBFE;
+  --surface-elevated: #FFFFFF;
+  --overlay-bg: rgba(0, 0, 0, 0.45);
+
+  /* Elevación y z-index centralizados */
+  --z-base: 1; --z-dropdown: 900; --z-sticky: 950; --z-sidebar: 1000;
+  --z-overlay: 1100; --z-modal: 1200; --z-popover: 1300; --z-toast: 1400;
+
+  /* Safe areas */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+
+  /* Movimiento */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --tap-min: 44px;
+
+  color-scheme: light;
 }
 
 body.dark-theme {
@@ -47,6 +88,14 @@ body.dark-theme {
   --text-inverse: #1A1A1A;
 
   --border-color: #3A3B3C;
+
+  --success-bg: #052E16; --success-border: #14532D;
+  --warning-bg: #2B1A04; --warning-border: #78350F;
+  --destructive-bg: #2D0A0A; --destructive-border: #7F1D1D;
+  --info-bg: #0B1B3A; --info-border: #1E3A8A;
+  --surface-elevated: #2C2D2E;
+  --overlay-bg: rgba(0, 0, 0, 0.65);
+  color-scheme: dark;
 
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.5), 0 4px 6px rgba(0, 0, 0, 0.4);
@@ -80,6 +129,58 @@ body {
 
 html {
   scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+
+/* UI de app: no seleccionable (el contenido legible mantiene selección) */
+button, [role="button"], [role="tab"], summary, nav a, label.btn {
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+img, video, svg { max-width: 100%; }
+img { height: auto; }
+
+/* Inputs: 16px en móvil evita el zoom automático de iOS */
+@media (max-width: 768px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select, textarea {
+    font-size: max(16px, 1em);
+  }
+}
+
+/* Hover solo donde existe; feedback :active inmediato en táctil */
+@media (hover: none) {
+  button:active, [role="button"]:active, a:active {
+    opacity: 0.72;
+    transition-duration: 0.05s;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+button:focus:not(:focus-visible) { outline: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ─── Custom Scrollbar ───────────────────────────────────────────────────── */

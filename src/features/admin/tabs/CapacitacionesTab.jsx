@@ -9,6 +9,8 @@ import QuizBuilder from '../shared/QuizBuilder';
 import CoursePreviewModal from '../shared/CoursePreviewModal';
 import { VisibilidadEditor, LoadingSpinner, useToast } from '../../../components/common';
 import { notificarNuevoCurso } from '../../../lib/notificaciones';
+import { useConfirm } from '../../../contexts/ConfirmContext';
+import { Select } from '../../../components/common';
 
 const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
@@ -23,6 +25,7 @@ const EMPTY_COURSE = {
 };
 
 const CapacitacionesTab = () => {
+  const confirm = useConfirm();
   const { showToast } = useToast();
   const [courses, setCourses] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -168,7 +171,7 @@ const CapacitacionesTab = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('¿Eliminar este curso?')) return;
+    if (!(await confirm({ message: '¿Eliminar este curso?', destructive: true }))) return;
     await deleteCurso(id);
     await reloadCourses();
   };
@@ -296,15 +299,14 @@ const CapacitacionesTab = () => {
               />
             </div>
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <select className="form-control" style={{ width: '200px', fontSize: '13px', padding: '7px 12px' }} value={courseFilterCat} onChange={e => setCourseFilterCat(e.target.value)}>
-                <option value="">Todas las categorías</option>
-                {categories.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-              </select>
-              <select className="form-control" style={{ width: '150px', fontSize: '13px', padding: '7px 12px' }} value={courseFilterPaf} onChange={e => setCourseFilterPaf(e.target.value)}>
-                <option value="">PAF: Todas</option>
-                <option value="si">Solo PAF</option>
-                <option value="no">No PAF</option>
-              </select>
+              <div style={{ width: '200px' }}>
+                <Select size="sm" aria-label="Filtrar por categoría" value={String(courseFilterCat ?? '')} onChange={v => setCourseFilterCat(v)} placeholder="Todas las categorías" clearable
+                  options={categories.map(c => ({ value: String(c.id), label: c.nombre }))} />
+              </div>
+              <div style={{ width: '150px' }}>
+                <Select size="sm" aria-label="Filtrar por PAF" value={courseFilterPaf ?? ''} onChange={v => setCourseFilterPaf(v)} placeholder="PAF: Todas" clearable
+                  options={[{ value: 'si', label: 'Solo PAF' }, { value: 'no', label: 'No PAF' }]} />
+              </div>
               {(courseSearch || courseFilterCat || courseFilterPaf) && (
                 <button className="btn-secondary" style={{ fontSize: '12px', padding: '6px 14px', width: 'fit-content' }} onClick={() => { setCourseSearch(''); setCourseFilterCat(''); setCourseFilterPaf(''); }}>
                   <X size={14} /> Limpiar
@@ -424,9 +426,8 @@ const CapacitacionesTab = () => {
           <div className="form-row" style={{ gap: '32px', marginBottom: '32px' }}>
             <div className="form-group" style={{ flex: 1 }}>
               <label>Categoría</label>
-              <select className="form-control" value={editingData.categoria_id || ''} onChange={e => setEditingData({ ...editingData, categoria_id: e.target.value })}>
-                {categories.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-              </select>
+              <Select value={String(editingData.categoria_id || '')} onChange={v => setEditingData({ ...editingData, categoria_id: v })}
+                options={categories.map(c => ({ value: String(c.id), label: c.nombre }))} />
             </div>
             <div className="form-group" style={{ flex: 1 }}>
               <label>Duración estimada (minutos)</label>
@@ -496,34 +497,23 @@ const CapacitacionesTab = () => {
                 <div className="form-row" style={{ gap: '16px', marginBottom: '12px' }}>
                   <div className="form-group" style={{ flex: 1 }}>
                     <label>Año del PAF</label>
-                    <select className="form-control" value={anioSeleccionado}
-                      onChange={e => setEditingData({ ...editingData, _paf_anio: parseInt(e.target.value), paf_item_id: null })}>
-                      {aniosDisponibles.map(a => <option key={a} value={a}>{a}</option>)}
-                    </select>
+                    <Select value={String(anioSeleccionado)}
+                      onChange={v => setEditingData({ ...editingData, _paf_anio: parseInt(v), paf_item_id: null })}
+                      options={aniosDisponibles.map(a => ({ value: String(a), label: String(a) }))} />
                   </div>
                   <div className="form-group" style={{ flex: 2 }}>
                     <label>Capacitación planificada</label>
-                    <select className="form-control" value={editingData.paf_item_id || ''}
-                      onChange={e => {
-                        const itemId = e.target.value || null;
+                    <Select value={String(editingData.paf_item_id || '')} placeholder="-- Seleccionar --" searchable clearable
+                      options={MESES.flatMap((mes, idx) => itemsDelPlan.filter(i => i.mes === idx + 1).map(item => ({ value: String(item.id), label: item.titulo, group: mes })))}
+                      onChange={v => {
+                        const itemId = v || null;
                         const itemSeleccionado = pafItems.find(i => i.id === itemId);
                         setEditingData({
                           ...editingData,
                           paf_item_id: itemId,
                           titulo: itemSeleccionado ? itemSeleccionado.titulo : editingData.titulo
                         });
-                      }}>
-                      <option value="">-- Seleccionar --</option>
-                      {MESES.map((mes, idx) => {
-                        const itemsMes = itemsDelPlan.filter(i => i.mes === idx + 1);
-                        if (!itemsMes.length) return null;
-                        return (
-                          <optgroup key={idx} label={mes}>
-                            {itemsMes.map(item => <option key={item.id} value={item.id}>{item.titulo}</option>)}
-                          </optgroup>
-                        );
-                      })}
-                    </select>
+                      }} />
                   </div>
                 </div>
                 {aniosDisponibles.length === 0 && <p className="text-muted text-xs">No hay planes PAF creados. Creá uno desde la pestaña PAF.</p>}

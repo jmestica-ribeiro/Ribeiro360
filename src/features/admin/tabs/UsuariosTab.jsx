@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { GraduationCap, Calendar, Rocket, MessageCircle, LayoutGrid, ShieldCheck, RefreshCw, ImageIcon, CheckCircle, AlertCircle, Search, Trash2, ChevronLeft, ChevronRight, ClipboardCheck, Truck, Tag, Rss, Wrench } from 'lucide-react';
 import { fetchAllUsers, updateUserRoleAndTabs, syncMsUsers, syncMsPhotos, deleteUser } from '../../../services/usuariosService';
 import { useAuth } from '../../../contexts/AuthContext';
-import { AdminListPanel, LoadingSpinner } from '../../../components/common';
+import { AdminListPanel, LoadingSpinner, Select } from '../../../components/common';
 
 const ALL_TABS = ['capacitaciones', 'paf', 'onboarding', 'eventos', 'faq', 'organigrama', 'sgi', 'cert-equipos', 'checklist-items', 'vehiculos', 'familias', 'social', 'herramientas'];
 
@@ -287,16 +287,15 @@ const UsuariosTab = () => {
                         {roleBadge.label}
                       </span>
                       {!isSelf && (
-                        <select
-                          className="form-control"
-                          style={{ width: 'auto', padding: '6px 10px', fontSize: '13px' }}
-                          value={u.role || 'user'}
-                          onChange={e => handleRoleChange(u.id, e.target.value)}
-                        >
-                          <option value="user">Usuario</option>
-                          <option value="admin">Admin</option>
-                          <option value="superadmin">Super Admin</option>
-                        </select>
+                        <div style={{ width: '150px' }}>
+                          <Select
+                            size="sm"
+                            aria-label="Rol"
+                            value={u.role || 'user'}
+                            onChange={v => handleRoleChange(u.id, v)}
+                            options={[{ value: 'user', label: 'Usuario' }, { value: 'admin', label: 'Admin' }, { value: 'superadmin', label: 'Super Admin' }]}
+                          />
+                        </div>
                       )}
 
                       {/* Eliminar — solo superadmin, no sobre sí mismo */}

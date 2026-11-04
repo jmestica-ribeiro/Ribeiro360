@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import { BookOpen, Compass, Globe, Lock } from 'lucide-react';
+import { Select } from '../../components/common';
 import { fetchPortalesConfig, updatePortalVisibilidad } from '../../services/portalesService';
 import './Explorar.css';
 
@@ -60,6 +62,7 @@ const TODOS_LOS_DEPTS = Object.keys(PORTALES_HARDCODEADOS);
 // ----------------------------------------------------------------------
 const Explorar = () => {
   const { profile } = useAuth();
+  const { toast } = useToast();
   const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
   const myDept = profile?.department || 'General';
 
@@ -108,7 +111,7 @@ const Explorar = () => {
     setTogglingDept(dept);
     const { error } = await updatePortalVisibilidad(dept, !actual);
     if (error) {
-      alert('No tenés permisos para cambiar la visibilidad de este portal.');
+      toast.error('No tenés permisos para cambiar la visibilidad de este portal.');
     } else {
       setVisibilidadMap(prev => ({ ...prev, [dept]: !actual }));
     }
@@ -135,15 +138,16 @@ const Explorar = () => {
         {!loadingVis && opcionesSelector.length > 1 && (
           <div className="admin-selector">
             <Compass size={18} color="var(--text-muted)" />
-            <select value={selectedDept} onChange={(e) => setSelectedDept(e.target.value)}>
-              {opcionesSelector.map(dept => (
-                <option key={dept} value={dept}>{dept}</option>
-              ))}
-              {/* Si el dept propio del admin no tiene portal, igual mostrarlo */}
-              {isAdmin && !opcionesSelector.includes(myDept) && (
-                <option value={myDept}>{myDept} (sin portal)</option>
-              )}
-            </select>
+            <Select
+              size="sm"
+              aria-label="Portal"
+              value={selectedDept}
+              onChange={setSelectedDept}
+              options={[
+                ...opcionesSelector.map(dept => ({ value: dept, label: dept })),
+                ...(isAdmin && !opcionesSelector.includes(myDept) ? [{ value: myDept, label: `${myDept} (sin portal)` }] : []),
+              ]}
+            />
           </div>
         )}
       </div>

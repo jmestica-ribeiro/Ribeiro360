@@ -1,5 +1,6 @@
 import React from 'react';
 import { Trash2 } from 'lucide-react';
+import { Select } from './Select';
 import './CommonComponents.css';
 
 const CAMPOS_OPCIONES = [
@@ -45,27 +46,19 @@ export function VisibilidadEditor({ rules, onChange, profileValues = {} }) {
       <div className="destinatarios-list">
         {rules.map((r, idx) => (
           <div key={r.id || idx} className="dest-row" style={{ marginBottom: 12, gridTemplateColumns: '180px 1fr 40px' }}>
-            <select
-              className="form-control"
-              style={{ padding: 8 }}
+            <Select
+              aria-label="Campo"
               value={r.campo}
-              onChange={e => handleCampoChange(idx, e.target.value)}
-            >
-              {CAMPOS_OPCIONES.map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-            <select
-              className="form-control"
-              style={{ padding: 8 }}
+              onChange={v => handleCampoChange(idx, v)}
+              options={CAMPOS_OPCIONES}
+            />
+            <Select
+              aria-label="Valor"
               value={r.valor}
-              onChange={e => handleValorChange(idx, e.target.value)}
-            >
-              <option value="">— Seleccionar —</option>
-              {[...new Set([...(profileValues[r.campo] || []), ...(r.valor ? [r.valor] : [])])].sort().map(v => (
-                <option key={v} value={v}>{v}</option>
-              ))}
-            </select>
+              onChange={v => handleValorChange(idx, v)}
+              placeholder="— Seleccionar —"
+              options={[...new Set([...(profileValues[r.campo] || []), ...(r.valor ? [r.valor] : [])])].sort()}
+            />
             <button className="action-btn delete" onClick={() => handleRemove(idx)}>
               <Trash2 size={16} />
             </button>

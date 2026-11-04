@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, ChevronDown, HelpCircle, X, ExternalLink } from 'lucide-react';
+import { Select } from '../../components/common';
 import { fetchFaqPreguntasActivas, fetchFaqSectores } from '../../services/faqService';
 import './FAQ.css';
 
@@ -91,18 +92,12 @@ export default function FAQ() {
 
         {/* Dropdown for Mobile */}
         <div className="faq-sector-dropdown">
-           <div className="custom-select-wrapper">
-              <select 
-                value={activeSector} 
-                onChange={(e) => { setActiveSector(e.target.value); setOpenId(null); }}
-              >
-                <option value="todos">Todos los sectores</option>
-                {sectores.map(s => (
-                  <option key={s.id} value={s.id}>{s.nombre}</option>
-                ))}
-              </select>
-              <ChevronDown className="custom-select-icon" size={18} />
-           </div>
+           <Select
+              aria-label="Sector"
+              value={activeSector}
+              onChange={(v) => { setActiveSector(v); setOpenId(null); }}
+              options={[{ value: 'todos', label: 'Todos los sectores' }, ...sectores.map(s => ({ value: s.id, label: s.nombre }))]}
+           />
         </div>
       </div>
 

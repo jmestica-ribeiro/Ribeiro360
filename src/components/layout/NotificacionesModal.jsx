@@ -1,102 +1,183 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Calendar, BookOpen, FileText, BellOff, ClipboardList } from 'lucide-react';
+import { X, Calendar, BookOpen, FileText, BellOff, ClipboardList, CheckCheck, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import './NotificacionesModal.css';
 
 const TIPO_CONFIG = {
-  evento:      { icon: Calendar,      label: 'Evento',        tagColor: '#F59E0B', getRoute: ()   => '/eventos'              },
-  capacitacion:{ icon: BookOpen,      label: 'Capacitación',  tagColor: '#10B981', getRoute: (id) => `/cursos/${id}`          },
-  documento:   { icon: FileText,      label: 'SGI',           tagColor: '#3B82F6', getRoute: (id) => `/sgi/documento/${id}`   },
-  hallazgo:    { icon: ClipboardList, label: 'No Conformidad',tagColor: '#E71D36', getRoute: (id) => `/sgi/nc/${id}`          },
+  evento:       { icon: Calendar,      label: 'Evento',         getRoute: ()   => '/eventos' },
+  capacitacion: { icon: BookOpen,      label: 'Capacitación',   getRoute: (id) => `/cursos/${id}` },
+  documento:    { icon: FileText,      label: 'SGI',            getRoute: (id) => `/sgi/documento/${id}` },
+  hallazgo:     { icon: ClipboardList, label: 'No Conformidad', getRoute: (id) => `/sgi/nc/${id}` },
 };
 
-const NotifItem = ({ item, onClick }) => {
+const DISMISS_KEY = 'notif-dismissed';
+const loadDismissed = () => {
+  try { return new Set(JSON.parse(localStorage.getItem(DISMISS_KEY) || '[]')); } catch { return new Set(); }
+};
+
+const toDate = (v) => (typeof v === 'string' && v.length === 10 ? new Date(`${v}T00:00:00`) : new Date(v));
+const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
+const relativeTime = (v) => {
+  if (!v) return '';
+  const d = toDate(v);
+  const diff = Date.now() - d.getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return 'ahora';
+  if (min < 60) return `hace ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24 && startOfDay(d) === startOfDay(new Date())) return `hace ${h} h`;
+  const days = Math.round((startOfDay(new Date()) - startOfDay(d)) / 86400000);
+  if (days === 1) return 'ayer';
+  if (days < 7) return `hace ${days} días`;
+  return d.toLocaleDateString('es-AR', { day: 'numeric', month: 'short' });
+};
+
+const groupLabel = (v) => {
+  const days = Math.round((startOfDay(new Date()) - startOfDay(toDate(v))) / 86400000);
+  if (days <= 0) return 'Hoy';
+  if (days === 1) return 'Ayer';
+  return 'Anteriores';
+};
+
+const NotifItem = ({ item, onOpen, onDismiss }) => {
   const config = TIPO_CONFIG[item.tipo];
   const Icon = config?.icon || BellOff;
+  const showSub = item.subtitulo && item.subtitulo !== config?.label;
 
   return (
-    <li
-      className={`notif-item${item.leida ? ' notif-item--leida' : ''}`}
-      onClick={() => onClick(item)}
-      role="button"
-      tabIndex={0}
-      onKeyDown={e => e.key === 'Enter' && onClick(item)}
-    >
-      {!item.leida && <span className="notif-dot" />}
-      <div className="notif-icon" style={{ background: `${item.color}22`, color: item.color }}>
-        <Icon size={18} />
-      </div>
-      <div className="notif-info">
-        <div className="notif-meta">
-          <span
-            className="notif-tag"
-            style={{ background: `${config.tagColor}20`, color: config.tagColor }}
-          >
-            {config.label}
+    <li className={`notif-item${item.leida ? ' notif-item--leida' : ''}`}>
+      <button type="button" className="notif-main" onClick={() => onOpen(item)}>
+        <span className="notif-icon" style={{ background: `${item.color}22`, color: item.color }}>
+          <Icon size={18} />
+        </span>
+        <span className="notif-info">
+          <span className="notif-meta">
+            <span className={`notif-tag notif-tag--${item.tipo}`}>{config?.label}</span>
+            <span className="notif-date">{relativeTime(item.created_at)}</span>
           </span>
-          {item.fecha && (
-            <span className="notif-date">
-              {new Date(item.fecha + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'long' })}
-            </span>
-          )}
-        </div>
-        <span className="notif-title">{item.titulo}</span>
-        {item.subtitulo && item.subtitulo !== config.label && (
-          <span className="notif-subtitle">{item.subtitulo}</span>
-        )}
-      </div>
+          <span className="notif-title">{item.titulo}</span>
+          {showSub && <span className="notif-subtitle">{item.subtitulo}</span>}
+        </span>
+        {!item.leida && <span className="notif-dot" aria-label="No leída" />}
+      </button>
+      <button
+        type="button"
+        className="notif-dismiss"
+        aria-label={`Descartar notificación: ${item.titulo}`}
+        onClick={() => onDismiss(item.id)}
+      >
+        <X size={14} />
+      </button>
     </li>
   );
 };
 
-const NotificacionesModal = ({ notificaciones, isLoading, onClose }) => {
-  const ref = useRef(null);
+const NotificacionesModal = ({ notificaciones, isLoading, error, onRetry, onMarkAllRead, anchorRef, onClose }) => {
   const navigate = useNavigate();
+  const panelRef = useRef(null);
+  const [dismissed, setDismissed] = useState(loadDismissed);
+  const [pos, setPos] = useState(null);
 
-  const nuevas = notificaciones.filter(n => !n.leida);
-  const leidas = notificaciones.filter(n => n.leida);
+  const items = useMemo(() => notificaciones.filter(n => !dismissed.has(n.id)), [notificaciones, dismissed]);
+  const unread = items.filter(n => !n.leida).length;
 
-  // Bloquear scroll de fondo mientras el modal está abierto
+  const groups = useMemo(() => {
+    const order = ['Hoy', 'Ayer', 'Anteriores'];
+    const map = { Hoy: [], Ayer: [], Anteriores: [] };
+    items.forEach(n => map[groupLabel(n.created_at)].push(n));
+    return order.filter(k => map[k].length).map(k => ({ label: k, list: map[k] }));
+  }, [items]);
+
+  // Anclar al botón en desktop
   useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
-  }, []);
-
-  useEffect(() => {
-    const handleClick = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) onClose();
+    const place = () => {
+      const r = anchorRef?.current?.getBoundingClientRect();
+      if (!r || window.innerWidth <= 640) { setPos(null); return; }
+      setPos({ top: r.bottom + 8, right: Math.max(16, window.innerWidth - r.right) });
     };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [onClose]);
+    place();
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
+  }, [anchorRef]);
 
+  // Escape + foco inicial + bloqueo de scroll en móvil
   useEffect(() => {
-    const handleKey = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', handleKey);
-    return () => document.removeEventListener('keydown', handleKey);
+    const prevFocus = document.activeElement;
+    panelRef.current?.focus();
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    const lock = window.innerWidth <= 640;
+    if (lock) document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      if (lock) document.body.style.overflow = '';
+      prevFocus?.focus?.();
+    };
   }, [onClose]);
 
-  const handleItemClick = (item) => {
-    const config = TIPO_CONFIG[item.tipo];
-    const route = config?.getRoute(item.itemId);
+  const dismiss = (id) => {
+    setDismissed(prev => {
+      const next = new Set(prev).add(id);
+      try { localStorage.setItem(DISMISS_KEY, JSON.stringify([...next])); } catch { /* storage no disponible */ }
+      return next;
+    });
+  };
+
+  const open = (item) => {
+    const route = TIPO_CONFIG[item.tipo]?.getRoute(item.itemId);
     if (route) { navigate(route); onClose(); }
   };
 
   return createPortal(
-    <div className="notif-overlay">
-      <div className="notif-modal" ref={ref} style={{ position: 'fixed', top: 72, right: 48 }}>
+    <div className="notif-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div
+        className="notif-modal"
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Notificaciones"
+        tabIndex={-1}
+        style={pos ? { top: pos.top, right: pos.right } : undefined}
+      >
+        <div className="notif-grip" />
         <div className="notif-header">
-          <h3>Notificaciones</h3>
-          <button className="notif-close" onClick={onClose}><X size={18} /></button>
+          <h3>Notificaciones{unread > 0 && <span className="notif-count">{unread}</span>}</h3>
+          <div className="notif-header-actions">
+            {unread > 0 && onMarkAllRead && (
+              <button type="button" className="notif-markall" onClick={onMarkAllRead}>
+                <CheckCheck size={15} /> Marcar leídas
+              </button>
+            )}
+            <button type="button" className="notif-close" onClick={onClose} aria-label="Cerrar notificaciones">
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         <div className="notif-body">
           {isLoading && (
-            <div className="notif-empty"><div className="notif-spinner" /></div>
+            <ul className="notif-list" aria-busy="true" aria-label="Cargando notificaciones">
+              {[0, 1, 2].map(i => (
+                <li key={i} className="notif-skeleton">
+                  <span className="notif-skel-icon" />
+                  <span className="notif-skel-lines"><span /><span /></span>
+                </li>
+              ))}
+            </ul>
           )}
 
-          {!isLoading && notificaciones.length === 0 && (
+          {!isLoading && error && (
+            <div className="notif-empty" role="alert">
+              <AlertCircle size={36} strokeWidth={1.5} />
+              <p>No se pudieron cargar</p>
+              <span>Revisá tu conexión e intentá de nuevo.</span>
+              {onRetry && <button type="button" className="notif-retry" onClick={onRetry}>Reintentar</button>}
+            </div>
+          )}
+
+          {!isLoading && !error && items.length === 0 && (
             <div className="notif-empty">
               <BellOff size={36} strokeWidth={1.5} />
               <p>Todo al día</p>
@@ -104,26 +185,16 @@ const NotificacionesModal = ({ notificaciones, isLoading, onClose }) => {
             </div>
           )}
 
-          {!isLoading && notificaciones.length > 0 && (
-            <ul className="notif-list">
-              {nuevas.length > 0 && (
-                <>
-                  <li className="notif-section-label">Nuevas</li>
-                  {nuevas.map(item => (
-                    <NotifItem key={item.id} item={item} onClick={handleItemClick} />
-                  ))}
-                </>
-              )}
-              {leidas.length > 0 && (
-                <>
-                  <li className="notif-section-label">{nuevas.length > 0 ? 'Anteriores' : 'Últimos 30 días'}</li>
-                  {leidas.map(item => (
-                    <NotifItem key={item.id} item={item} onClick={handleItemClick} />
-                  ))}
-                </>
-              )}
-            </ul>
-          )}
+          {!isLoading && !error && groups.map(g => (
+            <section key={g.label} aria-label={g.label}>
+              <h4 className="notif-section-label">{g.label}</h4>
+              <ul className="notif-list">
+                {g.list.map(item => (
+                  <NotifItem key={item.id} item={item} onOpen={open} onDismiss={dismiss} />
+                ))}
+              </ul>
+            </section>
+          ))}
         </div>
       </div>
     </div>,

@@ -6,11 +6,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast } from '../../../contexts/ToastContext';
+import { useConfirm } from '../../../contexts/ConfirmContext';
 import {
   fetchCheqItems, saveCheqChecklist, fetchCheqChecklists,
   fetchCheqDetalle, deleteCheqChecklist,
 } from '../../../services/sgiService';
-import { LoadingSpinner, EmptyState } from '../../../components/common';
+import { LoadingSpinner, EmptyState, Select } from '../../../components/common';
 import ChecklistPDF from './ChecklistPDF';
 import VehiculoPicker from './VehiculoPicker';
 import QRStickerModal from './QRStickerModal';
@@ -268,10 +269,7 @@ function Historial({ onBack, onViewDetalle }) {
       <div className="cheq-filtros">
         <div className="cheq-filtro-item">
           <Filter size={14} />
-          <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}>
-            <option value="">Todos los equipos</option>
-            {TIPOS_EQUIPO.map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
-          </select>
+          <Select size="sm" value={filtroTipo} onChange={setFiltroTipo} options={[{ value: '', label: 'Todos los equipos' }, ...TIPOS_EQUIPO.map(t => ({ value: t.key, label: t.label }))]} aria-label="Tipo de equipo" />
         </div>
         <div className="cheq-filtro-item">
           <Search size={14} />
@@ -346,6 +344,7 @@ function ChecklistDetalle({ checklistId, onBack }) {
   const navigate = useNavigate();
   const handleBack = onBack ?? (() => navigate('/sgi/checklists-equipo'));
   const { profile } = useAuth();
+  const confirm = useConfirm();
   const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
   const [detalle, setDetalle] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -359,7 +358,7 @@ function ChecklistDetalle({ checklistId, onBack }) {
   }, [checklistId]);
 
   const handleDelete = async () => {
-    if (!window.confirm('¿Eliminar este checklist?')) return;
+    if (!(await confirm({ message: '¿Eliminar este checklist?', destructive: true }))) return;
     await deleteCheqChecklist(checklistId);
     handleBack();
   };

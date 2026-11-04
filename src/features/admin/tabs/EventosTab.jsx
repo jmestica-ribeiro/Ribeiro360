@@ -11,10 +11,13 @@ import {
 import { fetchProfileValues } from '../../../services/usuariosService';
 import { AdminListPanel, EmptyState, VisibilidadEditor, useToast } from '../../../components/common';
 import { notificarNuevoEvento } from '../../../lib/notificaciones';
+import { useConfirm } from '../../../contexts/ConfirmContext';
+import { Select } from '../../../components/common';
 
 const EMPTY_EVENTO = { titulo: '', descripcion: '', fecha: new Date().toISOString().split('T')[0], categoria_id: null, area_id: null };
 
 const EventosTab = () => {
+  const confirm = useConfirm();
   const { showToast } = useToast();
   const [eventos, setEventos] = useState([]);
   const [categorias, setCategorias] = useState([]);
@@ -81,7 +84,7 @@ const EventosTab = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('¿Eliminar este evento?')) return;
+    if (!(await confirm({ message: '¿Eliminar este evento?', destructive: true }))) return;
     await deleteEvento(id);
     await loadData();
   };
@@ -115,17 +118,13 @@ const EventosTab = () => {
               </div>
               <div className="form-group">
                 <label>Categoría</label>
-                <select className="form-control" value={editingData.categoria_id || ''} onChange={e => setEditingData(d => ({ ...d, categoria_id: e.target.value }))}>
-                  <option value="">Sin categoría</option>
-                  {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                </select>
+                <Select value={String(editingData.categoria_id || '')} onChange={v => setEditingData(d => ({ ...d, categoria_id: v }))} placeholder="Sin categoría"
+                  options={[{ value: '', label: 'Sin categoría' }, ...categorias.map(c => ({ value: String(c.id), label: c.nombre }))]} />
               </div>
               <div className="form-group">
                 <label>Área</label>
-                <select className="form-control" value={editingData.area_id || ''} onChange={e => setEditingData(d => ({ ...d, area_id: e.target.value }))}>
-                  <option value="">Sin área</option>
-                  {areas.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-                </select>
+                <Select value={String(editingData.area_id || '')} onChange={v => setEditingData(d => ({ ...d, area_id: v }))} placeholder="Sin área"
+                  options={[{ value: '', label: 'Sin área' }, ...areas.map(a => ({ value: String(a.id), label: a.nombre }))]} />
               </div>
             </div>
 

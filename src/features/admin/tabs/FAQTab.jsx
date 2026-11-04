@@ -2,10 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Save, ChevronLeft, MessageCircle } from 'lucide-react';
 import { fetchFaqPreguntas, fetchFaqSectores, saveFaqPregunta, deleteFaqPregunta } from '../../../services/faqService';
 import { AdminListPanel, EmptyState, useToast } from '../../../components/common';
+import { useConfirm } from '../../../contexts/ConfirmContext';
+import { Select } from '../../../components/common';
 
 const EMPTY_PREGUNTA = { pregunta: '', respuesta: '', sector_id: null, activo: true, numero_orden: 0, links: [] };
 
 const FAQTab = () => {
+  const confirm = useConfirm();
   const { showToast } = useToast();
   const [preguntas, setPreguntas] = useState([]);
   const [sectores, setSectores] = useState([]);
@@ -53,7 +56,7 @@ const FAQTab = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm('¿Eliminar esta pregunta?')) return;
+    if (!(await confirm({ message: '¿Eliminar esta pregunta?', destructive: true }))) return;
     await deleteFaqPregunta(id);
     await loadData();
   };
@@ -83,10 +86,8 @@ const FAQTab = () => {
             <div className="form-row">
               <div className="form-group">
                 <label>Sector</label>
-                <select className="form-control" value={editingData.sector_id || ''} onChange={e => setEditingData(d => ({ ...d, sector_id: e.target.value }))}>
-                  <option value="">Sin sector</option>
-                  {sectores.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-                </select>
+                <Select value={String(editingData.sector_id || '')} onChange={v => setEditingData(d => ({ ...d, sector_id: v }))} placeholder="Sin sector"
+                  options={[{ value: '', label: 'Sin sector' }, ...sectores.map(s => ({ value: String(s.id), label: s.nombre }))]} />
               </div>
               <div className="form-group">
                 <label>Orden</label>
@@ -94,10 +95,8 @@ const FAQTab = () => {
               </div>
               <div className="form-group">
                 <label>Estado</label>
-                <select className="form-control" value={editingData.activo ? 'true' : 'false'} onChange={e => setEditingData(d => ({ ...d, activo: e.target.value === 'true' }))}>
-                  <option value="true">Activo</option>
-                  <option value="false">Inactivo</option>
-                </select>
+                <Select value={editingData.activo ? 'true' : 'false'} onChange={v => setEditingData(d => ({ ...d, activo: v === 'true' }))}
+                  options={[{ value: 'true', label: 'Activo' }, { value: 'false', label: 'Inactivo' }]} />
               </div>
             </div>
 
