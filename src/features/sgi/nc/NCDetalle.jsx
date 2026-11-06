@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { formatFecha } from '../../../lib/fechas';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Check, Upload, X, FileText, Clock, ChevronRight, Loader2, Search, User, HelpCircle, GitBranch, Settings, Package, Cloud, BarChart2, BookOpen, Users, Paperclip, Download } from 'lucide-react';
 import NCExportarPDF from './NCInformePDF';
@@ -507,7 +508,7 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
                       <div className="ncd-hito-dot" />
                       <div className="ncd-hito-content">
                         <div className="ncd-hito-header">
-                          <span className="ncd-hito-fecha">{new Date(h.fecha).toLocaleDateString('es-AR')}</span>
+                          <span className="ncd-hito-fecha">{formatFecha(h.fecha, {})}</span>
                           <span className="ncd-hito-pct">+{h.porcentaje}%</span>
                           <button className="ncd-adjunto-remove" onClick={() => handleDeleteHito(h.id)} title="Eliminar hito"><X size={13} /></button>
                         </div>
@@ -1685,7 +1686,7 @@ export default function NCDetalle() {
                   <p className="ncd-accion-desc">{a.descripcion}</p>
                   <div className="ncd-accion-card-footer">
                     <span className="ncd-accion-meta">{a.responsable?.full_name || '—'}</span>
-                    {a.fecha_vencimiento && <span className="ncd-accion-meta">Vence: {new Date(a.fecha_vencimiento).toLocaleDateString('es-AR')}</span>}
+                    {a.fecha_vencimiento && <span className="ncd-accion-meta">Vence: {formatFecha(a.fecha_vencimiento, {})}</span>}
                     <div className="ncd-accion-progress-wrap">
                       <div className="ncd-accion-progress-bar">
                         <div className="ncd-accion-progress-fill" style={{ width: `${pct}%`, background: pct === 100 ? '#10B981' : 'var(--primary-color)' }} />
@@ -1924,7 +1925,7 @@ export default function NCDetalle() {
                     {a.estado?.replace('_', ' ')}
                   </span>
                 </div>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Vence: {a.fecha_vencimiento ? new Date(a.fecha_vencimiento).toLocaleDateString('es-AR') : '—'}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Vence: {a.fecha_vencimiento ? formatFecha(a.fecha_vencimiento, {}) : '—'}</span>
               </div>
 
               <div className="ncd-step5-accion-body">
@@ -1956,7 +1957,7 @@ export default function NCDetalle() {
                       <span className={`ncd-step5-verif-readonly-result${v.eficaz ? ' si' : ' no'}`}>
                         {v.eficaz ? '✓ Eficaz' : '✗ No eficaz'}
                       </span>
-                      {v.fecha && <span className="ncd-step5-verif-readonly-meta">Fecha: {new Date(v.fecha).toLocaleDateString('es-AR')}</span>}
+                      {v.fecha && <span className="ncd-step5-verif-readonly-meta">Fecha: {formatFecha(v.fecha, {})}</span>}
                       {v.detalle && <span className="ncd-step5-verif-readonly-meta">{v.detalle}</span>}
                     </div>
                   ) : !canVerif ? (

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, Trash2, Save, ChevronLeft, ChevronRight, ChevronDown, FileText, FolderPlus, FilePlus, Download } from 'lucide-react';
+import { formatFecha } from '../../../lib/fechas';
 import {
   fetchSGI,
   fetchVersionVigente,
@@ -239,7 +240,7 @@ const SGITab = () => {
                             <div className="sgi-tree-ver-dot" />
                             <span className="sgi-tree-ver-num">v{ver.numero_version}</span>
                             {ver.vigente && <span className="sgi-vigente-pill">Vigente</span>}
-                            {ver.fecha_emision && <span className="sgi-tree-ver-date">{new Date(ver.fecha_emision).toLocaleDateString('es-AR')}</span>}
+                            {ver.fecha_emision && <span className="sgi-tree-ver-date">{formatFecha(ver.fecha_emision, {})}</span>}
                             {ver.notas_cambios && <span className="sgi-tree-ver-notes">{ver.notas_cambios}</span>}
                             <div className="sgi-tree-actions">
                               {ver.archivo_url && (

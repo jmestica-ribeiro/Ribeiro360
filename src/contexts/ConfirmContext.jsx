@@ -26,7 +26,7 @@ export const ConfirmProvider = ({ children }) => {
       setState({
         title: opts.title ?? '¿Confirmar acción?',
         message: opts.message ?? '',
-        confirmLabel: opts.confirmLabel ?? (opts.destructive ? 'Eliminar' : 'Aceptar'),
+        confirmLabel: opts.confirmLabel ?? (/elimin|borrar/i.test(opts.message ?? '') ? 'Eliminar' : opts.destructive ? 'Confirmar' : 'Aceptar'),
         cancelLabel: opts.cancelLabel ?? 'Cancelar',
         destructive: opts.destructive ?? /elimin|borrar|no se puede deshacer/i.test(opts.message ?? ''),
       });

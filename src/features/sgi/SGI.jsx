@@ -3,17 +3,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText, BookOpen, ClipboardList, Folder, ChevronRight, ChevronLeft,
   Plus, X, Download, History, CheckCircle, ShieldCheck, Search,
-  AlertCircle, Edit2, Trash2, Save, Lock, Unlock, Tag, Clock,
+  AlertCircle, Edit2, Trash2, Save, Lock, Unlock, Tag, Clock, FolderPlus,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useConfirm } from '../../contexts/ConfirmContext';
+import { useToast } from '../../contexts/ToastContext';
 import {
   fetchSgiCategoriasActivas,
   fetchSgiDocsCounts,
   fetchSgiDocumentosByCategoria,
   fetchVersionVigente,
   saveSgiDocumento,
+  saveSgiCategoria,
   uploadSgiArchivo,
   softDeleteSgiDocumento,
   getSgiSignedUrl,
@@ -44,6 +46,7 @@ const SGI = () => {
   const navigate = useNavigate();
   const { profile } = useAuth();
   const confirm = useConfirm();
+  const { toast } = useToast();
   const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
   const canUploadSgi = isAdmin || profile?.can_upload_sgi === true;
 
@@ -88,6 +91,10 @@ const SGI = () => {
   const [docForm, setDocForm] = useState(EMPTY_DOC_FORM);
   const [isSaving, setIsSaving] = useState(false);
   const [tagInput, setTagInput] = useState('');
+
+  const [showFolderModal, setShowFolderModal] = useState(false);
+  const [folderForm, setFolderForm] = useState({ nombre: '', descripcion: '' });
+  const [isSavingFolder, setIsSavingFolder] = useState(false);
 
   useEffect(() => { fetchCategories(); }, []);
 
@@ -241,6 +248,38 @@ const SGI = () => {
     ? categories.filter(c => c.parent_id === currentCategory.id)
     : [];
   
+  const openNewFolder = () => {
+    setFolderForm({ nombre: '', descripcion: '' });
+    setShowFolderModal(true);
+  };
+
+  const handleSaveFolder = async () => {
+    const nombre = folderForm.nombre.trim();
+    if (!nombre || !currentCategory) return;
+    // La ruta /sgi/:categoria usa el slug del nombre: debe ser único en todo el árbol
+    if (categories.some(c => getCatSlug(c.nombre) === getCatSlug(nombre))) {
+      toast.warning('Ya existe una carpeta con ese nombre', { description: 'Elegí un nombre distinto.' });
+      return;
+    }
+    setIsSavingFolder(true);
+    const { error } = await saveSgiCategoria({
+      nombre,
+      descripcion: folderForm.descripcion.trim() || null,
+      parent_id: currentCategory.id,
+      icono: 'Folder',
+      color: currentCategory.color,
+      orden: subCategories.length + 1,
+    });
+    setIsSavingFolder(false);
+    if (error) {
+      toast.error('No se pudo crear la carpeta', { description: error.message });
+      return;
+    }
+    setShowFolderModal(false);
+    toast.success(`Carpeta "${nombre}" creada`);
+    fetchCategories();
+  };
+
   const hasVersionVigente = (doc) => doc.versiones?.some(v => v.vigente && v.estado_aprobacion === 'aprobado');
 
   const filteredDocs = documents.filter(d => {
@@ -444,10 +483,19 @@ const SGI = () => {
           <h2>{currentCategory?.nombre || categoriaSlug}</h2>
           {currentCategory?.descripcion && <p>{currentCategory.descripcion}</p>}
         </div>
-        {canUploadSgi && (
-          <button className="btn-sgi-primary" onClick={openNewDoc}>
-            <Plus size={16} /> Nuevo documento
-          </button>
+        {(canUploadSgi || isAdmin) && (
+          <div className="sgi-header-actions">
+            {isAdmin && currentCategory && (
+              <button className="btn-sgi-secondary" onClick={openNewFolder}>
+                <FolderPlus size={16} /> Nueva carpeta
+              </button>
+            )}
+            {canUploadSgi && (
+              <button className="btn-sgi-primary" onClick={openNewDoc}>
+                <Plus size={16} /> Nuevo documento
+              </button>
+            )}
+          </div>
         )}
       </div>
 
@@ -724,6 +772,57 @@ const SGI = () => {
                   <Save size={14} /> {isSaving ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Modal: Nueva carpeta ── */}
+      <AnimatePresence>
+        {showFolderModal && (
+          <div className="sgi-modal-backdrop" onClick={() => setShowFolderModal(false)}>
+            <motion.div className="sgi-modal"
+              role="dialog" aria-modal="true" aria-labelledby="sgi-folder-title"
+              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }} onClick={e => e.stopPropagation()}
+              onKeyDown={e => { if (e.key === 'Escape') setShowFolderModal(false); }}>
+              <div className="sgi-modal-header">
+                <h4 id="sgi-folder-title">Nueva carpeta en {currentCategory?.nombre}</h4>
+                <button className="sgi-modal-close" aria-label="Cerrar" onClick={() => setShowFolderModal(false)}><X size={18} /></button>
+              </div>
+              <form
+                onSubmit={e => { e.preventDefault(); handleSaveFolder(); }}
+              >
+                <div className="sgi-modal-body">
+                  <div className="sgi-form-group">
+                    <label htmlFor="sgi-folder-nombre">Nombre *</label>
+                    <input
+                      id="sgi-folder-nombre"
+                      autoFocus
+                      value={folderForm.nombre}
+                      onChange={e => setFolderForm(f => ({ ...f, nombre: e.target.value }))}
+                      placeholder="Ej: Procedimientos de Obra"
+                      maxLength={80}
+                    />
+                  </div>
+                  <div className="sgi-form-group" style={{ marginTop: 12 }}>
+                    <label htmlFor="sgi-folder-desc">Descripción</label>
+                    <input
+                      id="sgi-folder-desc"
+                      value={folderForm.descripcion}
+                      onChange={e => setFolderForm(f => ({ ...f, descripcion: e.target.value }))}
+                      placeholder="Opcional"
+                      maxLength={160}
+                    />
+                  </div>
+                </div>
+                <div className="sgi-modal-footer">
+                  <button type="button" className="btn-sgi-secondary" onClick={() => setShowFolderModal(false)}>Cancelar</button>
+                  <button type="submit" className="btn-sgi-primary" disabled={isSavingFolder || !folderForm.nombre.trim()}>
+                    <FolderPlus size={14} /> {isSavingFolder ? 'Creando...' : 'Crear carpeta'}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}

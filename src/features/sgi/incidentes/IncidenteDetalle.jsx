@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { formatFecha } from '../../../lib/fechas';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Check, Clock, ChevronRight, Loader2, Search, User, Upload, X, Camera, HelpCircle, GitBranch, FileText, Paperclip } from 'lucide-react';
 import IncidenteInformePDF from './IncidenteInformePDF';
@@ -736,7 +737,7 @@ export default function IncidenteDetalle() {
                   <p className="ncd-accion-desc">{a.descripcion}</p>
                   <div className="ncd-accion-card-footer">
                     <span className="ncd-accion-meta">{a.responsable?.full_name || '—'}</span>
-                    {a.fecha_vencimiento && <span className="ncd-accion-meta">Vence: {new Date(a.fecha_vencimiento).toLocaleDateString('es-AR')}</span>}
+                    {a.fecha_vencimiento && <span className="ncd-accion-meta">Vence: {formatFecha(a.fecha_vencimiento, {})}</span>}
                     <div className="ncd-accion-progress-wrap">
                       <div className="ncd-accion-progress-bar">
                         <div className="ncd-accion-progress-fill" style={{ width: `${pct}%`, background: pct === 100 ? '#10B981' : 'var(--primary-color)' }} />
@@ -882,7 +883,7 @@ export default function IncidenteDetalle() {
                     </span>
                   )}
                 </div>
-                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Vence: {a.fecha_vencimiento ? new Date(a.fecha_vencimiento).toLocaleDateString('es-AR') : '—'}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Vence: {a.fecha_vencimiento ? formatFecha(a.fecha_vencimiento, {}) : '—'}</span>
               </div>
               <div className="ncd-step5-accion-body">
                 <div className="ncd-step5-col-left">
@@ -901,7 +902,7 @@ export default function IncidenteDetalle() {
                     <div className="ncd-step5-verif-readonly">
                       <span className="ncd-step5-verif-readonly-label">Resultado</span>
                       <span className={`ncd-step5-verif-readonly-result${v.eficaz ? ' si' : ' no'}`}>{v.eficaz ? '✓ Eficaz' : '✗ No eficaz'}</span>
-                      {v.fecha && <span className="ncd-step5-verif-readonly-meta">Fecha: {new Date(v.fecha).toLocaleDateString('es-AR')}</span>}
+                      {v.fecha && <span className="ncd-step5-verif-readonly-meta">Fecha: {formatFecha(v.fecha, {})}</span>}
                       {v.detalle && <span className="ncd-step5-verif-readonly-meta">{v.detalle}</span>}
                     </div>
                   ) : !canVerif ? (
@@ -1186,14 +1187,15 @@ export default function IncidenteDetalle() {
                 onSave={() => handleSavePaso2(false)}
                 onSaveAndAdvance={() => handleSavePaso2(true)}
                 onCerrar={async () => {
-                  if (!(await confirm({ message: '¿Cerrar este incidente sin continuar la investigación? Esta acción no se puede deshacer.', destructive: true }))) return;
+                  if (!(await confirm({ title: '¿Cerrar incidente?', message: '¿Cerrar este incidente sin continuar la investigación? Esta acción no se puede deshacer.', confirmLabel: 'Cerrar incidente', destructive: true }))) return;
                   setSaving(true);
                   try {
                     const { error } = await updateIncidente(id, { estado: 'cerrado', paso_actual: 6, sin_investigacion: true });
                     if (error) throw error;
                     setSinInvestigacion(true);
+                    setIncEstado('cerrado');
                     showToast('Incidente cerrado correctamente', 'success');
-                    setTimeout(() => navigate(-1), 1500);
+                    setTimeout(() => navigate('/sgi/incidentes', { replace: true }), 1200);
                   } catch (err) {
                     console.error(err);
                     showToast('Error al cerrar el incidente', 'error');
@@ -1250,7 +1252,7 @@ function IncStep6Hitos({ accionId }) {
       <p style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 6 }}>Historial de avance</p>
       {hitos.map((h, i) => (
         <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 5, paddingLeft: 8, borderLeft: '2px solid var(--border-color)' }}>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{new Date(h.fecha).toLocaleDateString('es-AR')}</span>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{formatFecha(h.fecha, {})}</span>
           <span style={{ fontSize: 11, color: '#059669', fontWeight: 700, whiteSpace: 'nowrap' }}>+{h.porcentaje}%</span>
           <span style={{ fontSize: 11, color: 'var(--text-main)' }}>{h.descripcion}</span>
         </div>
@@ -1458,7 +1460,7 @@ function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, ac
                     <div className="ncd-hito-dot" />
                     <div className="ncd-hito-content">
                       <div className="ncd-hito-header">
-                        <span className="ncd-hito-fecha">{new Date(h.fecha).toLocaleDateString('es-AR')}</span>
+                        <span className="ncd-hito-fecha">{formatFecha(h.fecha, {})}</span>
                         <span className="ncd-hito-pct">+{h.porcentaje}%</span>
                         <button className="ncd-adjunto-remove" onClick={() => handleDeleteHito(h.id)} title="Eliminar hito"><X size={13} /></button>
                       </div>

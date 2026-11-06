@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { formatFecha } from '../../../lib/fechas';
 import { ClipboardList, Plus, AlertCircle } from 'lucide-react';
 import { Select } from '../../../components/common';
 import { fetchNcHallazgosAbiertos, fetchNcGerencias, fetchNcHallazgos } from '../../../services/sgiService';
@@ -21,11 +22,7 @@ const TIPO_FILTERS = [
   { label: 'Fortaleza',  value: 'Fortaleza',  color: '#10B981' },
 ];
 
-function formatDate(dateStr) {
-  if (!dateStr) return '—';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
+const formatDate = (dateStr) => formatFecha(dateStr);
 
 function SkeletonRow() {
   return (

@@ -382,7 +382,7 @@ body.dark-theme .nc-estado-btn.active {
 }
 
 /* Anchos de columnas — table-layout: fixed, los % se reparten sobre el 100% */
-.nc-table th:nth-child(1), .nc-table td:nth-child(1) { width: 56px; }   /* Tipo */
+.nc-table th:nth-child(1), .nc-table td:nth-child(1) { width: 108px; }  /* Tipo — entra "FORTALEZA" */
 .nc-table th:nth-child(2), .nc-table td:nth-child(2) { width: 110px; }  /* Nro */
 .nc-table th:nth-child(3), .nc-table td:nth-child(3) { width: 90px; }   /* Fecha */
 .nc-table th:nth-child(4), .nc-table td:nth-child(4) { width: auto; overflow: hidden; }   /* Descripción — flexible */
@@ -400,6 +400,11 @@ body.dark-theme .nc-estado-btn.active {
   font-weight: 800;
   letter-spacing: 0.4px;
   text-transform: uppercase;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
 }
 
 .nc-tipo-badge.NC   { background: rgba(231,29,54,0.12);  color: #E71D36; }
@@ -616,6 +621,6 @@ body.dark-theme .nc-estado-badge.cerrado {
   }
 
   .nc-table {
-    min-width: 700px;
+    min-width: 1000px;
   }
 }

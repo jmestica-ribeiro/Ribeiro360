@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { formatFecha } from '../../../lib/fechas';
 import { AlertTriangle, Plus, AlertCircle } from 'lucide-react';
 import { Select } from '../../../components/common';
 import { fetchIncidentesAbiertos, fetchIncidentesGerencias, fetchIncidentesSitios, fetchIncidentes } from '../../../services/sgiService';
@@ -28,11 +29,7 @@ const CLASIFICACION_FILTERS = [
   { label: 'Mayor',     value: 'Mayor',     color: '#8B5CF6' },
 ];
 
-function formatDate(dateStr) {
-  if (!dateStr) return '—';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-}
+const formatDate = (dateStr) => formatFecha(dateStr);
 
 function SkeletonRow() {
   return (

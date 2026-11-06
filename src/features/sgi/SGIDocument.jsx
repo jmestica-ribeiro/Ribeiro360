@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { formatFecha } from '../../lib/fechas';
 import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import {
   ChevronLeft, Download, FileText, CheckCircle, ShieldCheck,
@@ -389,7 +390,7 @@ const SGIDocument = () => {
                     <td>{vigenteVersion.aprobador || '—'}</td>
                     <td>
                       {vigenteVersion.fecha_aprobacion
-                        ? new Date(vigenteVersion.fecha_aprobacion).toLocaleDateString('es-AR')
+                        ? formatFecha(vigenteVersion.fecha_aprobacion, {})
                         : vigenteVersion.fecha_emision
                           ? new Date(vigenteVersion.fecha_emision + 'T00:00:00').toLocaleDateString('es-AR')
                           : '—'}
