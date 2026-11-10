@@ -72,8 +72,8 @@
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: rgba(231, 29, 54, 0.12);
-  color: #E71D36;
+  background: var(--destructive-bg);
+  color: var(--destructive);
   margin-bottom: 14px;
 }
 
@@ -93,7 +93,7 @@
 
 .access-denied-btn {
   background: var(--primary-color);
-  color: #fff;
+  color: var(--accent-contrast);
   border: none;
   border-radius: 8px;
   padding: 10px 24px;

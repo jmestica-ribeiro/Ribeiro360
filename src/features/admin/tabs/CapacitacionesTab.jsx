@@ -453,7 +453,7 @@ const CapacitacionesTab = () => {
                   ><X size={11} /></button>
                 </div>
               ) : (
-                <div style={{ width: 120, height: 72, borderRadius: 8, border: '2px dashed var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', flexShrink: 0 }}>
+                <div style={{ width: 120, height: 72, borderRadius: 8, border: '2px dashed var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-faint)', flexShrink: 0 }}>
                   <ImageIcon size={28} />
                 </div>
               )}
@@ -471,7 +471,7 @@ const CapacitacionesTab = () => {
             </div>
           </div>
 
-          <div className="section-divider" style={{ margin: '32px 0 16px 0', borderBottom: '1px solid #f0f0f0' }} />
+          <div className="section-divider" style={{ margin: '32px 0 16px 0', borderBottom: '1px solid var(--divider)' }} />
 
           {/* 2. PAF */}
           <h4 className="mb-4" style={{ fontSize: '16px', fontWeight: '800' }}>2. Plan Anual de Formación (PAF)</h4>
@@ -493,7 +493,7 @@ const CapacitacionesTab = () => {
             const planActivo = pafPlanes.find(p => p.anio === anioSeleccionado);
             const itemsDelPlan = planActivo ? pafItems.filter(i => i.plan_id === planActivo.id) : [];
             return (
-              <div style={{ background: '#f8f9ff', border: '1px solid #e0e4ff', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
+              <div style={{ background: 'var(--info-bg)', border: '1px solid var(--info-border)', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
                 <div className="form-row" style={{ gap: '16px', marginBottom: '12px' }}>
                   <div className="form-group" style={{ flex: 1 }}>
                     <label>Año del PAF</label>
@@ -521,7 +521,7 @@ const CapacitacionesTab = () => {
             );
           })()}
 
-          <div className="section-divider" style={{ margin: '32px 0 16px 0', borderBottom: '1px solid #f0f0f0' }} />
+          <div className="section-divider" style={{ margin: '32px 0 16px 0', borderBottom: '1px solid var(--divider)' }} />
 
           {/* 3. Visibilidad */}
           <h4 className="mb-2" style={{ fontSize: '16px', fontWeight: '800' }}>3. Visibilidad</h4>
@@ -533,7 +533,7 @@ const CapacitacionesTab = () => {
             profileValues={profileValues}
           />
 
-          <div className="section-divider" style={{ margin: '32px 0 24px 0', borderBottom: '1px solid #f0f0f0' }} />
+          <div className="section-divider" style={{ margin: '32px 0 24px 0', borderBottom: '1px solid var(--divider)' }} />
 
           {/* 3b. Destinatarios individuales */}
           <h4 className="mb-2" style={{ fontSize: '16px', fontWeight: '800' }}>3b. Destinatarios individuales</h4>
@@ -555,11 +555,11 @@ const CapacitacionesTab = () => {
               ).slice(0, 6);
               if (results.length === 0) return null;
               return (
-                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 50, marginTop: 4 }}>
+                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 50, marginTop: 4 }}>
                   {results.map(u => (
                     <div
                       key={u.id}
-                      style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2, borderBottom: '1px solid #f3f4f6' }}
+                      style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 2, borderBottom: '1px solid var(--divider)' }}
                       onMouseDown={e => {
                         e.preventDefault();
                         setEditingDestinatarios(prev => [...prev, { user_id: u.id, full_name: u.full_name, email: u.email }]);
@@ -567,7 +567,7 @@ const CapacitacionesTab = () => {
                       }}
                     >
                       <span style={{ fontWeight: 600, fontSize: 14 }}>{u.full_name}</span>
-                      <span style={{ fontSize: 12, color: '#6b7280' }}>{u.email}</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{u.email}</span>
                     </div>
                   ))}
                 </div>
@@ -578,10 +578,10 @@ const CapacitacionesTab = () => {
           {editingDestinatarios.length > 0 ? (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
               {editingDestinatarios.map(d => (
-                <div key={d.user_id} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: 20, padding: '4px 10px 4px 12px', fontSize: 13 }}>
+                <div key={d.user_id} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--field-bg)', border: '1px solid var(--border-color)', borderRadius: 20, padding: '4px 10px 4px 12px', fontSize: 13 }}>
                   <span style={{ fontWeight: 500 }}>{d.full_name || d.email}</span>
                   <button
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9ca3af', display: 'flex', alignItems: 'center', padding: 0 }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--ink-faint)', display: 'flex', alignItems: 'center', padding: 0 }}
                     onClick={() => setEditingDestinatarios(prev => prev.filter(x => x.user_id !== d.user_id))}
                   >
                     <X size={13} />
@@ -590,10 +590,10 @@ const CapacitacionesTab = () => {
               ))}
             </div>
           ) : (
-            <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 8 }}>Ningún destinatario individual agregado.</p>
+            <p style={{ fontSize: 13, color: 'var(--ink-faint)', marginBottom: 8 }}>Ningún destinatario individual agregado.</p>
           )}
 
-          <div className="section-divider" style={{ margin: '48px 0', borderBottom: '2px solid #f0f0f0' }} />
+          <div className="section-divider" style={{ margin: '48px 0', borderBottom: '2px solid var(--divider)' }} />
 
           {/* 4. Módulos */}
           <div className="flex-between mb-6">
@@ -622,7 +622,7 @@ const CapacitacionesTab = () => {
                 }}
               >
                 <div className="module-item-header" style={{ padding: '14px 20px', gap: 8 }}>
-                  <GripVertical size={16} style={{ cursor: 'grab', color: '#ccc', flexShrink: 0 }} />
+                  <GripVertical size={16} style={{ cursor: 'grab', color: 'var(--ink-faint)', flexShrink: 0 }} />
                   <span className="mod-number">{mIdx + 1}</span>
                   <input
                     className="form-control-ghost"
@@ -635,8 +635,8 @@ const CapacitacionesTab = () => {
                     }}
                   />
                   <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-                    <button title="Duplicar módulo" className="delete-mod" style={{ color: '#94a3b8' }} onClick={() => duplicateModule(mIdx)}><Copy size={15} /></button>
-                    <button title="Colapsar/expandir" className="delete-mod" style={{ color: '#94a3b8' }} onClick={() => toggleCollapseModule(mod.id)}>
+                    <button title="Duplicar módulo" className="delete-mod" style={{ color: 'var(--ink-faint)' }} onClick={() => duplicateModule(mIdx)}><Copy size={15} /></button>
+                    <button title="Colapsar/expandir" className="delete-mod" style={{ color: 'var(--ink-faint)' }} onClick={() => toggleCollapseModule(mod.id)}>
                       {collapsedModules.has(mod.id) ? <ChevronDown size={15} /> : <ChevronUp size={15} />}
                     </button>
                     <button className="delete-mod" onClick={() => setEditingModules(prev => prev.filter(m => m.id !== mod.id))}><Trash2 size={15} /></button>

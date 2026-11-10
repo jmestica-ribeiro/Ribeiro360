@@ -20,7 +20,7 @@ const COLORS = {
   abierto: '#F59E0B',
   cerrado: '#10B981',
 };
-const PIE_PALETTE = ['#F2DC00', '#1A1A1A', '#D4B800', '#4A4A4A', '#F5E84A', '#787878', '#A38900', '#ABABAB'];
+const PIE_PALETTE = ['#F2DC00', '#6B6B6B', '#D4B800', '#9A9A9A', '#F5E84A', '#787878', '#A38900', '#ABABAB']; // sin negros: deben verse en tema claro y oscuro
 
 // ── Tooltip personalizado ─────────────────────────────────────────────────────
 const CustomTooltip = ({ active, payload, label }) => {

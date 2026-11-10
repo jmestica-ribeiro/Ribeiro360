@@ -96,7 +96,7 @@
 .sel-opt-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .sel-opt-desc { font-size: var(--fs-caption); color: var(--text-muted); }
 .sel-opt-icon { display: inline-flex; flex-shrink: 0; }
-.sel-check { color: var(--primary-dark); flex-shrink: 0; }
+.sel-check { color: var(--accent-ink); flex-shrink: 0; }
 .sel-empty { padding: var(--space-4); text-align: center; font-size: var(--fs-callout); color: var(--text-muted); }
 
 /* Bottom sheet (móvil) */

@@ -879,7 +879,7 @@ export default function IncidenteDetalle() {
               <div className="ncd-step5-accion-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontWeight: 700, fontSize: 13 }}>{a.codigo}</span>
-                  {a.tipo === 'rectificativa' && <span style={{ background: '#FEE2E2', color: '#DC2626', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>RECTIFICATIVA</span>}
+                  {a.tipo === 'rectificativa' && <span style={{ background: 'var(--destructive-bg)', color: 'var(--destructive)', borderRadius: 4, padding: '2px 8px', fontSize: 11, fontWeight: 700 }}>RECTIFICATIVA</span>}
                   <span style={{ background: estadoColor + '20', color: estadoColor, borderRadius: 4, padding: '2px 10px', fontSize: 11, fontWeight: 600 }}>{a.estado?.replace('_', ' ')}</span>
                   {accionPadre && (
                     <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
@@ -987,8 +987,8 @@ export default function IncidenteDetalle() {
           const todasResueltas = accionesNormales.length > 0 && accionesPendientes.length === 0;
 
           return (
-            <div style={{ marginTop: 28, padding: '16px 20px', background: todasResueltas ? '#f0fdf4' : 'var(--bg-card)', border: `1px solid ${todasResueltas ? '#86efac' : 'var(--border-color)'}`, borderRadius: 10 }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: todasResueltas ? '#15803d' : 'var(--text-main)', marginBottom: todasResueltas ? 12 : 6 }}>
+            <div style={{ marginTop: 28, padding: '16px 20px', background: todasResueltas ? 'var(--success-bg)' : 'var(--bg-card)', border: `1px solid ${todasResueltas ? 'var(--success-border)' : 'var(--border-color)'}`, borderRadius: 10 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: todasResueltas ? 'var(--success)' : 'var(--text-main)', marginBottom: todasResueltas ? 12 : 6 }}>
                 {todasResueltas ? '✓ Todas las acciones han sido verificadas y resueltas.' : 'Acciones pendientes de verificación:'}
               </p>
               {!todasResueltas && (
@@ -1123,14 +1123,14 @@ export default function IncidenteDetalle() {
         {!isNew && (
           <span style={{
             padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
-            background: incEstado === 'cerrado' ? '#dcfce7' : '#fef9c3',
-            color: incEstado === 'cerrado' ? '#15803d' : '#854d0e',
+            background: incEstado === 'cerrado' ? 'var(--success-bg)' : 'var(--warning-bg)',
+            color: incEstado === 'cerrado' ? 'var(--success)' : 'var(--warning)',
           }}>
             {incEstado === 'cerrado' ? 'CERRADO' : 'ABIERTO'}
           </span>
         )}
         {!isNew && incEstado === 'cerrado' && isAdmin && (
-          <button className="incd-pdf-btn" style={{ background: '#fef3c7', color: '#92400e', borderColor: '#fcd34d' }}
+          <button className="incd-pdf-btn" style={{ background: 'var(--warning-bg)', color: 'var(--warning)', borderColor: 'var(--warning-border)' }}
             onClick={async () => {
               if (!(await confirm({ message: '¿Reabrir este incidente?', destructive: false }))) return;
               await updateIncidente(id, { estado: 'abierto' });
@@ -1257,7 +1257,7 @@ function IncStep6Hitos({ accionId }) {
       {hitos.map((h, i) => (
         <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 5, paddingLeft: 8, borderLeft: '2px solid var(--border-color)' }}>
           <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{formatFecha(h.fecha, {})}</span>
-          <span style={{ fontSize: 11, color: '#059669', fontWeight: 700, whiteSpace: 'nowrap' }}>+{h.porcentaje}%</span>
+          <span style={{ fontSize: 11, color: 'var(--success)', fontWeight: 700, whiteSpace: 'nowrap' }}>+{h.porcentaje}%</span>
           <span style={{ fontSize: 11, color: 'var(--text-main)' }}>{h.descripcion}</span>
         </div>
       ))}

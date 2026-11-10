@@ -40,11 +40,11 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #FEE2E2;
-  border: 1.5px solid #FCA5A5;
+  background: var(--destructive-bg);
+  border: 1.5px solid var(--destructive-border);
   padding: 9px 14px;
   border-radius: 10px;
-  color: #DC2626;
+  color: var(--destructive);
   font-size: 13px;
   font-weight: 700;
   font-family: inherit;
@@ -53,8 +53,8 @@
 }
 
 .btn-clear-filters-inline:hover {
-  background: #DC2626;
-  border-color: #DC2626;
+  background: var(--destructive);
+  border-color: var(--destructive);
   color: white;
 }
 

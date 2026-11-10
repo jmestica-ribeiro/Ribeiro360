@@ -456,10 +456,10 @@ body.dark-theme .inc-estado-btn.active {
 body.dark-theme .inc-tipo-badge.Accidente      { background: rgba(231,29,54,0.2); }
 body.dark-theme .inc-tipo-badge.Incidente      { background: rgba(245,158,11,0.2); }
 body.dark-theme .inc-tipo-badge.Casi-Accidente { background: rgba(59,130,246,0.2); }
-body.dark-theme .inc-tipo-badge.Enfermedad     { background: rgba(139,92,246,0.2); }
+body.dark-theme .inc-tipo-badge.Enfermedad     { background: rgba(139,92,246,0.2); color: #c4b5fd; }
 body.dark-theme .inc-tipo-badge.Personal       { background: rgba(231,29,54,0.2); }
 body.dark-theme .inc-tipo-badge.Vehicular      { background: rgba(245,158,11,0.2); }
-body.dark-theme .inc-tipo-badge.Ambiental      { background: rgba(16,185,129,0.2); }
+body.dark-theme .inc-tipo-badge.Ambiental      { background: rgba(16,185,129,0.2); color: #34d399; }
 body.dark-theme .inc-tipo-badge.Industrial     { background: rgba(59,130,246,0.2); }
 
 .inc-numero {
@@ -541,17 +541,12 @@ body.dark-theme .inc-tipo-badge.Industrial     { background: rgba(59,130,246,0.2
 }
 
 .inc-estado-badge.cerrado {
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--success-bg);
+  color: var(--success);
 }
 
 body.dark-theme .inc-estado-badge.abierto {
   background: rgba(231,29,54,0.2);
-}
-
-body.dark-theme .inc-estado-badge.cerrado {
-  background: rgba(16,185,129,0.18);
-  color: #34d399;
 }
 
 /* ── Empty State ────────────────────────────────────────────────────────────── */

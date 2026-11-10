@@ -24,8 +24,8 @@ const LazyIframe = ({ title, src, height, bg }) => {
     <div ref={ref} style={{ background: bg, minHeight: height, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '10px', padding: '24px' }}>
       {visible
         ? <iframe title={title} width="100%" height={height} src={src} allowFullScreen style={{ border: 'none', display: 'block' }} />
-        : <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', color: '#aaa' }}>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" fill="#d1d5db" /><rect x="14" y="3" width="7" height="7" rx="1" fill="#d1d5db" opacity="0.6" /><rect x="3" y="14" width="7" height="7" rx="1" fill="#d1d5db" opacity="0.6" /><rect x="14" y="14" width="7" height="7" rx="1" fill="#d1d5db" /></svg>
+        : <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', color: 'var(--ink-faint)' }}>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" fill="currentColor" /><rect x="14" y="3" width="7" height="7" rx="1" fill="currentColor" opacity="0.6" /><rect x="3" y="14" width="7" height="7" rx="1" fill="currentColor" opacity="0.6" /><rect x="14" y="14" width="7" height="7" rx="1" fill="currentColor" /></svg>
           <span style={{ fontSize: '12px' }}>Cargando tablero...</span>
         </div>
       }
@@ -542,7 +542,7 @@ const PortalAdministracion = () => (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
           {/* Logística de Pedidos */}
-          <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1.5px solid #e5e7eb', background: '#fff', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+          <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1.5px solid var(--border-color)', background: 'var(--bg-card)', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
             <div style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 8px' }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 17l4-8 4 4 4-6 4 10" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -552,11 +552,11 @@ const PortalAdministracion = () => (
                 <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '11px' }}>Seguimiento de órdenes de compra</div>
               </div>
             </div>
-            <LazyIframe title="Compras - Pedidos" height={480} src="https://app.powerbi.com/view?r=eyJrIjoiMGQ0YTBkMGItYTdmNy00YTA2LWFkODUtZTIwODNjODAzYmNmIiwidCI6ImRhZmUzYmM1LTYzNzItNDM5Ni04NDUyLWM3MDdmM2VjZjRiZiJ9" bg="#f8faff" />
+            <LazyIframe title="Compras - Pedidos" height={480} src="https://app.powerbi.com/view?r=eyJrIjoiMGQ0YTBkMGItYTdmNy00YTA2LWFkODUtZTIwODNjODAzYmNmIiwidCI6ImRhZmUzYmM1LTYzNzItNDM5Ni04NDUyLWM3MDdmM2VjZjRiZiJ9" bg="var(--surface-subtle)" />
           </div>
 
           {/* Tracking de Compras */}
-          <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1.5px solid #e5e7eb', background: '#fff', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+          <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1.5px solid var(--border-color)', background: 'var(--bg-card)', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
             <div style={{ background: 'linear-gradient(135deg, #134e4a 0%, #0f766e 100%)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 8px' }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 17l4-8 4 4 4-6 4 10" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -566,7 +566,7 @@ const PortalAdministracion = () => (
                 <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: '11px' }}>Reemplazar por el link del reporte cuando esté disponible</div>
               </div>
             </div>
-            <LazyIframe title="Compras - Tracking" height={480} src="" bg="#f0fdf9" />
+            <LazyIframe title="Compras - Tracking" height={480} src="" bg="var(--surface-subtle)" />
           </div>
 
         </div>
@@ -576,7 +576,7 @@ const PortalAdministracion = () => (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
 
         {/* SOLICITAR ALOJAMIENTO */}
-        <div style={{ background: 'var(--bg-secondary)', border: '1.5px solid #e5e7eb', borderRadius: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg-secondary)', border: '1.5px solid var(--border-color)', borderRadius: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ background: 'linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 8px' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /><polyline points="9 22 9 12 15 12 15 22" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
@@ -619,7 +619,7 @@ const PortalAdministracion = () => (
         </div>
 
         {/* SOLICITAR RETIRO DE PEDIDOS */}
-        <div style={{ background: 'var(--bg-secondary)', border: '1.5px solid #e5e7eb', borderRadius: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg-secondary)', border: '1.5px solid var(--border-color)', borderRadius: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ background: 'linear-gradient(135deg, #134e4a 0%, #0f766e 100%)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 8px' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M21 10V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M23 3H1v7h22V3z" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M10 12h4" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" /></svg>
@@ -663,7 +663,7 @@ const PortalAdministracion = () => (
         </div>
 
         {/* RECURSOS - PLANILLA DESCARGABLE */}
-        <div style={{ background: 'var(--bg-secondary)', border: '1.5px solid #e5e7eb', borderRadius: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ background: 'var(--bg-secondary)', border: '1.5px solid var(--border-color)', borderRadius: '12px', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ background: 'linear-gradient(135deg, #4a1942 0%, #7c3aed 100%)', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '8px', padding: '6px 8px' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /><polyline points="14 2 14 8 20 8" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /><line x1="12" y1="18" x2="12" y2="12" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" /><polyline points="9 15 12 18 15 15" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>

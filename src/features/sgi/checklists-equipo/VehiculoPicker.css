@@ -146,14 +146,11 @@
   align-items: center;
   justify-content: center;
   background: var(--primary-color, #6366f1);
-  color: #fff;
+  color: var(--accent-contrast);
 }
 .vpicker-hero-icon-wrap.muted {
   background: var(--border-color, #e5e7eb);
   color: var(--text-secondary);
-}
-.dark .vpicker-hero-icon-wrap.muted {
-  background: #2d2d3a;
 }
 
 /* ── Info cuando está seleccionado ──────────────────────────────────────── */
@@ -236,9 +233,9 @@
   transition: all 0.12s;
 }
 .vpicker-hero-clear:hover {
-  border-color: #ef4444;
-  color: #ef4444;
-  background: #fef2f2;
+  border-color: var(--destructive);
+  color: var(--destructive);
+  background: var(--destructive-bg);
 }
 
 /* ── Chips ───────────────────────────────────────────────────────────────── */
@@ -250,22 +247,18 @@
   background: #e0e7ff;
   color: #3730a3;
 }
-.dark .vpicker-chip {
+body.dark-theme .vpicker-chip {
   background: #312e81;
   color: #c7d2fe;
 }
 .vpicker-chip.familia {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--warning-bg);
+  color: var(--warning);
   font-family: monospace;
 }
-.dark .vpicker-chip.familia {
-  background: #451a03;
-  color: #fcd34d;
-}
 .vpicker-chip.patente {
-  background: #f0fdf4;
-  color: #16a34a;
+  background: var(--success-bg);
+  color: var(--success);
 }
 .vpicker-chip.muted {
   background: var(--border-color, #e5e7eb);
@@ -390,7 +383,7 @@
   transition: background 0.1s;
 }
 .vpicker-result-row:last-child { border-bottom: none; }
-.vpicker-result-row:hover      { background: var(--primary-color, #6366f1)08; }
+.vpicker-result-row:hover      { background: color-mix(in srgb, var(--primary-color) 6%, transparent); }
 
 .vpicker-result-icon {
   width: 28px;
@@ -409,7 +402,7 @@
   font-weight: 700;
   color: #4f46e5;
 }
-.dark .vpicker-result-codigo {
+body.dark-theme .vpicker-result-codigo {
   color: #a5b4fc;
 }
 .vpicker-result-nombre {

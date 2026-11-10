@@ -139,12 +139,12 @@ const CoursePreviewModal = ({ course, modules, onClose }) => {
     }}>
       <div style={{
         display: 'flex', flexDirection: 'column', width: '100%',
-        background: '#fcfcfc', overflow: 'hidden',
+        background: 'var(--bg-color)', overflow: 'hidden',
       }}>
         {/* Toolbar */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '12px 24px', background: '#fff',
+          padding: '12px 24px', background: 'var(--bg-card)',
           borderBottom: '1px solid var(--border-color)',
           boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
         }}>
@@ -152,8 +152,8 @@ const CoursePreviewModal = ({ course, modules, onClose }) => {
             <BookOpen size={18} style={{ color: 'var(--primary-color)' }} />
             <span style={{ fontWeight: 700, fontSize: 15 }}>{course.titulo || 'Sin título'}</span>
             <span style={{
-              fontSize: 11, fontWeight: 700, background: '#fff3cd', color: '#92400e',
-              border: '1px solid #fde68a', borderRadius: 20, padding: '2px 10px',
+              fontSize: 11, fontWeight: 700, background: 'var(--warning-bg)', color: 'var(--warning)',
+              border: '1px solid var(--warning-border)', borderRadius: 20, padding: '2px 10px',
             }}>VISTA PREVIA</span>
           </div>
           <button
@@ -168,13 +168,13 @@ const CoursePreviewModal = ({ course, modules, onClose }) => {
           {/* Sidebar */}
           <aside style={{
             width: 240, flexShrink: 0, borderRight: '1px solid var(--border-color)',
-            background: '#fff', overflowY: 'auto', padding: '16px 0',
+            background: 'var(--bg-card)', overflowY: 'auto', padding: '16px 0',
           }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-muted)', padding: '0 20px 12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
               Módulos
             </div>
             {modules.length === 0 ? (
-              <p style={{ fontSize: 13, color: '#bbb', padding: '0 20px' }}>Sin módulos</p>
+              <p style={{ fontSize: 13, color: 'var(--ink-faint)', padding: '0 20px' }}>Sin módulos</p>
             ) : modules.map((mod, idx) => (
               <button
                 key={mod.id}
@@ -182,7 +182,7 @@ const CoursePreviewModal = ({ course, modules, onClose }) => {
                 style={{
                   width: '100%', textAlign: 'left', padding: '10px 20px',
                   background: activeIdx === idx ? 'var(--primary-color)' : 'none',
-                  color: activeIdx === idx ? '#000' : 'var(--text-main)',
+                  color: activeIdx === idx ? 'var(--accent-contrast)' : 'var(--text-main)',
                   border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: activeIdx === idx ? 700 : 500,
                   transition: 'background 0.15s',
                 }}
@@ -225,7 +225,7 @@ const CoursePreviewModal = ({ course, modules, onClose }) => {
                 </div>
               </>
             ) : (
-              <div style={{ textAlign: 'center', color: '#bbb', paddingTop: 80 }}>
+              <div style={{ textAlign: 'center', color: 'var(--ink-faint)', paddingTop: 80 }}>
                 <BookOpen size={48} style={{ marginBottom: 16, opacity: 0.3 }} />
                 <p style={{ fontSize: 15 }}>Este curso no tiene módulos aún.</p>
               </div>

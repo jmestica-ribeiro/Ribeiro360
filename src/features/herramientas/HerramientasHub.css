@@ -171,7 +171,7 @@
 }
 
 .herramientas-sidebar-item.active {
-  background: var(--sector-accent, #3b82f6)0d;
+  background: color-mix(in srgb, var(--sector-accent, #3b82f6) 5%, transparent);
 }
 
 .herramientas-sidebar-icon {

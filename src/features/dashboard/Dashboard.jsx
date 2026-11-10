@@ -235,7 +235,7 @@ const Dashboard = () => {
             {proximosEventos.map(ev => {
               const fecha = new Date(ev.fecha + 'T00:00:00');
               return (
-                <div key={ev.id} className="proximo-evento-card" style={{ borderTopColor: ev.categoria?.color || '#e5e7eb' }}>
+                <div key={ev.id} className="proximo-evento-card" style={{ borderTopColor: ev.categoria?.color || 'var(--border-soft)' }}>
                   <div className="proximo-evento-fecha">
                     <span className="proximo-dia">{fecha.getDate()}</span>
                     <span className="proximo-mes">{fecha.toLocaleDateString('es-AR', { month: 'short' })}</span>
@@ -451,7 +451,7 @@ const Dashboard = () => {
             const pieData = [
               { name: 'Completados', value: completados, color: '#10b981' },
               { name: 'En progreso', value: enProgreso, color: '#F2DC00' },
-              { name: 'Sin iniciar', value: sinIniciar, color: '#e5e7eb' },
+              { name: 'Sin iniciar', value: sinIniciar, color: 'var(--border-soft)' },
             ].filter(d => d.value > 0);
 
             return (
@@ -490,7 +490,7 @@ const Dashboard = () => {
             <div className="results-list">
               {resultados.map(r => (
                 <div key={r.id} className="result-item">
-                  <div className="result-score-badge" style={{ backgroundColor: r.aprobado ? '#d1fae5' : '#fee2e2', color: r.aprobado ? '#065f46' : '#991b1b' }}>
+                  <div className="result-score-badge" style={{ backgroundColor: r.aprobado ? 'var(--success-bg)' : 'var(--destructive-bg)', color: r.aprobado ? 'var(--success)' : 'var(--destructive)' }}>
                     {r.puntaje}%
                   </div>
                   <div className="result-info">
@@ -577,9 +577,9 @@ function EcosistemaHub() {
                 </text>
               )}
               <circle cx={nx - 26} cy={ny + 10} r="4"
-                fill={available ? '#23824A' : '#9CA3AF'} />
+                fill={available ? 'var(--success)' : 'var(--ink-faint)'} />
               <text x={nx - 18} y={ny + 14} fontSize="9.5"
-                fill={available ? '#23824A' : '#9CA3AF'} fontFamily="IBM Plex Sans, system-ui, sans-serif">
+                fill={available ? 'var(--success)' : 'var(--ink-faint)'} fontFamily="IBM Plex Sans, system-ui, sans-serif">
                 {estado}
               </text>
             </>

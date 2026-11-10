@@ -191,13 +191,13 @@
 }
 
 .status-badge.activo, .status-badge.visible {
-  background-color: #D1FAE5;
-  color: #065F46;
+  background-color: var(--success-bg);
+  color: var(--success);
 }
 
 .status-badge.borrador {
-  background-color: #FEF3C7;
-  color: #92400E;
+  background-color: var(--warning-bg);
+  color: var(--warning);
 }
 
 .actions-cell {
@@ -215,7 +215,7 @@
 }
 
 .action-btn.edit:hover { background-color: var(--bg-color); color: var(--primary-dark); }
-.action-btn.delete:hover { background-color: #FEE2E2; color: #DC2626; }
+.action-btn.delete:hover { background-color: var(--destructive-bg); color: var(--destructive); }
 
 /* Steps List for Onboarding Editor */
 .info-banner {
@@ -305,7 +305,7 @@
 
 /* Forms for Step Editor */
 .admin-form-section {
-  background-color: white;
+  background-color: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   padding: 32px;
@@ -422,7 +422,7 @@ textarea.form-control {
   gap: 8px;
   margin-bottom: 24px;
   padding: 12px;
-  background-color: #f9fafb;
+  background-color: var(--surface-subtle);
   border-radius: 12px;
   border: 1px dashed var(--border-color);
 }
@@ -432,7 +432,7 @@ textarea.form-control {
   align-items: center;
   gap: 8px;
   padding: 10px 16px;
-  background: white;
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   font-size: 13px;
@@ -455,7 +455,7 @@ textarea.form-control {
 }
 
 .block-item-mini {
-  background: #fff;
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   overflow: hidden;
@@ -469,7 +469,7 @@ textarea.form-control {
 
 .block-item-header {
   padding: 10px 16px;
-  background-color: #fafafa;
+  background-color: var(--surface-subtle);
   border-bottom: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
@@ -638,7 +638,7 @@ textarea.form-control {
 
 .module-item-header {
   padding: 12px 16px;
-  background-color: #fcfcfc;
+  background-color: var(--surface-subtle);
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
@@ -670,12 +670,12 @@ textarea.form-control {
 }
 
 .form-control-ghost:hover {
-  background-color: #f0f0f0;
+  background-color: var(--bg-hover);
 }
 
 .delete-mod {
   background: none;
-  color: #ff4d4f;
+  color: var(--destructive);
   border: none;
   cursor: pointer;
   padding: 4px;
@@ -683,7 +683,7 @@ textarea.form-control {
 }
 
 .delete-mod:hover {
-  background-color: #fff1f0;
+  background-color: var(--destructive-bg);
 }
 
 .module-item-body {
@@ -707,7 +707,7 @@ textarea.form-control {
 .dest-row button {
   background: none;
   border: none;
-  color: #999;
+  color: var(--ink-faint);
   cursor: pointer;
 }
 
@@ -774,7 +774,7 @@ textarea.form-control {
   align-items: center;
   gap: 16px;
   padding: 24px;
-  background-color: #f9fafb;
+  background-color: var(--surface-subtle);
   border: 1px dashed var(--border-color);
   border-radius: 12px;
   color: var(--text-muted);
@@ -805,7 +805,7 @@ textarea.form-control {
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  background-color: #fcfcfc;
+  background-color: var(--surface-subtle);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -846,7 +846,7 @@ textarea.form-control {
 .btn-remove-block {
   background: none;
   border: none;
-  color: #ccc;
+  color: var(--ink-faint);
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
@@ -855,8 +855,8 @@ textarea.form-control {
 }
 
 .btn-remove-block:hover {
-  background-color: #fee2e2;
-  color: #dc2626;
+  background-color: var(--destructive-bg);
+  color: var(--destructive);
 }
 
 /* === Eventos Admin === */
@@ -891,7 +891,7 @@ textarea.form-control {
 .admin-count {
   font-size: 13px;
   font-weight: 700;
-  background: #f3f4f6;
+  background: var(--field-bg);
   color: var(--text-muted);
   padding: 2px 10px;
   border-radius: 20px;
@@ -952,19 +952,19 @@ textarea.form-control {
   align-items: center;
   gap: 16px;
   padding: 14px 16px;
-  background: #fafafa;
+  background: var(--surface-subtle);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   transition: var(--transition);
 }
 
-.evento-item:hover { background: #f5f5f5; }
+.evento-item:hover { background: var(--bg-hover); }
 
 .evento-date-badge {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background: white;
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 6px 12px;
@@ -1021,7 +1021,7 @@ textarea.form-control {
 }
 
 .btn-icon-admin {
-  background: white;
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   width: 32px;
@@ -1035,11 +1035,11 @@ textarea.form-control {
 }
 
 .btn-icon-admin:hover { border-color: var(--primary-color); color: var(--text-main); }
-.btn-icon-admin.danger:hover { border-color: #dc2626; color: #dc2626; background: #fff5f5; }
+.btn-icon-admin.danger:hover { border-color: var(--destructive); color: var(--destructive); background: var(--destructive-bg); }
 
 /* === FAQ Links Editor === */
 .faq-links-editor {
-  background: #f9fafb;
+  background: var(--surface-subtle);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 20px 24px;
@@ -1064,7 +1064,7 @@ textarea.form-control {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: white;
+  background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 6px 14px;
@@ -1077,7 +1077,7 @@ textarea.form-control {
 
 .btn-add-link:hover {
   border-color: var(--primary-color);
-  background: #fffbeb;
+  background: var(--accent-soft);
 }
 
 .faq-links-empty {
@@ -1100,7 +1100,7 @@ textarea.form-control {
 
 .faq-link-row .form-control {
   flex: 1;
-  background: white;
+  background: var(--bg-card);
 }
 
 /* ── SGI Tree ──────────────────────────────────────────────────────────────── */
@@ -1126,33 +1126,33 @@ textarea.form-control {
 }
 
 .sgi-tree-row.cat-row {
-  background: #fafafa;
+  background: var(--surface-subtle);
   font-weight: 600;
   font-size: 14px;
   border-bottom: 1px solid transparent;
 }
 
-.sgi-tree-row.cat-row:hover { background: #f3f3f3; }
+.sgi-tree-row.cat-row:hover { background: var(--bg-hover); }
 
 .sgi-tree-row.doc-row {
-  background: white;
-  border-top: 1px solid #f0f0f0;
+  background: var(--bg-card);
+  border-top: 1px solid var(--divider);
   padding-left: 20px;
   font-size: 13px;
 }
 
-.sgi-tree-row.doc-row:hover { background: #fafafa; }
+.sgi-tree-row.doc-row:hover { background: var(--bg-hover); }
 
 .sgi-tree-row.ver-row {
-  background: white;
-  border-top: 1px solid #f7f7f7;
+  background: var(--bg-card);
+  border-top: 1px solid var(--divider);
   padding-left: 52px;
   font-size: 12px;
   color: var(--text-muted);
 }
 
-.sgi-tree-row.ver-row.vigente { background: #f0fdf4; }
-.sgi-tree-row.ver-row:hover { background: #f5f5f5; }
+.sgi-tree-row.ver-row.vigente { background: var(--success-bg); }
+.sgi-tree-row.ver-row:hover { background: var(--bg-hover); }
 
 .sgi-tree-toggle {
   background: none;
@@ -1180,7 +1180,7 @@ textarea.form-control {
   font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
-  background: #efefef;
+  background: var(--field-bg);
   padding: 2px 8px;
   border-radius: 20px;
 }
@@ -1199,6 +1199,10 @@ textarea.form-control {
   border-radius: 5px;
   letter-spacing: 0.3px;
 }
+body.dark-theme .sgi-tree-code {
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.15);
+}
 
 .sgi-tree-ver {
   font-size: 11px;
@@ -1206,8 +1210,8 @@ textarea.form-control {
   padding: 2px 8px;
   border-radius: 6px;
 }
-.sgi-tree-ver.vigente { background: #d1fae5; color: #065f46; }
-.sgi-tree-ver.none { background: #f3f4f6; color: #9ca3af; }
+.sgi-tree-ver.vigente { background: var(--success-bg); color: var(--success); }
+.sgi-tree-ver.none { background: var(--field-bg); color: var(--ink-faint); }
 
 .sgi-tree-actions {
   display: flex;
@@ -1219,14 +1223,14 @@ textarea.form-control {
 
 .sgi-tree-row:hover .sgi-tree-actions { opacity: 1; }
 
-.sgi-tree-docs { border-top: 1px solid #f0f0f0; }
+.sgi-tree-docs { border-top: 1px solid var(--divider); }
 
-.sgi-tree-versions { border-top: 1px solid #f0f0f0; }
+.sgi-tree-versions { border-top: 1px solid var(--divider); }
 
 .sgi-tree-empty {
   padding: 10px 20px 10px 52px;
   font-size: 12px;
-  color: #bbb;
+  color: var(--ink-faint);
   font-style: italic;
 }
 
@@ -1234,7 +1238,7 @@ textarea.form-control {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #d1d5db;
+  background: var(--ink-faint);
   flex-shrink: 0;
 }
 
@@ -1245,15 +1249,15 @@ textarea.form-control {
 .sgi-vigente-pill {
   font-size: 10px;
   font-weight: 700;
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--success-bg);
+  color: var(--success);
   padding: 2px 7px;
   border-radius: 5px;
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
 
-.sgi-tree-ver-date { color: #aaa; }
+.sgi-tree-ver-date { color: var(--ink-faint); }
 
 .sgi-tree-ver-notes {
   flex: 1;
@@ -1314,7 +1318,7 @@ textarea.form-control {
   border-radius: 20px;
 }
 .portales-tab-badge.publico {
-  background: color-mix(in srgb, var(--primary-color) 15%, transparent);
+  background: color-mix(in srgb, var(--accent-ink) 15%, transparent);
   color: var(--primary-color);
 }
 .portales-tab-badge.interno {

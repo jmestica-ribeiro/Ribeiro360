@@ -20,10 +20,10 @@ import { TIPOS_EQUIPO } from './tiposEquipo';
 import './ChecklistEquipos.css';
 
 const ESTADO_CONFIG = {
-  bien:    { label: 'Bien',    color: '#22c55e', bg: '#dcfce7', icon: CheckCircle },
-  regular: { label: 'Regular', color: '#f59e0b', bg: '#fef3c7', icon: Minus },
-  mal:     { label: 'Mal',     color: '#ef4444', bg: '#fee2e2', icon: AlertTriangle },
-  na:      { label: 'N/A',     color: '#94a3b8', bg: '#f1f5f9', icon: Ban },
+  bien:    { label: 'Bien',    color: 'var(--success)',     bg: 'var(--success-bg)',     icon: CheckCircle },
+  regular: { label: 'Regular', color: 'var(--warning)',     bg: 'var(--warning-bg)',     icon: Minus },
+  mal:     { label: 'Mal',     color: 'var(--destructive)', bg: 'var(--destructive-bg)', icon: AlertTriangle },
+  na:      { label: 'N/A',     color: 'var(--text-muted)',  bg: 'var(--bg-hover)',       icon: Ban },
 };
 
 function formatDate(d) {

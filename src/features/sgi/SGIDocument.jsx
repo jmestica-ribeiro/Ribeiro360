@@ -398,7 +398,7 @@ const SGIDocument = () => {
                     <td>Rev. {vigenteVersion.numero_version}</td>
                   </tr>
                 ) : (
-                  <tr><td colSpan={4} style={{ textAlign: 'center', color: '#aaa', padding: '20px' }}>Sin versión vigente</td></tr>
+                  <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--ink-faint)', padding: '20px' }}>Sin versión vigente</td></tr>
                 )}
               </tbody>
             </table>
@@ -417,7 +417,7 @@ const SGIDocument = () => {
               </thead>
               <tbody>
                 {versiones.length === 0 ? (
-                  <tr><td colSpan={4} style={{ textAlign: 'center', color: '#aaa', padding: '20px' }}>Sin versiones registradas</td></tr>
+                  <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--ink-faint)', padding: '20px' }}>Sin versiones registradas</td></tr>
                 ) : (
                   versiones.map(ver => (
                     <tr key={ver.id} className={ver.vigente ? 'sgi-row-vigente' : ''}>

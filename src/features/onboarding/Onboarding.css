@@ -286,7 +286,7 @@
   width: 80px;
   height: 80px;
   background-color: rgba(242, 220, 0, 0.1);
-  color: var(--primary-dark);
+  color: var(--accent-ink);
   border-radius: 20px;
   display: flex;
   align-items: center;
@@ -444,7 +444,7 @@
 }
 
 .check-icon {
-  color: var(--primary-dark);
+  color: var(--accent-ink);
   flex-shrink: 0;
   margin-top: 2px;
 }
@@ -693,7 +693,7 @@
 .step-servicio-clientes {
   font-size: 11px;
   font-weight: 700;
-  color: var(--primary-dark, #b8a000);
+  color: var(--accent-ink);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -801,7 +801,7 @@
   display: inline-block;
   font-size: 13px;
   font-weight: 800;
-  color: var(--primary-dark);
+  color: var(--accent-ink);
   margin-bottom: 8px;
   text-transform: uppercase;
 }

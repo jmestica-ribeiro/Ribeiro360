@@ -128,7 +128,7 @@ body.dark-theme .nc-header-icon {
 }
 
 .nc-paso-summary-card.nc-paso-active .nc-paso-summary-count {
-  color: #a89800;
+  color: var(--accent-ink);
 }
 
 .nc-paso-summary-card.nc-paso-active .nc-paso-summary-label {
@@ -514,13 +514,8 @@ body.dark-theme .nc-tipo-badge.Fortaleza { background: rgba(16,185,129,0.2); }
 }
 
 .nc-estado-badge.cerrado {
-  background: #d1fae5;
-  color: #065f46;
-}
-
-body.dark-theme .nc-estado-badge.cerrado {
-  background: rgba(16,185,129,0.18);
-  color: #34d399;
+  background: var(--success-bg);
+  color: var(--success);
 }
 
 /* ── Empty State ────────────────────────────────────────────────────────────── */

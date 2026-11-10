@@ -596,7 +596,7 @@ function Step5Hitos({ accionId }) {
       {hitos.map((h, i) => (
         <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 5, paddingLeft: 8, borderLeft: '2px solid var(--border-color)' }}>
           <span style={{ fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{formatDate(h.fecha)}</span>
-          <span style={{ fontSize: 11, color: '#059669', fontWeight: 700, whiteSpace: 'nowrap' }}>+{h.porcentaje}%</span>
+          <span style={{ fontSize: 11, color: 'var(--success)', fontWeight: 700, whiteSpace: 'nowrap' }}>+{h.porcentaje}%</span>
           <span style={{ fontSize: 11, color: 'var(--text-main)' }}>{h.descripcion}</span>
         </div>
       ))}
@@ -1570,7 +1570,7 @@ export default function NCDetalle() {
                           newPorques[idx] = e.target.value;
                           setStep3(s => ({ ...s, porques: newPorques }));
                         }}
-                        style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius-sm)', padding: '10px 14px', fontSize: '14px', color: 'var(--text-main)', background: '#ffffff', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box', resize: 'vertical', minHeight: '64px', transition: 'var(--transition)' }}
+                        style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius-sm)', padding: '10px 14px', fontSize: '14px', color: 'var(--text-main)', background: 'var(--bg-input)', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box', resize: 'vertical', minHeight: '64px', transition: 'var(--transition)' }}
                       />
                     </div>
                   </div>
@@ -1593,7 +1593,7 @@ export default function NCDetalle() {
                     placeholder={`Causas relacionadas con ${f.label.toLowerCase()}...`}
                     value={step3.ishikawa[f.key]}
                     onChange={e => setStep3(s => ({ ...s, ishikawa: { ...s.ishikawa, [f.key]: e.target.value } }))}
-                    style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius-sm)', padding: '10px 14px', fontSize: '14px', color: 'var(--text-main)', background: '#ffffff', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box', resize: 'vertical', minHeight: '80px', transition: 'var(--transition)' }}
+                    style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--border-radius-sm)', padding: '10px 14px', fontSize: '14px', color: 'var(--text-main)', background: 'var(--bg-input)', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box', resize: 'vertical', minHeight: '80px', transition: 'var(--transition)' }}
                   />
                 </div>
               ))}

@@ -113,7 +113,7 @@
 .hero-content h1 {
   font-size: 38px;
   font-weight: 800;
-  color: var(--text-main);
+  color: var(--accent-contrast);
   margin-bottom: 8px;
   line-height: 1.15;
   position: relative;
@@ -121,7 +121,7 @@
 }
 
 .hero-content h1 span {
-  color: var(--text-main);
+  color: var(--accent-contrast);
 }
 
 .hero-content p {
@@ -232,7 +232,7 @@ body.dark-theme .stat-card {
 }
 
 .bg-blue { background: linear-gradient(135deg, #333333, #1A1A1A); } /* Updated for Ribeiro */
-.bg-orange { background: linear-gradient(135deg, #F2DC00, #D4C100); color: var(--text-main); }
+.bg-orange { background: linear-gradient(135deg, #F2DC00, #D4C100); color: var(--accent-contrast); }
 .bg-green { background: linear-gradient(135deg, #444444, #2A2A2A); }
 
 .stat-info h3 {
@@ -480,7 +480,7 @@ body.dark-theme .quick-card {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--accent-warm);
+  color: var(--ink-2);
   font-size: 13px;
   font-weight: 600;
 }
@@ -668,7 +668,7 @@ body.dark-theme .quick-card {
   align-items: center;
   justify-content: center;
   background-color: rgba(0, 119, 182, 0.1);
-  color: var(--secondary-color);
+  color: var(--text-main);
   min-width: 50px;
   height: 50px;
   border-radius: 8px;
@@ -721,7 +721,7 @@ body.dark-theme .quick-card {
 
 .chart-tooltip-cat {
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--ink-faint);
   margin-bottom: 6px;
 }
 
@@ -734,7 +734,7 @@ body.dark-theme .quick-card {
 
 .chart-tooltip-sub {
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--ink-faint);
   margin: 2px 0 0;
 }
 
@@ -908,10 +908,10 @@ body.dark-theme .quick-card {
 .course-progress-chip-cat {
   font-size: 11px;
   font-weight: 600;
-  color: #9ca3af;
+  color: var(--ink-faint);
   white-space: nowrap;
   flex-shrink: 0;
-  border-left: 1px solid #e5e7eb;
+  border-left: 1px solid var(--border-soft);
   padding-left: 8px;
   margin-left: 2px;
 }
@@ -940,7 +940,7 @@ body.dark-theme .quick-card {
   display: flex;
   gap: 12px;
   font-size: 11px;
-  color: #9ca3af;
+  color: var(--ink-faint);
   font-weight: 600;
 }
 
@@ -996,7 +996,7 @@ body.dark-theme .quick-card {
 .activity-bar-track {
   flex: 1;
   height: 10px;
-  background-color: #f0f0f0;
+  background-color: var(--field-bg);
   border-radius: 10px;
   overflow: hidden;
 }
@@ -1016,7 +1016,7 @@ body.dark-theme .quick-card {
 }
 
 .activity-pct.done {
-  color: #10b981;
+  color: var(--success);
 }
 
 .activity-skeleton {
@@ -1085,11 +1085,11 @@ body.dark-theme .quick-card {
 }
 
 .result-status-icon.passed {
-  color: #10b981;
+  color: var(--success);
 }
 
 .result-status-icon.failed {
-  color: #dc2626;
+  color: var(--destructive);
 }
 
 .results-empty {
@@ -1165,12 +1165,12 @@ body.dark-theme .quick-card {
 
 
 /* === Ecosistema Hub === */
-:root {
+body {
   --ecosistema-ring: rgba(14, 116, 144, 0.18);
   --ecosistema-card-bg: var(--bg-card, #ffffff);
   --ecosistema-card-border: var(--border-color, #e5e7eb);
 }
-.dark {
+body.dark-theme {
   --ecosistema-ring: rgba(14, 116, 144, 0.3);
 }
 

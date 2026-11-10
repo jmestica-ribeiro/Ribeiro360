@@ -25,10 +25,10 @@ const EMPTY_FORM = {
 };
 
 const ESTADO_CONFIG = {
-  vigente:    { label: 'Vigente',    color: '#22c55e', bg: '#dcfce7', icon: CheckCircle },
-  por_vencer: { label: 'Por vencer', color: '#f59e0b', bg: '#fef3c7', icon: Clock },
-  vencido:    { label: 'Vencido',    color: '#ef4444', bg: '#fee2e2', icon: AlertTriangle },
-  sin_fecha:  { label: 'Sin fecha',  color: '#94a3b8', bg: '#f1f5f9', icon: Clock },
+  vigente:    { label: 'Vigente',    color: 'var(--success)', bg: 'var(--success-bg)', icon: CheckCircle },
+  por_vencer: { label: 'Por vencer', color: 'var(--warning)', bg: 'var(--warning-bg)', icon: Clock },
+  vencido:    { label: 'Vencido',    color: 'var(--destructive)', bg: 'var(--destructive-bg)', icon: AlertTriangle },
+  sin_fecha:  { label: 'Sin fecha',  color: 'var(--ink-faint)', bg: 'var(--field-bg)', icon: Clock },
 };
 
 function formatDate(dateStr) {
@@ -410,7 +410,7 @@ export default function CertEquipos() {
                   {eqs.length > 0 && (
                     <div className="ceq-cal-events">
                       {eqs.slice(0, 2).map(eq => (
-                        <span key={eq.id} className="ceq-cal-event-pill" style={{ borderLeftColor: ESTADO_CONFIG[eq.estado]?.color ?? '#94a3b8' }}>
+                        <span key={eq.id} className="ceq-cal-event-pill" style={{ borderLeftColor: ESTADO_CONFIG[eq.estado]?.color ?? 'var(--ink-faint)' }}>
                           <span className="ceq-cal-event-tipo">{eq.tipo}</span>
                           {eq.ubicacion && <span className="ceq-cal-event-loc">{eq.ubicacion}</span>}
                         </span>

@@ -2,7 +2,7 @@
   border: 1px solid var(--border-color);
   border-radius: 10px;
   overflow: hidden;
-  background: var(--bg-card, #fff);
+  background: var(--bg-card);
 }
 
 /* ── Toolbar ─────────────────────────────────────────────────────────────── */
@@ -12,7 +12,7 @@
   align-items: center;
   gap: 2px;
   padding: 6px 8px;
-  background: var(--bg-secondary, #f9fafb);
+  background: var(--surface-subtle);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -32,13 +32,13 @@
 }
 
 .rte-btn:hover {
-  background: var(--bg-hover, #f3f4f6);
+  background: var(--bg-hover);
   color: var(--text-main);
 }
 
 .rte-btn.active {
-  background: var(--primary-color, var(--primary-color));
-  color: #111827;
+  background: var(--accent);
+  color: var(--accent-contrast);
 }
 
 .rte-divider {

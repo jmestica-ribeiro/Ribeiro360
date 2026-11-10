@@ -175,7 +175,7 @@ a .social-card { display: flex; flex-direction: column; }
   background: #dbeafe;
   color: #1d4ed8;
 }
-.dark .social-badge--anuncio {
+body.dark-theme .social-badge--anuncio {
   background: #1e3a5f;
   color: #93c5fd;
 }
@@ -183,7 +183,7 @@ a .social-card { display: flex; flex-direction: column; }
   background: #f3e8ff;
   color: #7c3aed;
 }
-.dark .social-badge--foto {
+body.dark-theme .social-badge--foto {
   background: #3b1d6e;
   color: #c4b5fd;
 }
