@@ -415,3 +415,109 @@
 .cheq-detalle-field { display: flex; flex-direction: column; gap: 2px; }
 .cheq-detalle-label { font-size: 11px; text-transform: uppercase; color: var(--text-secondary); font-weight: 600; }
 .cheq-detalle-val   { font-size: 13px; color: var(--text-main); }
+
+
+/* == Rediseno formulario de alta de checklist (estilo docm) == */
+.cheq-card {
+  background: var(--surface-subtle);
+  border: none;
+  border-radius: 16px;
+  padding: var(--space-6);
+}
+.cheq-card-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+  margin-bottom: 20px;
+}
+.cheq-card-title svg { color: var(--ink-faint); }
+.cheq-form-grid { column-gap: 20px; row-gap: 24px; }
+.cheq-form-group { gap: var(--space-2); }
+.cheq-form-group label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.cheq-req { color: var(--accent-ink); }
+.cheq-form-group input, .cheq-form-group select, .cheq-form-group textarea {
+  min-height: 44px;
+  padding: 0 14px;
+  background: var(--field-bg);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  box-shadow: none;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.cheq-form-group input::placeholder { color: var(--ink-faint); }
+.cheq-form-group input:focus, .cheq-form-group select:focus, .cheq-form-group textarea:focus {
+  outline: none;
+  background: var(--surface);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-ring);
+}
+.cheq-form-group input[type="date"] { color-scheme: light; }
+body.dark-theme .cheq-form-group input[type="date"] { color-scheme: dark; }
+.cheq-form-group .sel-trigger { background: var(--field-bg); border-color: transparent; border-radius: 999px; padding-left: 18px; }
+
+.cheq-form-actions {
+  position: sticky;
+  bottom: var(--space-4);
+  margin-top: var(--space-8);
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--divider);
+  border-radius: 20px;
+  box-shadow: var(--shadow-card);
+  overflow: visible;
+}
+.cheq-form-actions::before { display: none; }
+.cheq-form-actions .cheq-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 22px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: var(--shadow-btn);
+  transform: none;
+}
+.cheq-form-actions .cheq-btn-primary:disabled { opacity: 0.4; transform: none; }
+.cheq-form-actions .cheq-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 22px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--border-soft);
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: none;
+}
+@media (hover: hover) {
+  .cheq-form-actions .cheq-btn-primary:hover:not(:disabled) { background: var(--accent-hover); box-shadow: var(--shadow-btn); transform: none; }
+  .cheq-form-actions .cheq-btn-secondary:hover { background: var(--field-bg); border-color: var(--border-soft); box-shadow: none; }
+}
+@media (max-width: 768px) {
+  .cheq-form-actions { bottom: calc(72px + var(--safe-bottom)); }
+  .cheq-form-actions > * { flex: 1; }
+}
+@media (max-width: 640px) {
+  .cheq-card { padding: 20px 16px; }
+  .cheq-form-3col { grid-template-columns: 1fr; }
+}

@@ -37,52 +37,49 @@ const NavTab = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: 28 }}>
-        <h3 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-main)', marginBottom: 6 }}>
-          Visibilidad del menú
-        </h3>
-        <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>
+      <div className="adm-pane-head">
+        <h3>Visibilidad del menú</h3>
+        <p>
           Ocultá temporalmente los módulos que aún no están terminados.
           Los cambios se aplican para todos los usuarios de inmediato.
         </p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-        {NAV_ITEMS_CONFIG.map(({ section, items }) => (
-          <div key={section}>
-            <p style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', marginBottom: 10 }}>
-              {section}
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {items.map(({ key, label }) => {
-                const visible = isVisible(key);
-                const ocupado = toggling === key;
-                return (
-                  <div key={key} className="portales-tab-row">
-                    <div className="portales-tab-info">
-                      <span className="portales-tab-titulo">{label}</span>
-                    </div>
-                    <div className="portales-tab-controls">
-                      <span className={`portales-tab-badge ${visible ? 'publico' : 'interno'}`}>
-                        {visible ? <><Eye size={12} /> Visible</> : <><EyeOff size={12} /> Oculto</>}
-                      </span>
-                      <button
-                        className={`portales-tab-toggle ${visible ? 'activo' : ''}`}
-                        onClick={() => handleToggle(key)}
-                        disabled={ocupado}
-                      >
-                        {ocupado ? 'Guardando...' : visible ? 'Ocultar' : 'Mostrar'}
-                      </button>
-                    </div>
+      {NAV_ITEMS_CONFIG.map(({ section, items }) => (
+        <section key={section}>
+          <h4 className="adm-group-label">{section}</h4>
+          <ul className="adm-list">
+            {items.map(({ key, label }) => {
+              const visible = isVisible(key);
+              const ocupado = toggling === key;
+              return (
+                <li key={key} className={`adm-row${visible ? '' : ' muted'}`}>
+                  <span className="adm-row-icon">
+                    {visible ? <Eye size={18} strokeWidth={1.5} /> : <EyeOff size={18} strokeWidth={1.5} />}
+                  </span>
+                  <div className="adm-row-info">
+                    <div className="adm-row-title">{label}</div>
+                    <div className="adm-row-meta">{ocupado ? 'Guardando…' : visible ? 'Visible en el menú' : 'Oculto para todos'}</div>
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={visible}
+                    aria-label={`Mostrar ${label} en el menú`}
+                    className={`adm-switch${visible ? ' on' : ''}`}
+                    onClick={() => handleToggle(key)}
+                    disabled={ocupado}
+                  >
+                    <span className="adm-switch-thumb" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
 
-      <p style={{ marginTop: 24, fontSize: 12, color: 'var(--text-muted)' }}>
+      <p className="adm-footnote">
         <strong>Inicio</strong> y <strong>Panel Admin</strong> son siempre visibles y no pueden ocultarse.
       </p>
     </div>

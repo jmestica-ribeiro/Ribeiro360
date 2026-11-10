@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
-import { Home, Compass, BookOpen, Users, Calendar, Settings, Briefcase, ChevronLeft, ChevronRight, LayoutGrid, MessageCircle, ShieldCheck, ChevronDown, X, Rss, Wrench } from 'lucide-react';
+import {
+  Home, Compass, BookOpen, Users, Calendar, Settings, Briefcase, LayoutGrid, MessageCircle,
+  ShieldCheck, ChevronDown, ChevronsUpDown, X, Rss, Wrench, PanelLeftClose, PanelLeftOpen, User, LogOut,
+} from 'lucide-react';
 import Logo from '../../assets/Logo.png';
 import './Sidebar.css';
+
+const ICON = { size: 18, strokeWidth: 1.5 };
 
 // Ítems configurables (pueden ocultarse desde el admin).
 // "required: true" = siempre visible, no se puede ocultar.
@@ -25,12 +30,36 @@ const NAV_ITEMS = {
   ],
 };
 
+const SGI_SUBITEMS = [
+  { to: '/sgi', end: true, label: 'Documentos' },
+  { to: '/sgi/nc', label: 'Hallazgos' },
+  { to: '/sgi/incidentes', label: 'Incidentes' },
+  { to: '/sgi/estadisticas', label: 'Estadísticas' },
+  { to: '/sgi/cert-equipos', label: 'Cert. Equipos' },
+  { to: '/sgi/checklists-equipo', label: 'Checklists Equipo' },
+];
+
+const getInitials = (name = '') =>
+  name.trim().split(/\s+/).slice(0, 2).map(p => p[0]?.toUpperCase() ?? '').join('') || '?';
+
 const Sidebar = ({ isOpen, onToggle, isCollapsed, onToggleCollapse }) => {
-  const { profile, navConfig } = useAuth();
+  const { profile, navConfig, signOut } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
   const isSGIActive = location.pathname.startsWith('/sgi');
   const [sgiOpen, setSgiOpen] = useState(isSGIActive);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userRef = useRef(null);
+
+  useEffect(() => {
+    if (!userMenuOpen) return undefined;
+    const onDown = (e) => { if (userRef.current && !userRef.current.contains(e.target)) setUserMenuOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setUserMenuOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey); };
+  }, [userMenuOpen]);
 
   const linkClass = ({ isActive }) => `nav-item${isActive ? ' active' : ''}`;
   const subLinkClass = ({ isActive }) => `nav-subitem${isActive ? ' active' : ''}`;
@@ -45,13 +74,22 @@ const Sidebar = ({ isOpen, onToggle, isCollapsed, onToggleCollapse }) => {
     if (!isVisible(key, required)) return null;
     return (
       <NavLink key={key} to={to} end={end} className={linkClass} title={label} onClick={handleLinkClick}>
-        <Icon size={20} />
+        <Icon {...ICON} />
         {!isVisuallyCollapsed && <span>{label}</span>}
       </NavLink>
     );
   };
 
+  const renderGroup = (label, children) => (
+    <div className="nav-section">
+      {isVisuallyCollapsed ? <div className="nav-label-dot" aria-hidden="true" /> : <p className="nav-label">{label}</p>}
+      {children}
+    </div>
+  );
+
   const sgiVisible = isVisible('sgi');
+  const fullName = profile?.full_name || 'Usuario';
+  const avatarUrl = profile?.avatar_url;
 
   return (
     <aside className={`sidebar ${isOpen ? 'open' : ''} ${isVisuallyCollapsed ? 'collapsed' : ''}`}>
@@ -63,95 +101,119 @@ const Sidebar = ({ isOpen, onToggle, isCollapsed, onToggleCollapse }) => {
           {!isVisuallyCollapsed && <h2>Ribeiro<span> 360</span></h2>}
         </div>
         <button
-          className={`collapse-btn${isOpen ? ' collapse-btn--mobile' : ''}`}
+          type="button"
+          className="collapse-btn"
           onClick={isOpen ? onToggle : onToggleCollapse}
+          aria-label={isOpen ? 'Cerrar menú' : isVisuallyCollapsed ? 'Expandir menú' : 'Colapsar menú'}
+          title={isOpen ? 'Cerrar menú' : isVisuallyCollapsed ? 'Expandir menú' : 'Colapsar menú'}
         >
-          {isOpen ? <X size={14} /> : (isVisuallyCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />)}
+          {isOpen
+            ? <X {...ICON} />
+            : isVisuallyCollapsed ? <PanelLeftOpen {...ICON} /> : <PanelLeftClose {...ICON} />}
         </button>
       </div>
 
-      <nav className="sidebar-nav">
-        {!isVisuallyCollapsed && <p className="nav-label">Principal</p>}
-        {isVisuallyCollapsed && <div className="nav-label-dot" />}
-        {NAV_ITEMS.principal.map(renderNavItem)}
-
-        {!isVisuallyCollapsed && <p className="nav-label mt-4">Comunidad</p>}
-        {isVisuallyCollapsed && <div className="nav-label-dot mt-4" />}
-        {NAV_ITEMS.comunidad.map(renderNavItem)}
+      <nav className="sidebar-nav" aria-label="Navegación principal">
+        {renderGroup('Principal', NAV_ITEMS.principal.map(renderNavItem))}
+        {renderGroup('Comunidad', NAV_ITEMS.comunidad.map(renderNavItem))}
 
         {/* SGI — ocultar sección entera si está deshabilitado */}
-        {sgiVisible && (
-          <>
-            {!isVisuallyCollapsed && <p className="nav-label mt-4">Gestión</p>}
-            {isVisuallyCollapsed && <div className="nav-label-dot mt-4" />}
-
-            {isVisuallyCollapsed ? (
-              <NavLink to="/sgi" className={linkClass} title="SGI" onClick={handleLinkClick}>
-                <ShieldCheck size={20} />
-              </NavLink>
-            ) : (
-              <div className="nav-group">
-                <button
-                  className={`nav-item nav-group-toggle${isSGIActive ? ' group-active' : ''}`}
-                  onClick={() => setSgiOpen(o => !o)}
+        {sgiVisible && renderGroup('Gestión', isVisuallyCollapsed ? (
+          <NavLink to="/sgi" className={linkClass} title="SGI" onClick={handleLinkClick}>
+            <ShieldCheck {...ICON} />
+          </NavLink>
+        ) : (
+          <div className="nav-group">
+            <button
+              type="button"
+              className={`nav-item nav-group-toggle${isSGIActive ? ' group-active' : ''}`}
+              onClick={() => setSgiOpen(o => !o)}
+              aria-expanded={sgiOpen}
+            >
+              <ShieldCheck {...ICON} />
+              <span>SGI</span>
+              <ChevronDown size={16} strokeWidth={1.5} className={`nav-chevron${sgiOpen ? ' open' : ''}`} />
+            </button>
+            <AnimatePresence initial={false}>
+              {sgiOpen && (
+                <motion.div
+                  className="nav-subitems"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: 'easeInOut' }}
+                  style={{ overflow: 'hidden' }}
                 >
-                  <ShieldCheck size={20} />
-                  <span>SGI</span>
-                  <ChevronDown size={14} className={`nav-chevron${sgiOpen ? ' open' : ''}`} />
-                </button>
-                <AnimatePresence initial={false}>
-                  {sgiOpen && (
-                    <motion.div
-                      className="nav-subitems"
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      transition={{ duration: 0.2, ease: 'easeInOut' }}
-                      style={{ overflow: 'hidden' }}
-                    >
-                      <NavLink to="/sgi" end className={subLinkClass} title="Documentos" onClick={handleLinkClick}>
-                        <span className="nav-sub-dot" />
-                        <span>Documentos</span>
-                      </NavLink>
-                      <NavLink to="/sgi/nc" className={subLinkClass} title="Hallazgos" onClick={handleLinkClick}>
-                        <span className="nav-sub-dot" />
-                        <span>Hallazgos</span>
-                      </NavLink>
-                      <NavLink to="/sgi/incidentes" className={subLinkClass} title="Incidentes" onClick={handleLinkClick}>
-                        <span className="nav-sub-dot" />
-                        <span>Incidentes</span>
-                      </NavLink>
-                      <NavLink to="/sgi/estadisticas" className={subLinkClass} title="Estadísticas SGI" onClick={handleLinkClick}>
-                        <span className="nav-sub-dot" />
-                        <span>Estadísticas</span>
-                      </NavLink>
-                      <NavLink to="/sgi/cert-equipos" className={subLinkClass} title="Cert. Equipos" onClick={handleLinkClick}>
-                        <span className="nav-sub-dot" />
-                        <span>Cert. Equipos</span>
-                      </NavLink>
-                      <NavLink to="/sgi/checklists-equipo" className={subLinkClass} title="Checklists de Equipo" onClick={handleLinkClick}>
-                        <span className="nav-sub-dot" />
-                        <span>Checklists Equipo</span>
-                      </NavLink>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
-          </>
-        )}
+                  {SGI_SUBITEMS.map(s => (
+                    <NavLink key={s.to} to={s.to} end={s.end} className={subLinkClass} title={s.label} onClick={handleLinkClick}>
+                      <span>{s.label}</span>
+                    </NavLink>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        ))}
 
-        {isAdmin && (
-          <>
-            {!isVisuallyCollapsed && <p className="nav-label mt-4">Administración</p>}
-            {isVisuallyCollapsed && <div className="nav-label-dot mt-4" />}
-            <NavLink to="/admin" className={linkClass} title="Panel Admin" onClick={handleLinkClick}>
-              <Settings size={20} />
-              {!isVisuallyCollapsed && <span>Panel Admin</span>}
-            </NavLink>
-          </>
-        )}
+        {isAdmin && renderGroup('Administración', (
+          <NavLink to="/admin" className={linkClass} title="Panel Admin" onClick={handleLinkClick}>
+            <Settings {...ICON} />
+            {!isVisuallyCollapsed && <span>Panel Admin</span>}
+          </NavLink>
+        ))}
       </nav>
+
+      <div className="sidebar-user" ref={userRef}>
+        <AnimatePresence>
+          {userMenuOpen && (
+            <motion.div
+              className="sidebar-user-menu"
+              role="menu"
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 6 }}
+              transition={{ duration: 0.14 }}
+            >
+              <div className="sidebar-user-menu-info">
+                <span className="sidebar-user-menu-name">{fullName}</span>
+                {profile?.email && <span className="sidebar-user-menu-email">{profile.email}</span>}
+              </div>
+              <button
+                type="button"
+                role="menuitem"
+                className="sidebar-user-menu-item"
+                onClick={() => { setUserMenuOpen(false); handleLinkClick(); navigate('/perfil'); }}
+              >
+                <User size={16} strokeWidth={1.5} /> Mi perfil
+              </button>
+              <button type="button" role="menuitem" className="sidebar-user-menu-item danger" onClick={signOut}>
+                <LogOut size={16} strokeWidth={1.5} /> Cerrar sesión
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <button
+          type="button"
+          className="sidebar-user-card"
+          onClick={() => setUserMenuOpen(o => !o)}
+          aria-haspopup="menu"
+          aria-expanded={userMenuOpen}
+          title={isVisuallyCollapsed ? fullName : undefined}
+        >
+          {avatarUrl
+            ? <img src={avatarUrl} alt="" className="sidebar-user-avatar" />
+            : <span className="sidebar-user-avatar" aria-hidden="true">{getInitials(fullName)}</span>}
+          {!isVisuallyCollapsed && (
+            <>
+              <span className="sidebar-user-text">
+                <span className="sidebar-user-name">{fullName}</span>
+                {profile?.job_title && <span className="sidebar-user-role">{profile.job_title}</span>}
+              </span>
+              <ChevronsUpDown size={16} strokeWidth={1.5} className="sidebar-user-chevron" />
+            </>
+          )}
+        </button>
+      </div>
     </aside>
   );
 };

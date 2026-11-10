@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { SafeHtml } from '../../components/common/SafeHtml';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, ChevronLeft, Building2, Briefcase, FileText, CheckCircle, Clock, Users, Shield, GraduationCap, Award, Rocket, Heart, Coffee, HelpCircle, Bell, Star, Info, PartyPopper } from 'lucide-react';
 import { fetchOnboardingContenido, marcarInduccionCompletada } from '../../services/onboardingService';
@@ -262,10 +263,10 @@ const Onboarding = () => {
     switch (block.tipo) {
       case 'texto':
         return (
-          <div
+          <SafeHtml
             key={block.id}
             className="step-text-block step-rich-text"
-            dangerouslySetInnerHTML={{ __html: block.contenido }}
+            html={block.contenido}
           />
         );
       case 'banner':

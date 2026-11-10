@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { hoyISO } from '../../../lib/fechas';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ClipboardList, Search, ChevronLeft, Trash2, Save, Truck,
@@ -62,7 +63,7 @@ function ChecklistForm({ tipo, vehiculoInicial, onBack, onSaved }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = hoyISO();
   const [header, setHeader] = useState({
     fecha: today, lugar: '', interno_nro: vehiculoInicial?.interno_nro ?? '', km_hrs: '',
   });

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Tag } from 'lucide-react';
+import { Plus, Trash2, Tag, ArrowRight } from 'lucide-react';
 import { fetchFamilias, saveFamilia, deleteFamilia, fetchModelosCodigos } from '../../../services/vehiculosService';
 import { TIPOS_EQUIPO } from '../../sgi/checklists-equipo/tiposEquipo';
 import { LoadingSpinner } from '../../../components/common';
@@ -47,113 +47,76 @@ const FamiliasTab = () => {
 
   const tipoLabel = (key) => TIPOS_EQUIPO.find(t => t.key === key)?.label ?? key;
 
+  const canAdd = !saving && form.modelo_codigo && form.tipo_equipo;
+
   return (
-    <div style={{ padding: 24, maxWidth: 680 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-        <div style={{
-          width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-          background: '#6366f118', color: '#6366f1',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <Tag size={18} />
-        </div>
+    <div className="adm-panel adm-familias">
+      <div className="admin-list-header">
         <div>
-          <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
-            Familias de Equipos
-          </h3>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '2px 0 0' }}>
+          <h3>Familias de equipos <span className="admin-count">{familias.length}</span></h3>
+          <p className="adm-panel-desc">
             Mapeá cada <strong>Modelo_Codigo</strong> al tipo de checklist correspondiente.
           </p>
         </div>
       </div>
 
-      {/* Formulario nuevo mapeo */}
-      <div style={{
-        display: 'flex', gap: 10, marginBottom: 20, alignItems: 'flex-end',
-        padding: '16px', borderRadius: 10,
-        background: 'var(--bg-card)', border: '1px solid var(--border-color,#e5e7eb)',
-      }}>
-        <div style={{ flex: 1 }}>
-          <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
-            Modelo_Codigo
-          </label>
+      <div className="adm-card adm-inline-form">
+        <div className="adm-inline-field">
+          <span className="adm-field-label">Modelo_Codigo</span>
           <Select
             size="sm"
             value={form.modelo_codigo || ''}
             onChange={v => setForm(f => ({ ...f, modelo_codigo: v }))}
-            placeholder="— Seleccionar modelo —"
+            placeholder="Seleccionar modelo"
+            aria-label="Modelo_Codigo"
             options={[
               ...modelosSinFamilia,
               ...(form.modelo_codigo && !modelosSinFamilia.includes(form.modelo_codigo) ? [form.modelo_codigo] : []),
             ]}
           />
         </div>
-        <div style={{ flex: 1 }}>
-          <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', display: 'block', marginBottom: 4 }}>
-            Tipo de checklist
-          </label>
+        <div className="adm-inline-field">
+          <span className="adm-field-label">Tipo de checklist</span>
           <Select
             size="sm"
             value={form.tipo_equipo || ''}
             onChange={v => setForm(f => ({ ...f, tipo_equipo: v }))}
-            placeholder="— Seleccionar tipo —"
+            placeholder="Seleccionar tipo"
+            aria-label="Tipo de checklist"
             options={TIPOS_EQUIPO.map(t => ({ value: t.key, label: t.label }))}
           />
         </div>
-        <button
-          onClick={handleAdd}
-          disabled={saving || !form.modelo_codigo || !form.tipo_equipo}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 6,
-            padding: '8px 16px', borderRadius: 7, fontSize: 13, fontWeight: 600,
-            background: '#6366f1', color: '#fff', border: 'none',
-            cursor: saving || !form.modelo_codigo || !form.tipo_equipo ? 'not-allowed' : 'pointer',
-            opacity: saving || !form.modelo_codigo || !form.tipo_equipo ? 0.5 : 1,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          <Plus size={14} /> Agregar
+        <button type="button" className="btn-add-admin" onClick={handleAdd} disabled={!canAdd}>
+          <Plus size={16} strokeWidth={1.5} /> Agregar
         </button>
       </div>
 
-      {/* Lista */}
-      {isLoading ? <LoadingSpinner /> : (
-        <div style={{ border: '1px solid var(--border-color,#e5e7eb)', borderRadius: 10, overflow: 'hidden' }}>
-          {familias.length === 0 ? (
-            <div style={{ padding: '28px', textAlign: 'center', fontSize: 13, color: 'var(--text-secondary)' }}>
-              No hay familias configuradas. Agregá la primera arriba.
-            </div>
-          ) : familias.map((f, idx) => (
-            <div key={f.id} style={{
-              display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px',
-              borderBottom: idx < familias.length - 1 ? '1px solid var(--border-color,#e5e7eb)' : 'none',
-              background: 'var(--bg-main)',
-            }}>
-              <span style={{
-                padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700,
-                background: '#e0e7ff', color: '#3730a3',
-              }}>{f.modelo_codigo}</span>
-              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>→</span>
-              <span style={{
-                padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,
-                background: '#6366f118', color: '#6366f1',
-              }}>{tipoLabel(f.tipo_equipo)}</span>
-              <button
-                onClick={() => handleDelete(f.id)}
-                style={{
-                  marginLeft: 'auto', background: 'none', border: 'none',
-                  cursor: 'pointer', color: '#ef4444', display: 'flex', padding: 4, borderRadius: 6,
-                }}
-              >
-                <Trash2 size={14} />
-              </button>
-            </div>
+      {isLoading ? <LoadingSpinner /> : familias.length === 0 ? (
+        <div className="adm-empty">No hay familias configuradas. Agregá la primera arriba.</div>
+      ) : (
+        <ul className="adm-list">
+          {familias.map(f => (
+            <li key={f.id} className="adm-row">
+              <span className="adm-row-icon"><Tag size={18} strokeWidth={1.5} /></span>
+              <div className="adm-row-info">
+                <div className="adm-row-title">
+                  <span className="adm-badge mono neutral">{f.modelo_codigo}</span>
+                  <ArrowRight size={14} strokeWidth={1.5} className="adm-arrow" aria-hidden="true" />
+                  <span className="adm-badge">{tipoLabel(f.tipo_equipo)}</span>
+                </div>
+              </div>
+              <div className="adm-actions hover-reveal">
+                <button type="button" className="adm-action danger" aria-label={`Eliminar mapeo ${f.modelo_codigo}`} onClick={() => handleDelete(f.id)}>
+                  <Trash2 size={16} strokeWidth={1.5} />
+                </button>
+              </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
 
       {modelosSinFamilia.length > 0 && (
-        <p style={{ marginTop: 14, fontSize: 12, color: 'var(--text-secondary)' }}>
+        <p className="adm-footnote">
           <strong>{modelosSinFamilia.length}</strong> modelo{modelosSinFamilia.length !== 1 ? 's' : ''} sin familia asignada en la base de datos.
         </p>
       )}

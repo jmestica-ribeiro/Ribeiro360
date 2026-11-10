@@ -1,0 +1,26 @@
+.submit-blocked {
+  opacity: 0.55;
+  cursor: pointer;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.field-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--destructive);
+}
+
+/* Campo inválido: mismo look en inputs nativos y en el Select custom */
+input[aria-invalid="true"],
+textarea[aria-invalid="true"],
+.sel-trigger[aria-invalid="true"] {
+  border-color: var(--destructive) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--destructive) 18%, transparent) !important;
+}

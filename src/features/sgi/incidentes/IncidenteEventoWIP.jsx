@@ -1,10 +1,16 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Upload, X, FileText, Check, Loader2, AlertCircle } from 'lucide-react';
-import { Select } from '../../../components/common';
+import { Select, SubmitButton, FieldError } from '../../../components/common';
+import { useRequiredFields } from '../../../hooks/useRequiredFields';
+import { hoyISO } from '../../../lib/fechas';
+import { matchGerencia } from '../../../lib/gerencias';
+
+const GERENCIAS = ['Servicios', 'Obras', 'CMASS', 'Administración, Finanzas y TI', 'RRHH', 'Institucional'];
 import { useAuth } from '../../../contexts/AuthContext';
 import { insertIncidenteConNumeroUnico, uploadIncAdjunto } from '../../../services/incidentesService';
 import './IncidenteEvento.css';
+import './IncidenteFormRedesign.css';
 
 const MAX_ADJUNTOS = 5;
 const ACCEPT = '.xlsx,.xls,.ppt,.pptx,.pdf,.jpg,.jpeg,.png,.webp,.gif,.mp4,.mov,.mp3';
@@ -15,9 +21,9 @@ export default function IncidenteEventoWIP() {
 
   const [form, setForm] = useState({
     nombre_reporta:     profile?.full_name ?? '',
-    fecha:              new Date().toISOString().split('T')[0],
+    fecha:              hoyISO(),
     hora_evento:        '',
-    gerencia:           '',
+    gerencia:           matchGerencia(profile?.department, GERENCIAS),
     lugar:              '',
     afectado:           '',
     descripcion:        '',
@@ -31,19 +37,18 @@ export default function IncidenteEventoWIP() {
 
   const set = (field, value) => {
     setForm(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) setErrors(prev => ({ ...prev, [field]: null }));
+    if (errors._global) setErrors({});
   };
 
-  const validate = () => {
-    const e = {};
-    if (!form.nombre_reporta.trim()) e.nombre_reporta = 'Requerido';
-    if (!form.fecha)                 e.fecha           = 'Requerido';
-    if (!form.hora_evento.trim())    e.hora_evento     = 'Requerido';
-    if (!form.lugar.trim())          e.lugar           = 'Requerido';
-    if (!form.descripcion.trim())    e.descripcion     = 'Requerido';
-    if (!form.acciones_inmediatas.trim()) e.acciones_inmediatas = 'Requerido';
-    return e;
-  };
+  const v = useRequiredFields([
+    { id: 'ev-nombre',      label: 'Nombre',               valid: !!form.nombre_reporta.trim() },
+    { id: 'ev-fecha',       label: 'Fecha',                valid: !!form.fecha },
+    { id: 'ev-hora',        label: 'Hora',                 valid: !!form.hora_evento.trim() },
+    { id: 'ev-lugar',       label: 'Lugar',                valid: !!form.lugar.trim() },
+    { id: 'ev-descripcion', label: 'Descripción',          valid: !!form.descripcion.trim() },
+    { id: 'ev-acciones',    label: 'Acciones inmediatas',  valid: !!form.acciones_inmediatas.trim() },
+  ]);
+  const err = (id) => (v.isInvalid(id) ? 'Requerido' : null);
 
   const handleAdjuntos = (files) => {
     const remaining = MAX_ADJUNTOS - adjuntos.length;
@@ -55,8 +60,7 @@ export default function IncidenteEventoWIP() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length) { setErrors(errs); return; }
+    if (!v.isValid) { v.revealAll(); return; }
 
     setSaving(true);
     try {
@@ -127,9 +131,11 @@ export default function IncidenteEventoWIP() {
       <form className="ev-form" onSubmit={handleSubmit} noValidate>
 
         {/* 1. Nombre quien reporta */}
-        <Field n={1} label="Apellido y nombre de quien carga el evento" required error={errors.nombre_reporta}>
+        <Field n={1} label="Apellido y nombre de quien carga el evento" required error={err('ev-nombre')} htmlFor="ev-nombre">
           <input
-            className={`ev-input${errors.nombre_reporta ? ' ev-input--error' : ''}`}
+            id="ev-nombre"
+            {...v.fieldProps('ev-nombre')}
+            className={`ev-input${err('ev-nombre') ? ' ev-input--error' : ''}`}
             value={form.nombre_reporta}
             onChange={e => set('nombre_reporta', e.target.value)}
             placeholder="Escriba su respuesta"
@@ -137,20 +143,24 @@ export default function IncidenteEventoWIP() {
         </Field>
 
         {/* 2. Fecha */}
-        <Field n={2} label="Fecha de ocurrencia del evento" required error={errors.fecha}>
+        <Field n={2} label="Fecha de ocurrencia del evento" required error={err('ev-fecha')} htmlFor="ev-fecha">
           <input
             type="date"
-            className={`ev-input${errors.fecha ? ' ev-input--error' : ''}`}
+            id="ev-fecha"
+            {...v.fieldProps('ev-fecha')}
+            className={`ev-input${err('ev-fecha') ? ' ev-input--error' : ''}`}
             value={form.fecha}
             onChange={e => set('fecha', e.target.value)}
           />
         </Field>
 
         {/* 3. Hora */}
-        <Field n={3} label="Hora aproximada de ocurrencia del evento" required error={errors.hora_evento}>
+        <Field n={3} label="Hora aproximada de ocurrencia del evento" required error={err('ev-hora')} htmlFor="ev-hora">
           <input
             type="time"
-            className={`ev-input ev-input-time${errors.hora_evento ? ' ev-input--error' : ''}`}
+            id="ev-hora"
+            {...v.fieldProps('ev-hora')}
+            className={`ev-input ev-input-time${err('ev-hora') ? ' ev-input--error' : ''}`}
             value={form.hora_evento}
             onChange={e => set('hora_evento', e.target.value)}
           />
@@ -168,9 +178,11 @@ export default function IncidenteEventoWIP() {
         </Field>
 
         {/* 5. Lugar */}
-        <Field n={5} label="Lugar de ocurrencia del evento" required error={errors.lugar}>
+        <Field n={5} label="Lugar de ocurrencia del evento" required error={err('ev-lugar')} htmlFor="ev-lugar">
           <input
-            className={`ev-input${errors.lugar ? ' ev-input--error' : ''}`}
+            id="ev-lugar"
+            {...v.fieldProps('ev-lugar')}
+            className={`ev-input${err('ev-lugar') ? ' ev-input--error' : ''}`}
             value={form.lugar}
             onChange={e => set('lugar', e.target.value)}
             placeholder="Escriba su respuesta"
@@ -188,9 +200,11 @@ export default function IncidenteEventoWIP() {
         </Field>
 
         {/* 7. Descripción */}
-        <Field n={7} label="Descripción del evento" required error={errors.descripcion}>
+        <Field n={7} label="Descripción del evento" required error={err('ev-descripcion')} htmlFor="ev-descripcion">
           <textarea
-            className={`ev-input ev-textarea${errors.descripcion ? ' ev-input--error' : ''}`}
+            id="ev-descripcion"
+            {...v.fieldProps('ev-descripcion')}
+            className={`ev-input ev-textarea${err('ev-descripcion') ? ' ev-input--error' : ''}`}
             value={form.descripcion}
             onChange={e => set('descripcion', e.target.value)}
             placeholder="Escriba su respuesta"
@@ -199,9 +213,11 @@ export default function IncidenteEventoWIP() {
         </Field>
 
         {/* 8. Acciones inmediatas */}
-        <Field n={8} label="Acciones inmediatas realizadas" required error={errors.acciones_inmediatas}>
+        <Field n={8} label="Acciones inmediatas realizadas" required error={err('ev-acciones')} htmlFor="ev-acciones">
           <textarea
-            className={`ev-input ev-textarea${errors.acciones_inmediatas ? ' ev-input--error' : ''}`}
+            id="ev-acciones"
+            {...v.fieldProps('ev-acciones')}
+            className={`ev-input ev-textarea${err('ev-acciones') ? ' ev-input--error' : ''}`}
             value={form.acciones_inmediatas}
             onChange={e => set('acciones_inmediatas', e.target.value)}
             placeholder="Escriba su respuesta"
@@ -261,25 +277,32 @@ export default function IncidenteEventoWIP() {
           >
             Cancelar
           </button>
-          <button type="submit" className="ev-btn-primary" disabled={saving}>
-            {saving ? <><Loader2 size={15} className="ev-spin" /> Guardando…</> : 'Enviar reporte'}
-          </button>
+          <SubmitButton
+            type="submit"
+            className="ev-btn-primary"
+            missing={v.missing}
+            onMissing={v.revealAll}
+            saving={saving}
+            savingLabel={<><Loader2 size={15} className="ev-spin" /> Guardando…</>}
+          >
+            Enviar reporte
+          </SubmitButton>
         </div>
       </form>
     </div>
   );
 }
 
-function Field({ n, label, required, error, children }) {
+function Field({ n, label, required, error, htmlFor, children }) {
   return (
     <div className={`ev-field${error ? ' ev-field--error' : ''}`}>
-      <label className="ev-label">
+      <label className="ev-label" htmlFor={htmlFor}>
         <span className="ev-label-num">{n}.</span>
         {label}
         {required && <span className="ev-required"> *</span>}
       </label>
       {children}
-      {error && <span className="ev-field-error"><AlertCircle size={12} /> {error}</span>}
+      <FieldError show={!!error}>{error}</FieldError>
     </div>
   );
 }

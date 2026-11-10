@@ -62,7 +62,7 @@ const Perfil = () => {
           {form.job_title && <p className="perfil-job">{form.job_title}</p>}
           {form.department && <span className="perfil-dept-badge">{form.department}</span>}
           <div className="perfil-email-row">
-            <Mail size={14} />
+            <Mail size={14} strokeWidth={1.5} />
             <span>{profile?.email || user?.email}</span>
           </div>
         </div>
@@ -72,16 +72,16 @@ const Perfil = () => {
             <h4>Información personal</h4>
             <div className="perfil-fields">
               <div className="perfil-field">
-                <label><User size={14} /> Nombre completo</label>
-                <input name="full_name" value={form.full_name} onChange={handleChange} placeholder="Ej: Juan Pérez" />
+                <label><User size={14} strokeWidth={1.5} /> Nombre completo</label>
+                <input name="full_name" autoComplete="name" value={form.full_name} onChange={handleChange} placeholder="Ej: Juan Pérez" />
               </div>
               <div className="perfil-field">
-                <label><Linkedin size={14} /> LinkedIn</label>
-                <input name="linkedin_url" value={form.linkedin_url} onChange={handleChange} placeholder="https://linkedin.com/in/tu-perfil" />
+                <label><Linkedin size={14} strokeWidth={1.5} /> LinkedIn</label>
+                <input name="linkedin_url" inputMode="url" autoComplete="url" value={form.linkedin_url} onChange={handleChange} placeholder="https://linkedin.com/in/tu-perfil" />
               </div>
               <div className="perfil-field perfil-field--full">
-                <label><Phone size={14} /> Teléfono</label>
-                <input name="phone" value={form.phone} onChange={handleChange} placeholder="Ej: +54 299 4123456" />
+                <label><Phone size={14} strokeWidth={1.5} /> Teléfono</label>
+                <input name="phone" type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={handleChange} placeholder="Ej: +54 299 4123456" />
               </div>
             </div>
             <label className="perfil-consent-label">
@@ -92,7 +92,7 @@ const Perfil = () => {
                 onChange={handleChange}
                 disabled={!form.phone}
               />
-              <MessageCircle size={15} />
+              <MessageCircle size={16} strokeWidth={1.5} />
               Permitir que mis compañeros me contacten por WhatsApp
               {!form.phone && <span className="perfil-consent-hint">(Completá tu teléfono primero)</span>}
             </label>
@@ -102,25 +102,25 @@ const Perfil = () => {
             <h4>Información laboral</h4>
             <div className="perfil-fields">
               <div className="perfil-field">
-                <label><Briefcase size={14} /> Puesto</label>
-                <input name="job_title" value={form.job_title} onChange={handleChange} placeholder="Ej: Analista Contable" />
+                <label><Briefcase size={14} strokeWidth={1.5} /> Puesto</label>
+                <input name="job_title" autoComplete="organization-title" value={form.job_title} onChange={handleChange} placeholder="Ej: Analista Contable" />
               </div>
               <div className="perfil-field">
-                <label><Building2 size={14} /> Sector</label>
+                <label><Building2 size={14} strokeWidth={1.5} /> Sector</label>
                 <input name="department" value={form.department} onChange={handleChange} placeholder="Ej: Administración" />
               </div>
               <div className="perfil-field">
-                <label><MapPin size={14} /> Ubicación</label>
+                <label><MapPin size={14} strokeWidth={1.5} /> Ubicación</label>
                 <input name="office_location" value={form.office_location} onChange={handleChange} placeholder="Ej: Neuquén" />
               </div>
             </div>
           </div>
 
-          {error && <p className="perfil-error">{error}</p>}
+          {error && <p className="perfil-error" role="alert">{error}</p>}
 
           <div className="perfil-form-footer">
             {saved && (
-              <span className="perfil-saved-msg">
+              <span className="perfil-saved-msg" role="status">
                 <CheckCircle size={16} /> Cambios guardados
               </span>
             )}

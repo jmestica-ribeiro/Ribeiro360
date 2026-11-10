@@ -63,55 +63,53 @@ const PortalesTab = () => {
   };
 
   if (loading) {
-    return <p style={{ color: 'var(--text-muted)', padding: '32px 0' }}>Cargando portales...</p>;
+    return <p className="adm-empty">Cargando portales...</p>;
   }
 
   return (
     <div>
-      <div style={{ marginBottom: 28 }}>
-        <h3 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-main)', marginBottom: 6 }}>
-          Visibilidad de portales
-        </h3>
-        <p style={{ fontSize: 14, color: 'var(--text-muted)' }}>
+      <div className="adm-pane-head">
+        <h3>Visibilidad de portales</h3>
+        <p>
           Controlá qué portales departamentales son accesibles para todos los empleados
           y cuáles permanecen de uso interno.
         </p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <ul className="adm-list">
         {PORTALES_INFO.map(({ departamento, titulo, descripcion }) => {
           const esPublico = visibilidadMap[departamento] ?? false;
           const ocupado = toggling === departamento;
 
           return (
-            <div key={departamento} className="portales-tab-row">
-              <div className="portales-tab-info">
-                <span className="portales-tab-titulo">{titulo}</span>
-                <span className="portales-tab-desc">{descripcion}</span>
+            <li key={departamento} className="adm-row">
+              <span className="adm-row-icon">
+                {esPublico ? <Globe size={18} strokeWidth={1.5} /> : <Lock size={18} strokeWidth={1.5} />}
+              </span>
+              <div className="adm-row-info">
+                <div className="adm-row-title">
+                  {titulo}
+                  <span className={`adm-badge${esPublico ? '' : ' neutral'}`}>{esPublico ? 'Público' : 'Interno'}</span>
+                </div>
+                <div className="adm-row-meta">{ocupado ? 'Guardando…' : descripcion}</div>
               </div>
-
-              <div className="portales-tab-controls">
-                <span className={`portales-tab-badge ${esPublico ? 'publico' : 'interno'}`}>
-                  {esPublico ? <><Globe size={12} /> Público</> : <><Lock size={12} /> Interno</>}
-                </span>
-                <button
-                  className={`portales-tab-toggle ${esPublico ? 'activo' : ''}`}
-                  onClick={() => handleToggle(departamento)}
-                  disabled={ocupado}
-                >
-                  {ocupado
-                    ? 'Guardando...'
-                    : esPublico
-                      ? 'Hacer privado'
-                      : 'Hacer público'}
-                </button>
-              </div>
-            </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={esPublico}
+                aria-label={`Hacer público ${titulo}`}
+                className={`adm-switch${esPublico ? ' on' : ''}`}
+                onClick={() => handleToggle(departamento)}
+                disabled={ocupado}
+              >
+                <span className="adm-switch-thumb" />
+              </button>
+            </li>
           );
         })}
-      </div>
+      </ul>
 
-      <p style={{ marginTop: 24, fontSize: 12, color: 'var(--text-muted)' }}>
+      <p className="adm-footnote">
         Los portales marcados como <strong>Público</strong> aparecen en la sección
         "Disponibles para todos" dentro de Explorar, accesibles para cualquier empleado.
       </p>

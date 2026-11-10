@@ -66,71 +66,89 @@ const QuizBuilder = ({ preguntas, setPreguntas }) => {
   };
 
   return (
-    <>
-      <div className="section-divider" style={{ margin: '48px 0', borderBottom: '2px solid #f0f0f0' }} />
-      <div className="flex-between mb-6">
+    <section className="quiz-section" aria-labelledby="quiz-title">
+      <div className="quiz-head">
         <div>
-          <h4 style={{ fontSize: '18px', fontWeight: '800' }}>5. Cuestionario Final</h4>
-          <p className="text-muted text-sm" style={{ marginTop: '6px' }}>
+          <span className="blk-section-label">Paso 5</span>
+          <h4 id="quiz-title" className="quiz-title">Cuestionario final</h4>
+          <p className="quiz-subtitle">
             Preguntas que el usuario debe responder al completar todos los módulos.
           </p>
         </div>
-        <button className="btn-secondary" onClick={handleAddPregunta}><Plus size={16} /> Nueva Pregunta</button>
+        <button type="button" className="blk-pill-btn" onClick={handleAddPregunta}>
+          <Plus size={16} strokeWidth={1.5} /> Nueva pregunta
+        </button>
       </div>
 
       {preguntas.length === 0 ? (
-        <div className="empty-quiz-hint">
-          <HelpCircle size={28} />
+        <div className="quiz-empty">
+          <HelpCircle size={28} strokeWidth={1.5} />
           <p>Sin cuestionario. Las preguntas son opcionales — si no agregás ninguna, el curso finaliza al completar los módulos.</p>
         </div>
       ) : (
-        <div className="preguntas-list">
+        <div className="quiz-list">
           {preguntas.map((pregunta, pIdx) => (
-            <div key={pregunta.id} className="pregunta-card">
-              <div className="pregunta-card-header">
-                <span className="mod-number">{pIdx + 1}</span>
+            <div key={pregunta.id} className="quiz-card">
+              <div className="quiz-card-head">
+                <span className="blk-index">{pIdx + 1}</span>
                 <input
-                  className="form-control-ghost"
-                  style={{ flex: 1, fontSize: '15px', fontWeight: '700' }}
+                  className="quiz-question"
                   value={pregunta.texto}
-                  placeholder="Escribe la pregunta aquí..."
+                  aria-label={`Pregunta ${pIdx + 1}`}
+                  placeholder="Escribí la pregunta aquí…"
                   onChange={e => handleUpdatePregunta(pIdx, e.target.value)}
                 />
-                <button className="delete-mod" onClick={() => handleRemovePregunta(pIdx)}><Trash2 size={16} /></button>
+                <button
+                  type="button"
+                  className="adm-action danger"
+                  aria-label={`Eliminar pregunta ${pIdx + 1}`}
+                  onClick={() => handleRemovePregunta(pIdx)}
+                ><Trash2 size={16} strokeWidth={1.5} /></button>
               </div>
 
-              <div className="opciones-editor">
-                <p className="opciones-hint">Seleccioná el radio de la respuesta correcta</p>
+              <div className="quiz-options" role="radiogroup" aria-label={`Respuesta correcta de la pregunta ${pIdx + 1}`}>
+                <p className="quiz-hint">Marcá la respuesta correcta</p>
                 {pregunta.opciones.map((opcion, oIdx) => (
-                  <div key={opcion.id} className={`opcion-row ${opcion.correcta ? 'correcta' : ''}`}>
+                  <div key={opcion.id} className={`quiz-option${opcion.correcta ? ' correct' : ''}`}>
+                    <label className="quiz-radio" title="Marcar como correcta">
+                      <input
+                        type="radio"
+                        name={`correct-${pregunta.id}`}
+                        checked={opcion.correcta}
+                        aria-label={`Opción ${oIdx + 1} correcta`}
+                        onChange={() => handleSetCorrecta(pIdx, oIdx)}
+                      />
+                      <span className="quiz-radio-dot" aria-hidden="true" />
+                    </label>
                     <input
-                      type="radio"
-                      name={`correct-${pregunta.id}`}
-                      checked={opcion.correcta}
-                      onChange={() => handleSetCorrecta(pIdx, oIdx)}
-                      className="opcion-radio"
-                    />
-                    <input
-                      className="form-control"
-                      style={{ flex: 1, padding: '8px 12px', fontSize: '14px' }}
+                      className="quiz-option-input"
                       value={opcion.texto}
-                      placeholder={`Opción ${oIdx + 1}...`}
+                      aria-label={`Texto de la opción ${oIdx + 1}`}
+                      placeholder={`Opción ${oIdx + 1}…`}
                       onChange={e => handleUpdateOpcion(pIdx, oIdx, e.target.value)}
                     />
+                    {opcion.correcta && <span className="adm-badge success">Correcta</span>}
                     {pregunta.opciones.length > 2 && (
-                      <button className="btn-remove-block" onClick={() => handleRemoveOpcion(pIdx, oIdx)}><X size={12} /></button>
+                      <button
+                        type="button"
+                        className="adm-action danger"
+                        aria-label={`Quitar opción ${oIdx + 1}`}
+                        onClick={() => handleRemoveOpcion(pIdx, oIdx)}
+                      ><X size={14} strokeWidth={1.5} /></button>
                     )}
                   </div>
                 ))}
                 {pregunta.opciones.length < 4 && (
-                  <button className="btn-add-sub" onClick={() => handleAddOpcion(pIdx)}>+ Agregar opción</button>
+                  <button type="button" className="blk-dashed-btn quiz-add-option" onClick={() => handleAddOpcion(pIdx)}>
+                    <Plus size={14} strokeWidth={1.5} /> Agregar opción
+                  </button>
                 )}
               </div>
             </div>
           ))}
         </div>
       )}
-    </>
+    </section>
   );
 };
 

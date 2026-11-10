@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { formatFecha } from '../../../lib/fechas';
+import { formatFecha, hoyISO } from '../../../lib/fechas';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Check, Clock, ChevronRight, Loader2, Search, User, Upload, X, Camera, HelpCircle, GitBranch, FileText, Paperclip } from 'lucide-react';
 import IncidenteInformePDF from './IncidenteInformePDF';
@@ -9,7 +9,9 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { useConfirm } from '../../../contexts/ConfirmContext';
 import { useToast } from '../../../contexts/ToastContext';
 import { notificarAccionIncidente } from '../../../lib/notificaciones';
-import { AccessDeniedModal, Select } from '../../../components/common';
+import { AccessDeniedModal, Select, SubmitButton, FieldError } from '../../../components/common';
+import { useRequiredFields } from '../../../hooks/useRequiredFields';
+import { matchGerencia } from '../../../lib/gerencias';
 import {
   fetchIncidentesProfiles, fetchCentrosDeCostos,
   countIncidentesByYear, fetchIncidente, insertIncidenteConNumeroUnico, updateIncidente,
@@ -21,6 +23,8 @@ import {
   uploadIncAdjunto, getSignedUrl, getSignedUrls,
 } from '../../../services/incidentesService';
 import './IncidenteDetalle.css';
+import '../nc/NCFormRedesign.css';
+import './IncidenteFormRedesign.css';
 
 /* ── Constants ──────────────────────────────────────────────────────────────── */
 const STEPS = [
@@ -51,7 +55,7 @@ const PARTES_CUERPO = ['Cabeza', 'Cuello', 'Hombro', 'Brazo', 'Codo', 'Antebrazo
 const EMPTY_FORM = {
   tipo:                     'Incidente',
   numero:                   '',
-  fecha:                    new Date().toISOString().split('T')[0],
+  fecha:                    hoyISO(),
   hora_evento:              '',
   lugar:                    '',
   tarea_obra_servicio:      '',
@@ -291,7 +295,7 @@ export default function IncidenteDetalle() {
     setForm(f => ({
       ...f,
       emisor_id: f.emisor_id || user.id,
-      gerencia:  f.gerencia  || profile?.department      || '',
+      gerencia:  f.gerencia  || matchGerencia(profile?.department, GERENCIAS),
       sitio:     f.sitio     || profile?.office_location || '',
     }));
   }, [isNew, user?.id, profile?.department, profile?.office_location]);
@@ -338,7 +342,7 @@ export default function IncidenteDetalle() {
           setForm({
             tipo:                       data.tipo                    || 'Incidente',
             numero:                     data.numero                  || '',
-            fecha:                      data.fecha                   || new Date().toISOString().split('T')[0],
+            fecha:                      data.fecha                   || hoyISO(),
             hora_evento:                data.hora_evento             || '',
             lugar:                      data.lugar                   || '',
             tarea_obra_servicio:        data.tarea_obra_servicio     || '',
@@ -422,7 +426,7 @@ export default function IncidenteDetalle() {
 
   /* ── Save paso 1 ── */
   const handleSavePaso1 = async (advance = false) => {
-    if (!form.descripcion.trim()) { showToast('La descripción es obligatoria', 'error'); return; }
+    if (!form.descripcion.trim()) return;
     setSaving(true);
     try {
       /* subir fotos pendientes */
@@ -1268,7 +1272,7 @@ function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, ac
   const [saving, setSaving]           = useState(false);
   const [hitos, setHitos]             = useState([]);
   const [hitosLoading, setHitosLoading] = useState(false);
-  const [hitoForm, setHitoForm]       = useState({ descripcion: '', fecha: new Date().toISOString().split('T')[0], porcentaje: 10 });
+  const [hitoForm, setHitoForm]       = useState({ descripcion: '', fecha: hoyISO(), porcentaje: 10 });
   const [hitoFiles, setHitoFiles]     = useState([]);
   const [savingHito, setSavingHito]   = useState(false);
   const hitoFileRef = useRef();
@@ -1282,6 +1286,11 @@ function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, ac
 
   const avanceCalculado = Math.min(100, hitos.reduce((sum, h) => sum + (h.porcentaje || 0), 0));
   const maxProximoHito  = Math.max(5, 100 - avanceCalculado);
+
+  const v = useRequiredFields([
+    { id: 'inc-acc-desc', label: 'Descripción', valid: !!accionForm.descripcion.trim() },
+    { id: 'inc-hito-files', label: 'Evidencia del avance', valid: hitoFiles.length > 0, when: !!(editingAccion?.id && hitoForm.descripcion.trim()) },
+  ]);
 
   const handleGuardar = async () => {
     if (!accionForm.descripcion.trim()) return;
@@ -1334,7 +1343,7 @@ function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, ac
           adjunto_2: adjuntoUrls[1] || null,
           adjunto_3: adjuntoUrls[2] || null,
         });
-        setHitoForm({ descripcion: '', fecha: new Date().toISOString().split('T')[0], porcentaje: 10 });
+        setHitoForm({ descripcion: '', fecha: hoyISO(), porcentaje: 10 });
         setHitoFiles([]);
         onHitoSaved?.();
       }
@@ -1380,8 +1389,9 @@ function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, ac
           <div className="ncd-accion-col-left">
             <div className="ncd-accion-datos">
               <div className="ncd-form-group">
-                <label>Descripción</label>
-                <textarea rows={2} placeholder="Describí la acción a tomar..." value={accionForm.descripcion} onChange={e => setAccionForm(f => ({ ...f, descripcion: e.target.value }))} />
+                <label htmlFor="inc-acc-desc">Descripción <span className="incd-required">*</span></label>
+                <textarea id="inc-acc-desc" {...v.fieldProps('inc-acc-desc')} rows={2} placeholder="Describí la acción a tomar..." value={accionForm.descripcion} onChange={e => setAccionForm(f => ({ ...f, descripcion: e.target.value }))} />
+                <FieldError show={v.isInvalid('inc-acc-desc')}>Describí la acción</FieldError>
               </div>
               <div className="ncd-form-grid cols-2">
                 <div className="ncd-form-group">
@@ -1427,7 +1437,7 @@ function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, ac
                 <div className="ncd-hito-adjuntos-picker">
                   <input ref={hitoFileRef} type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" style={{ display: 'none' }}
                     onChange={e => { const selected = Array.from(e.target.files || []).slice(0, 3); setHitoFiles(selected); e.target.value = ''; }} />
-                  <button type="button" className="ncd-adjunto-pick-btn" onClick={() => hitoFileRef.current?.click()} disabled={avanceCalculado >= 100}>
+                  <button type="button" id="inc-hito-files" className="ncd-adjunto-pick-btn" onClick={() => hitoFileRef.current?.click()} disabled={avanceCalculado >= 100}>
                     <Paperclip size={13} />
                     {hitoFiles.length > 0 ? `${hitoFiles.length} archivo${hitoFiles.length > 1 ? 's' : ''} seleccionado${hitoFiles.length > 1 ? 's' : ''}` : 'Adjuntar archivos (máx. 3)'}
                   </button>
@@ -1438,9 +1448,9 @@ function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, ac
                       ))}
                     </div>
                   )}
-                  {hitoForm.descripcion.trim() && hitoFiles.length === 0 && (
-                    <p className="ncd-hito-adjunto-hint">Este campo es obligatorio, por favor, dejá la evidencia de tu acción.</p>
-                  )}
+                  <FieldError show={!!hitoForm.descripcion.trim() && hitoFiles.length === 0}>
+                    Adjuntá la evidencia de tu acción (obligatorio)
+                  </FieldError>
                 </div>
               </div>
             )}
@@ -1487,11 +1497,12 @@ function IncAccionModal({ editingAccion, accionForm, setAccionForm, profiles, ac
         </div>
         <div className="ncd-accion-modal-footer">
           <button className="ncd-btn-secondary" onClick={onClose}>Cancelar</button>
-          <button className="ncd-btn-primary" onClick={handleGuardar}
-            disabled={saving || !accionForm.descripcion.trim() || (editingAccion?.id && hitoForm.descripcion.trim() && hitoFiles.length === 0)}>
-            {saving ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : <Check size={14} />}
+          <SubmitButton className="ncd-btn-primary" onClick={handleGuardar}
+            missing={v.missing} onMissing={v.revealAll} saving={saving}
+            savingLabel={<><Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> Guardando…</>}>
+            <Check size={14} />
             {editingAccion ? 'Guardar cambios' : 'Agregar acción'}
-          </button>
+          </SubmitButton>
         </div>
       </div>
       {accionPicker && (
@@ -1512,6 +1523,9 @@ function Step1({ form, setForm, profiles, clientes, gerencias, sitios, pendingFo
 
   const [picker, setPicker] = useState(null);
   const [manualInvolucrado, setManualInvolucrado] = useState('');
+  const v = useRequiredFields([
+    { id: 'inc-descripcion', label: 'Descripción del evento', valid: !!form.descripcion.trim() },
+  ]);
 
   const removeInvolucrado = (i) => setForm(f => ({ ...f, involucrados: f.involucrados.filter((_, idx) => idx !== i) }));
   const addManualInvolucrado = () => {
@@ -1843,13 +1857,16 @@ function Step1({ form, setForm, profiles, clientes, gerencias, sitios, pendingFo
         <div className="incd-section-title">Descripción del evento y registros</div>
         <div className="incd-desc-fotos-row">
           <div className="incd-form-group incd-desc-col">
-            <label className="incd-form-label">Descripción del evento <span className="incd-required">*</span></label>
+            <label className="incd-form-label" htmlFor="inc-descripcion">Descripción del evento <span className="incd-required">*</span></label>
             <textarea
+              id="inc-descripcion"
+              {...v.fieldProps('inc-descripcion')}
               className="incd-form-textarea incd-textarea-tall"
               placeholder="Describí qué ocurrió, cuándo, dónde y cómo..."
               value={form.descripcion}
               onChange={e => set('descripcion', e.target.value)}
             />
+            <FieldError show={v.isInvalid('inc-descripcion')}>Describí qué ocurrió</FieldError>
           </div>
           <div className="incd-form-group incd-fotos-col">
             <label className="incd-form-label">Registros fotográficos <span className="incd-fotos-count">({totalFotos}/{MAX_FOTOS})</span></label>
@@ -1887,14 +1904,16 @@ function Step1({ form, setForm, profiles, clientes, gerencias, sitios, pendingFo
 
       {/* Acciones */}
       <div className="incd-step-actions">
-        <button type="button" className="incd-btn-secondary" onClick={onSave} disabled={saving}>
+        <button type="button" className="incd-btn-secondary" onClick={v.isValid ? onSave : v.revealAll} disabled={saving}>
           {saving ? <Loader2 size={15} className="incd-spin" /> : null}
           {isNew ? 'Crear Incidente' : 'Guardar borrador'}
         </button>
-        <button type="button" className="incd-btn-primary" onClick={onSaveAndAdvance} disabled={saving}>
-          {saving ? <Loader2 size={15} className="incd-spin" /> : <Check size={15} />}
+        <SubmitButton className="incd-btn-primary" onClick={onSaveAndAdvance}
+          missing={v.missing} onMissing={v.revealAll} saving={saving}
+          savingLabel={<><Loader2 size={15} className="incd-spin" /> Guardando…</>}>
+          <Check size={15} />
           Siguiente paso
-        </button>
+        </SubmitButton>
       </div>
 
       {/* Pickers */}
@@ -2498,7 +2517,7 @@ function TimelineSection({ incidenteId, onCountChange }) {
   const confirm = useConfirm();
   const { toast: appToast } = useToast();
   const { user } = useAuth();
-  const today = new Date().toISOString().split('T')[0];
+  const today = hoyISO();
 
   // Estado para filas guardadas en DB (cuando ya hay id)
   const [rows, setRows]       = useState([]);

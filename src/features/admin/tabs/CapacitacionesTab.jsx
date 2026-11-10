@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Edit2, Trash2, Save, ChevronLeft, Search, X, GripVertical, Upload, Image as ImageIcon, Eye, Copy, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, ChevronLeft, Search, X, GripVertical, Upload, Image as ImageIcon, Eye, Copy, ChevronDown, ChevronUp, GraduationCap, Clock, Pencil } from 'lucide-react';
 import { fetchCursos, fetchCursosCategorias, fetchCursoDetalle, saveCurso, deleteCurso, uploadBannerImage, uploadArchivoBloque } from '../../../services/cursosService';
 import { fetchPAF } from '../../../services/pafService';
 import { fetchAllUsers, fetchProfileValues } from '../../../services/usuariosService';
@@ -7,7 +7,8 @@ import { parseBlocks, updateBlockInList, updateBlockMetaInList } from '../../../
 import BlocksEditor from '../shared/BlocksEditor';
 import QuizBuilder from '../shared/QuizBuilder';
 import CoursePreviewModal from '../shared/CoursePreviewModal';
-import { VisibilidadEditor, LoadingSpinner, useToast } from '../../../components/common';
+import { VisibilidadEditor, LoadingSpinner, useToast, SubmitButton, FieldError } from '../../../components/common';
+import { useRequiredFields } from '../../../hooks/useRequiredFields';
 import { notificarNuevoCurso } from '../../../lib/notificaciones';
 import { useConfirm } from '../../../contexts/ConfirmContext';
 import { Select } from '../../../components/common';
@@ -44,6 +45,9 @@ const CapacitacionesTab = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editingData, setEditingData] = useState(null);
+  const vc = useRequiredFields([
+    { id: 'cap-titulo', label: 'Título del curso', valid: !!editingData?.titulo?.trim() },
+  ]);
   const [editingModules, setEditingModules] = useState([]);
   const [editingVisibilidad, setEditingVisibilidad] = useState([]);
   const [editingDestinatarios, setEditingDestinatarios] = useState([]);
@@ -92,6 +96,7 @@ const CapacitacionesTab = () => {
     setEditingVisibilidad([]);
     setEditingDestinatarios([]);
     setEditingPreguntas([]);
+    vc.reset();
     setIsEditing(true);
   };
 
@@ -105,6 +110,7 @@ const CapacitacionesTab = () => {
       }
     }
     setEditingData({ ...course, _paf_anio: pafAnio });
+    vc.reset();
     setIsEditing(true);
     setIsLoadingDetail(true);
     setEditingModules([]);
@@ -286,80 +292,79 @@ const CapacitacionesTab = () => {
     });
 
     return (
-      <div className="admin-section">
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '16px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
-            <div className="search-box">
-              <Search size={18} />
-              <input
-                type="text"
-                placeholder="Buscar curso..."
-                value={courseSearch}
-                onChange={e => setCourseSearch(e.target.value)}
-              />
-            </div>
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <div style={{ width: '200px' }}>
-                <Select size="sm" aria-label="Filtrar por categoría" value={String(courseFilterCat ?? '')} onChange={v => setCourseFilterCat(v)} placeholder="Todas las categorías" clearable
-                  options={categories.map(c => ({ value: String(c.id), label: c.nombre }))} />
-              </div>
-              <div style={{ width: '150px' }}>
-                <Select size="sm" aria-label="Filtrar por PAF" value={courseFilterPaf ?? ''} onChange={v => setCourseFilterPaf(v)} placeholder="PAF: Todas" clearable
-                  options={[{ value: 'si', label: 'Solo PAF' }, { value: 'no', label: 'No PAF' }]} />
-              </div>
-              {(courseSearch || courseFilterCat || courseFilterPaf) && (
-                <button className="btn-secondary" style={{ fontSize: '12px', padding: '6px 14px', width: 'fit-content' }} onClick={() => { setCourseSearch(''); setCourseFilterCat(''); setCourseFilterPaf(''); }}>
-                  <X size={14} /> Limpiar
-                </button>
-              )}
-            </div>
-          </div>
-          <button className="btn-primary" style={{ flexShrink: 0, alignSelf: 'flex-start' }} onClick={handleCreate}><Plus size={18} /> Nuevo Curso</button>
+      <div className="admin-list-panel">
+        <div className="admin-list-header">
+          <h3>Capacitaciones <span className="admin-count">{courses.length}</span></h3>
+          <button type="button" className="btn-add-admin" onClick={handleCreate}><Plus size={16} /> Nuevo curso</button>
         </div>
 
-        <div className="data-table-wrapper">
-          <table className="data-table">
-            <thead>
-              <tr><th>Título</th><th>Categoría</th><th>PAF</th><th>Duración</th><th>Acciones</th></tr>
-            </thead>
-            <tbody>
-              {coursesFiltrados.length === 0 ? (
-                <tr><td colSpan={5} style={{ textAlign: 'center', color: '#bbb', padding: '32px' }}>Sin resultados</td></tr>
-              ) : coursesFiltrados.map(course => (
-                <tr key={course.id}>
-                  <td className="font-bold">{course.titulo}</td>
-                  <td><span className="badge-category" style={{ backgroundColor: course.categoria?.color }}>{course.categoria?.nombre}</span></td>
-                  <td>{course.es_paf
-                    ? <span style={{ fontSize: '11px', fontWeight: '700', color: '#4361ee', background: '#e8ecff', borderRadius: '20px', padding: '2px 10px' }}>PAF</span>
-                    : <span style={{ fontSize: '11px', color: '#bbb' }}>—</span>}
-                  </td>
-                  <td>{course.duracion_estimada}</td>
-                  <td className="actions-cell">
-                    <button className="action-btn edit" onClick={() => handleEdit(course)}><Edit2 size={16} /></button>
-                    <button className="action-btn delete" onClick={() => handleDelete(course.id)}><Trash2 size={16} /></button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="adm-toolbar">
+          <label className="org-search">
+            <Search size={16} strokeWidth={1.5} aria-hidden="true" />
+            <input
+              type="search"
+              placeholder="Buscar curso…"
+              aria-label="Buscar curso"
+              value={courseSearch}
+              onChange={e => setCourseSearch(e.target.value)}
+            />
+          </label>
+          <div className="adm-filter">
+            <Select size="sm" aria-label="Filtrar por categoría" value={String(courseFilterCat ?? '')} onChange={v => setCourseFilterCat(v)} placeholder="Todas las categorías" clearable
+              options={categories.map(c => ({ value: String(c.id), label: c.nombre }))} />
+          </div>
+          <div className="adm-filter adm-filter-sm">
+            <Select size="sm" aria-label="Filtrar por PAF" value={courseFilterPaf ?? ''} onChange={v => setCourseFilterPaf(v)} placeholder="PAF: Todas" clearable
+              options={[{ value: 'si', label: 'Solo PAF' }, { value: 'no', label: 'No PAF' }]} />
+          </div>
+          {(courseSearch || courseFilterCat || courseFilterPaf) && (
+            <button type="button" className="adm-clear" onClick={() => { setCourseSearch(''); setCourseFilterCat(''); setCourseFilterPaf(''); }}>
+              <X size={14} strokeWidth={1.5} /> Limpiar
+            </button>
+          )}
         </div>
+
+        {coursesFiltrados.length === 0 ? (
+          <p className="adm-empty">Sin resultados</p>
+        ) : (
+          <ul className="adm-list">
+            {coursesFiltrados.map(course => (
+              <li key={course.id} className="adm-row" style={{ '--tone': course.categoria?.color || 'var(--accent)' }}>
+                <span className="adm-row-icon"><GraduationCap size={18} strokeWidth={1.5} /></span>
+                <div className="adm-row-info">
+                  <div className="adm-row-title">
+                    <span className="adm-ellipsis">{course.titulo}</span>
+                    {course.es_paf && <span className="adm-badge">PAF</span>}
+                  </div>
+                  <div className="adm-row-meta">
+                    {course.categoria && <span className="adm-badge tone">{course.categoria.nombre}</span>}
+                    {course.duracion_estimada && <span className="adm-sub"><Clock size={12} strokeWidth={1.5} aria-hidden="true" /> {course.duracion_estimada}</span>}
+                  </div>
+                </div>
+                <div className="adm-actions hover-reveal">
+                  <button type="button" className="adm-action" aria-label={`Editar ${course.titulo}`} onClick={() => handleEdit(course)}><Pencil size={16} strokeWidth={1.5} /></button>
+                  <button type="button" className="adm-action danger" aria-label={`Eliminar ${course.titulo}`} onClick={() => handleDelete(course.id)}><Trash2 size={16} strokeWidth={1.5} /></button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     );
   }
 
   // --- EDITOR VIEW ---
   const saveButton = (
-    <button
+    <SubmitButton
       className="btn-primary"
+      missing={vc.missing}
+      onMissing={vc.revealAll}
       onClick={handleSave}
-      disabled={isSaving}
-      style={{ opacity: isSaving ? 0.7 : 1, cursor: isSaving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+      saving={isSaving}
+      savingLabel={<><svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 0.8s linear infinite' }}><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" strokeDasharray="40 20" /></svg> Guardando...</>}
     >
-      {isSaving
-        ? <><svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 0.8s linear infinite' }}><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" strokeDasharray="40 20" /></svg> Guardando...</>
-        : <><Save size={18} /> Publicar Capacitación</>
-      }
-    </button>
+      <Save size={18} /> Publicar Capacitación
+    </SubmitButton>
   );
 
   return (
@@ -385,24 +390,16 @@ const CapacitacionesTab = () => {
           >
             <Eye size={15} /> Vista previa
           </button>
-          <button
+          <SubmitButton
+            className="btn-primary"
+            missing={vc.missing}
+            onMissing={vc.revealAll}
             onClick={handleSave}
-            disabled={isSaving}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 7,
-              padding: '9px 20px', borderRadius: 10, border: 'none',
-              background: isSaving ? '#ccc' : 'var(--primary-color)',
-              color: '#000', fontSize: 13, fontWeight: 800,
-              cursor: isSaving ? 'not-allowed' : 'pointer',
-              boxShadow: isSaving ? 'none' : '0 2px 8px rgba(0,0,0,0.12)',
-              transition: 'background 0.15s, box-shadow 0.15s',
-            }}
+            saving={isSaving}
+            savingLabel={<><svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 0.8s linear infinite' }}><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" strokeDasharray="40 20" /></svg> Guardando...</>}
           >
-            {isSaving
-              ? <><svg width="15" height="15" viewBox="0 0 24 24" fill="none" style={{ animation: 'spin 0.8s linear infinite' }}><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" strokeDasharray="40 20" /></svg> Guardando...</>
-              : <><Save size={15} /> Publicar Capacitación</>
-            }
-          </button>
+            <Save size={15} /> Publicar Capacitación
+          </SubmitButton>
         </div>
       </div>
 
@@ -414,13 +411,16 @@ const CapacitacionesTab = () => {
           <h4 className="mb-6" style={{ fontSize: '18px', fontWeight: '800' }}>1. Información General</h4>
 
           <div className="form-group" style={{ marginBottom: '32px' }}>
-            <label>Título del Curso</label>
+            <label htmlFor="cap-titulo">Título del Curso *</label>
             <input
+              id="cap-titulo"
+              {...vc.fieldProps('cap-titulo')}
               className="form-control"
               style={{ fontSize: '18px', fontWeight: '700' }}
               value={editingData.titulo}
               onChange={e => setEditingData({ ...editingData, titulo: e.target.value })}
             />
+            <FieldError show={vc.isInvalid('cap-titulo')}>Ingresá un título</FieldError>
           </div>
 
           <div className="form-row" style={{ gap: '32px', marginBottom: '32px' }}>

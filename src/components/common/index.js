@@ -8,3 +8,5 @@ export { useToast } from '../../contexts/ToastContext';
 export { useConfirm } from '../../contexts/ConfirmContext';
 export { default as CustomSelect } from './CustomSelect';
 export { Select, Combobox, MultiSelect } from './Select';
+export { SubmitButton, FieldError } from './FormFeedback';
+export { SafeHtml } from './SafeHtml';

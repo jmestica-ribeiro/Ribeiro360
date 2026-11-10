@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Save, ChevronLeft, ChevronRight, ChevronDown, FileText, FolderPlus, FilePlus, Download } from 'lucide-react';
-import { formatFecha } from '../../../lib/fechas';
+import { Plus, Trash2, Save, ChevronLeft, ChevronRight, ChevronDown, FileText, FolderPlus, FilePlus, Download, Folder, Pencil, Search } from 'lucide-react';
+import { formatFecha, hoyISO } from '../../../lib/fechas';
+import { useRequiredFields } from '../../../hooks/useRequiredFields';
 import {
   fetchSGI,
   fetchVersionVigente,
@@ -14,13 +15,33 @@ import {
   uploadSgiArchivo,
   getSgiSignedUrl,
 } from '../../../services/sgiService';
-import { EmptyState, useToast } from '../../../components/common';
+import { EmptyState, useToast, SubmitButton, FieldError } from '../../../components/common';
 import { fetchSgiUploaders, updateCanUploadSgi } from '../../../services/usuariosService';
 import { useConfirm } from '../../../contexts/ConfirmContext';
 import { Select } from '../../../components/common';
 
+const initials = (name = '') =>
+  name.trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('') || '?';
+
 const EMPTY_CAT = { nombre: '', icono: 'Folder', color: '#6366f1', descripcion: '', orden: 0, activo: true, parent_id: null, nivel_piramide: '' };
-const EMPTY_DOC = { titulo: '', codigo: '', descripcion: '', categoria_id: null, tipo_documento: 'Otro', acceso: 'No Confidencial', lugar_ubicacion: '', periodo_retencion: '', etiquetas: '', documento_controlado: false, activo: true, _ver_id: null, numero_version: '0', fecha_emision: new Date().toISOString().split('T')[0], notas_cambios: '' };
+const EMPTY_DOC = { titulo: '', codigo: '', descripcion: '', categoria_id: null, tipo_documento: 'Otro', acceso: 'No Confidencial', lugar_ubicacion: '', periodo_retencion: '', etiquetas: '', documento_controlado: false, activo: true, _ver_id: null, numero_version: '0', fecha_emision: '', notas_cambios: '' };
+
+// Siguiente código según los existentes de la carpeta: prefijo más frecuente + número siguiente (mismo padding)
+const sugerirCodigo = (docs) => {
+  const grupos = {};
+  docs.forEach(d => {
+    const m = /^(.*?)(\d+)$/.exec((d.codigo || '').trim());
+    if (!m) return;
+    const g = (grupos[m[1]] ||= { count: 0, max: -1, pad: 0 });
+    g.count += 1;
+    g.max = Math.max(g.max, parseInt(m[2], 10));
+    g.pad = Math.max(g.pad, m[2].length);
+  });
+  const [prefijo, g] = Object.entries(grupos).sort((a, b) => b[1].count - a[1].count)[0] || [];
+  if (!g) return null;
+  const sugerido = `${prefijo}${String(g.max + 1).padStart(g.pad, '0')}`;
+  return docs.some(d => (d.codigo || '').trim() === sugerido) ? null : sugerido;
+};
 
 const SGITab = () => {
   const confirm = useConfirm();
@@ -35,6 +56,12 @@ const SGITab = () => {
   const [editingCat, setEditingCat] = useState(null);
   const [editingDoc, setEditingDoc] = useState(null);
   const [editingVer, setEditingVer] = useState(null);
+  const vCat = useRequiredFields([
+    { id: 'sgicat-nombre', label: 'Nombre', valid: !!editingCat?.nombre?.trim() },
+  ]);
+  const vDoc = useRequiredFields([
+    { id: 'sgidoc-titulo', label: 'Título', valid: !!editingDoc?.titulo?.trim() },
+  ]);
   const [uploaders, setUploaders] = useState([]);
   const [uploadersSearch, setUploadersSearch] = useState('');
 
@@ -96,7 +123,8 @@ const SGITab = () => {
 
   // ── Documentos ────────────────────────────────────────────────────────────
   const handleCreateDoc = (categoriaId) => {
-    setEditingDoc({ ...EMPTY_DOC, categoria_id: categoriaId });
+    setEditingDoc({ ...EMPTY_DOC, categoria_id: categoriaId, fecha_emision: hoyISO() });
+    vDoc.reset();
     setEditMode('doc');
   };
 
@@ -111,6 +139,7 @@ const SGITab = () => {
       fecha_emision: vigente?.fecha_emision || '',
       notas_cambios: vigente?.notas_cambios || '',
     });
+    vDoc.reset();
     setEditMode('doc');
   };
 
@@ -175,94 +204,126 @@ const SGITab = () => {
     return directDocs + subcats.reduce((sum, s) => sum + getRecursiveDocCount(s.id), 0);
   };
 
+  const IC = { size: 16, strokeWidth: 1.5 };
+
   const renderCategory = (cat, depth = 0) => {
     const subcats = categorias.filter(c => c.parent_id === cat.id);
     const catDocs = documentos.filter(d => d.categoria_id === cat.id);
     const isOpen = expandedCats[cat.id];
     const totalDocs = getRecursiveDocCount(cat.id);
+    const tone = /^#[0-9a-f]{6}$/i.test(cat.color || '') ? cat.color : undefined;
 
     return (
-      <div key={cat.id} style={{ marginLeft: depth > 0 ? 24 : 0, borderLeft: depth > 0 ? '1px dashed #e2e8f0' : 'none', paddingLeft: depth > 0 ? 16 : 0, marginTop: depth > 0 ? 8 : 0 }}>
-        <div className="sgi-tree-cat">
-          <div className="sgi-tree-row cat-row">
-            <button className="sgi-tree-toggle" onClick={() => setExpandedCats(s => ({ ...s, [cat.id]: !s[cat.id] }))}>
-              {isOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-            </button>
-            <div className="sgi-tree-cat-dot" style={{ background: cat.color }} />
-            <span className="sgi-tree-cat-name">{cat.nombre}</span>
-            <span className="sgi-tree-count">{totalDocs} doc{totalDocs !== 1 ? 's' : ''} {subcats.length > 0 ? `· ${subcats.length} sub` : ''}</span>
-            <div className="sgi-tree-actions">
-              <button className="btn-icon-admin" title="Crear carpeta interna" onClick={() => { setEditingCat({ ...EMPTY_CAT, parent_id: cat.id, orden: categorias.length + 1 }); setEditMode('cat'); }}><FolderPlus size={13} /></button>
-              <button className="btn-icon-admin" title="Crear documento" onClick={() => handleCreateDoc(cat.id)}><FilePlus size={13} /></button>
-              <button className="btn-icon-admin" title="Editar categoría" onClick={() => { setEditingCat({ ...cat }); setEditMode('cat'); }}><Edit2 size={13} /></button>
-              <button className="btn-icon-admin danger" title="Eliminar categoría" onClick={() => handleDeleteCat(cat.id)}><Trash2 size={13} /></button>
+      <React.Fragment key={cat.id}>
+        <li className="adm-row sgi-adm-cat" style={{ '--depth': depth, ...(tone ? { '--tone': tone } : {}) }}>
+          <button
+            type="button"
+            className="adm-action"
+            aria-expanded={!!isOpen}
+            aria-label={`${isOpen ? 'Contraer' : 'Expandir'} ${cat.nombre}`}
+            onClick={() => setExpandedCats(s => ({ ...s, [cat.id]: !s[cat.id] }))}
+          >
+            {isOpen ? <ChevronDown {...IC} /> : <ChevronRight {...IC} />}
+          </button>
+          <span className="adm-row-icon"><Folder size={18} strokeWidth={1.5} /></span>
+          <div className="adm-row-info">
+            <div className="adm-row-title"><span className="adm-ellipsis">{cat.nombre}</span></div>
+            <div className="adm-row-meta">
+              <span>{totalDocs} doc{totalDocs !== 1 ? 's' : ''}</span>
+              {subcats.length > 0 && <span>{subcats.length} subcarpeta{subcats.length !== 1 ? 's' : ''}</span>}
             </div>
           </div>
+          <div className="adm-actions hover-reveal">
+            <button type="button" className="adm-action" title="Crear carpeta interna" aria-label={`Crear carpeta dentro de ${cat.nombre}`} onClick={() => { setEditingCat({ ...EMPTY_CAT, parent_id: cat.id, orden: categorias.length + 1 }); vCat.reset(); setEditMode('cat'); }}><FolderPlus {...IC} /></button>
+            <button type="button" className="adm-action" title="Crear documento" aria-label={`Crear documento en ${cat.nombre}`} onClick={() => handleCreateDoc(cat.id)}><FilePlus {...IC} /></button>
+            <button type="button" className="adm-action" title="Editar categoría" aria-label={`Editar ${cat.nombre}`} onClick={() => { setEditingCat({ ...cat }); vCat.reset(); setEditMode('cat'); }}><Pencil {...IC} /></button>
+            <button type="button" className="adm-action danger" title="Eliminar categoría" aria-label={`Eliminar ${cat.nombre}`} onClick={() => handleDeleteCat(cat.id)}><Trash2 {...IC} /></button>
+          </div>
+        </li>
 
-          {isOpen && (
-            <div className="sgi-tree-docs" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', background: depth === 0 ? '#fdfdfd' : 'transparent' }}>
-              {subcats.map(subcat => renderCategory(subcat, depth + 1))}
-              {catDocs.length === 0 && subcats.length === 0 ? (
-                <div className="sgi-tree-empty">Vacío</div>
-              ) : catDocs.map(doc => {
-                const vigente = versiones.find(v => v.documento_id === doc.id);
-                const isDocOpen = expandedDocs[doc.id];
-                const docVers = versionesPorDoc[doc.id];
-                return (
-                  <div key={doc.id} className="sgi-tree-doc">
-                    <div className="sgi-tree-row doc-row">
-                      <button className="sgi-tree-toggle" onClick={() => toggleDocExpand(doc.id)}>
-                        {isDocOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                      </button>
-                      <FileText size={14} className="sgi-tree-file-icon" />
-                      <span className="sgi-tree-doc-title">{doc.titulo}</span>
-                      {doc.codigo && <span className="sgi-tree-code">{doc.codigo}</span>}
-                      {vigente ? <span className="sgi-tree-ver vigente">v{vigente.numero_version}</span> : <span className="sgi-tree-ver none">sin versión</span>}
-                      <div className="sgi-tree-actions">
-                        <button className="btn-icon-admin" title="Nueva versión" onClick={() => {
-                          const maxVer = parseInt(vigente?.numero_version) || 0;
-                          setEditingVer({ numero_version: String(maxVer + 1), archivo_url: '', notas_cambios: '', fecha_emision: new Date().toISOString().split('T')[0], vigente: true, documento_id: doc.id });
-                          setEditMode('ver');
-                        }}><Plus size={13} /></button>
-                        <button className="btn-icon-admin" title="Editar documento" onClick={() => handleEditDoc(doc)}><Edit2 size={13} /></button>
-                        <button className="btn-icon-admin danger" title="Eliminar documento" onClick={() => handleDeleteDoc(doc.id)}><Trash2 size={13} /></button>
+        {isOpen && (
+          <>
+            {subcats.map(subcat => renderCategory(subcat, depth + 1))}
+            {catDocs.length === 0 && subcats.length === 0 ? (
+              <li className="adm-row adm-row-note" style={{ '--depth': depth + 1 }}>Carpeta vacía</li>
+            ) : catDocs.map(doc => {
+              const vigente = versiones.find(v => v.documento_id === doc.id);
+              const isDocOpen = expandedDocs[doc.id];
+              const docVers = versionesPorDoc[doc.id];
+              return (
+                <React.Fragment key={doc.id}>
+                  <li className="adm-row" style={{ '--depth': depth + 1 }}>
+                    <button
+                      type="button"
+                      className="adm-action"
+                      aria-expanded={!!isDocOpen}
+                      aria-label={`${isDocOpen ? 'Ocultar' : 'Ver'} versiones de ${doc.titulo}`}
+                      onClick={() => toggleDocExpand(doc.id)}
+                    >
+                      {isDocOpen ? <ChevronDown {...IC} /> : <ChevronRight {...IC} />}
+                    </button>
+                    <span className="adm-row-icon sgi-adm-doc-icon"><FileText size={18} strokeWidth={1.5} /></span>
+                    <div className="adm-row-info">
+                      <div className="adm-row-title">
+                        <span className="adm-ellipsis">{doc.titulo}</span>
+                        {doc.codigo && <span className="adm-badge mono neutral">{doc.codigo}</span>}
                       </div>
                     </div>
+                    <div className="adm-row-side">
+                      {vigente
+                        ? <span className="adm-badge success">Rev. {vigente.numero_version}</span>
+                        : <span className="adm-badge neutral">Sin versión</span>}
+                    </div>
+                    <div className="adm-actions hover-reveal">
+                      <button type="button" className="adm-action" title="Nueva versión" aria-label={`Nueva versión de ${doc.titulo}`} onClick={() => {
+                        const maxVer = parseInt(vigente?.numero_version) || 0;
+                        setEditingVer({ numero_version: String(maxVer + 1), archivo_url: '', notas_cambios: '', fecha_emision: hoyISO(), vigente: true, documento_id: doc.id });
+                        setEditMode('ver');
+                      }}><Plus {...IC} /></button>
+                      <button type="button" className="adm-action" title="Editar documento" aria-label={`Editar ${doc.titulo}`} onClick={() => handleEditDoc(doc)}><Pencil {...IC} /></button>
+                      <button type="button" className="adm-action danger" title="Eliminar documento" aria-label={`Eliminar ${doc.titulo}`} onClick={() => handleDeleteDoc(doc.id)}><Trash2 {...IC} /></button>
+                    </div>
+                  </li>
 
-                    {isDocOpen && (
-                      <div className="sgi-tree-versions">
-                        {docVers === undefined ? (
-                          <div className="sgi-tree-empty">Cargando…</div>
-                        ) : docVers.length === 0 ? (
-                          <div className="sgi-tree-empty">Sin versiones</div>
-                        ) : docVers.map(ver => (
-                          <div key={ver.id} className={`sgi-tree-row ver-row${ver.vigente ? ' vigente' : ''}`}>
-                            <div className="sgi-tree-ver-dot" />
-                            <span className="sgi-tree-ver-num">v{ver.numero_version}</span>
-                            {ver.vigente && <span className="sgi-vigente-pill">Vigente</span>}
-                            {ver.fecha_emision && <span className="sgi-tree-ver-date">{formatFecha(ver.fecha_emision, {})}</span>}
-                            {ver.notas_cambios && <span className="sgi-tree-ver-notes">{ver.notas_cambios}</span>}
-                            <div className="sgi-tree-actions">
-                              {ver.archivo_url && (
-                                <button className="btn-icon-admin" title="Descargar" onClick={async () => {
-                                  const { data } = await getSgiSignedUrl(ver.archivo_url, 60);
-                                  if (data?.signedUrl) window.open(data.signedUrl, '_blank');
-                                }}><Download size={13} /></button>
-                              )}
-                              <button className="btn-icon-admin" title="Editar versión" onClick={() => { setEditingVer({ ...ver }); setEditMode('ver'); }}><Edit2 size={13} /></button>
-                              <button className="btn-icon-admin danger" title="Eliminar versión" onClick={() => handleDeleteVer(ver.id, doc.id)}><Trash2 size={13} /></button>
-                            </div>
+                  {isDocOpen && (
+                    docVers === undefined ? (
+                      <li className="adm-row adm-row-note" style={{ '--depth': depth + 2 }}>Cargando…</li>
+                    ) : docVers.length === 0 ? (
+                      <li className="adm-row adm-row-note" style={{ '--depth': depth + 2 }}>Sin versiones</li>
+                    ) : docVers.map(ver => (
+                      <li key={ver.id} className="adm-row adm-row-compact sgi-adm-ver" style={{ '--depth': depth + 2 }}>
+                        <span className={`sgi-adm-ver-dot${ver.vigente ? ' vigente' : ''}`} aria-hidden="true" />
+                        <div className="adm-row-info">
+                          <div className="adm-row-title">
+                            <span>Rev. {ver.numero_version}</span>
+                            {ver.vigente && <span className="adm-badge success">Vigente</span>}
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
+                          {(ver.fecha_emision || ver.notas_cambios) && (
+                            <div className="adm-row-meta">
+                              {ver.fecha_emision && <span>{formatFecha(ver.fecha_emision, {})}</span>}
+                              {ver.notas_cambios && <span className="adm-ellipsis sgi-adm-ver-notes">{ver.notas_cambios}</span>}
+                            </div>
+                          )}
+                        </div>
+                        <div className="adm-actions hover-reveal">
+                          {ver.archivo_url && (
+                            <button type="button" className="adm-action" title="Descargar" aria-label={`Descargar revisión ${ver.numero_version}`} onClick={async () => {
+                              const { data } = await getSgiSignedUrl(ver.archivo_url, 60);
+                              if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+                            }}><Download {...IC} /></button>
+                          )}
+                          <button type="button" className="adm-action" title="Editar versión" aria-label={`Editar revisión ${ver.numero_version}`} onClick={() => { setEditingVer({ ...ver }); setEditMode('ver'); }}><Pencil {...IC} /></button>
+                          <button type="button" className="adm-action danger" title="Eliminar versión" aria-label={`Eliminar revisión ${ver.numero_version}`} onClick={() => handleDeleteVer(ver.id, doc.id)}><Trash2 {...IC} /></button>
+                        </div>
+                      </li>
+                    ))
+                  )}
+                </React.Fragment>
+              );
+            })}
+          </>
+        )}
+      </React.Fragment>
     );
   };
 
@@ -276,8 +337,9 @@ const SGITab = () => {
       <div className="form-body">
         <div className="form-row">
           <div className="form-group">
-            <label>Nombre *</label>
-            <input className="form-control" value={editingCat.nombre} onChange={e => setEditingCat(d => ({ ...d, nombre: e.target.value }))} placeholder="Ej: Procedimientos" />
+            <label htmlFor="sgicat-nombre">Nombre *</label>
+            <input id="sgicat-nombre" {...vCat.fieldProps('sgicat-nombre')} className="form-control" value={editingCat.nombre} onChange={e => setEditingCat(d => ({ ...d, nombre: e.target.value }))} placeholder="Ej: Procedimientos" />
+            <FieldError show={vCat.isInvalid('sgicat-nombre')}>Ingresá un nombre</FieldError>
           </div>
           <div className="form-group">
             <label>Carpeta Padre</label>
@@ -319,23 +381,39 @@ const SGITab = () => {
             </span>
           </div>
         </div>
-        <button className="btn-primary" onClick={handleSaveCat} disabled={!editingCat.nombre}><Save size={16} /> Guardar</button>
+        <SubmitButton className="btn-primary" missing={vCat.missing} onMissing={vCat.revealAll} onClick={handleSaveCat}><Save size={16} /> Guardar</SubmitButton>
       </div>
     </div>
   );
+
+  const codigoSugerido = editMode === 'doc' && editingDoc && !editingDoc.id
+    ? sugerirCodigo(documentos.filter(d => d.categoria_id === editingDoc.categoria_id))
+    : null;
 
   if (editMode === 'doc') return (
     <div className="edit-card">
       <div className="form-header">
         <button className="btn-back" onClick={closeEdit}><ChevronLeft size={18} /> Volver</button>
         <h3>{editingDoc?.id ? 'Editar documento' : 'Agregar documento'}</h3>
-        <button className="btn-primary" style={{ marginLeft: 'auto' }} onClick={handleSaveDoc} disabled={!editingDoc.titulo || !editingDoc.categoria_id}><Save size={16} /> Guardar</button>
+        <SubmitButton className="btn-primary" style={{ marginLeft: 'auto' }} missing={vDoc.missing} onMissing={vDoc.revealAll} onClick={handleSaveDoc}><Save size={16} /> Guardar</SubmitButton>
       </div>
       <div className="form-body">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 48px' }}>
           <div>
-            <div className="form-group"><label>Código</label><input className="form-control" value={editingDoc.codigo || ''} onChange={e => setEditingDoc(d => ({ ...d, codigo: e.target.value }))} placeholder="Código del documento" /></div>
-            <div className="form-group"><label>Título *</label><input className="form-control" value={editingDoc.titulo} onChange={e => setEditingDoc(d => ({ ...d, titulo: e.target.value }))} placeholder="Título del documento" /></div>
+            <div className="form-group">
+              <label htmlFor="sgidoc-codigo">Código</label>
+              <input id="sgidoc-codigo" className="form-control" value={editingDoc.codigo || ''} onChange={e => setEditingDoc(d => ({ ...d, codigo: e.target.value }))} placeholder="Código del documento" />
+              {!editingDoc.id && !editingDoc.codigo && codigoSugerido && (
+                <button type="button" className="adm-suggest-chip" onClick={() => setEditingDoc(d => ({ ...d, codigo: codigoSugerido }))}>
+                  Usar {codigoSugerido}
+                </button>
+              )}
+            </div>
+            <div className="form-group">
+              <label htmlFor="sgidoc-titulo">Título *</label>
+              <input id="sgidoc-titulo" {...vDoc.fieldProps('sgidoc-titulo')} className="form-control" value={editingDoc.titulo} onChange={e => setEditingDoc(d => ({ ...d, titulo: e.target.value }))} placeholder="Título del documento" />
+              <FieldError show={vDoc.isInvalid('sgidoc-titulo')}>Ingresá un título</FieldError>
+            </div>
             <div className="form-group">
               <label>Revisión</label>
               <Select value={String(editingDoc.numero_version || '0')} onChange={v => setEditingDoc(d => ({ ...d, numero_version: v }))}
@@ -415,61 +493,76 @@ const SGITab = () => {
   );
 
   return (
-    <div className="admin-list-panel">
-      {/* Sección de editores SGI */}
-      <div style={{ marginBottom: 32 }}>
-        <div className="admin-list-header" style={{ marginBottom: 12 }}>
+    <div className="admin-list-panel adm-panel">
+      <section className="adm-section">
+        <div className="admin-list-header">
           <div>
-            <span className="admin-count">Editores de documentos SGI</span>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 4 }}>
+            <h3>Editores de documentos SGI <span className="admin-count">{uploaders.filter(u => u.can_upload_sgi).length}</span></h3>
+            <p className="adm-panel-desc">
               Solo estas personas podrán subir y editar documentos. Los admins siempre tienen acceso.
             </p>
           </div>
         </div>
-        <input
-          type="text"
-          className="form-control"
-          placeholder="Buscar por nombre o email..."
-          value={uploadersSearch}
-          onChange={e => setUploadersSearch(e.target.value)}
-          style={{ maxWidth: 340, marginBottom: 12 }}
-        />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 320, overflowY: 'auto' }}>
-          {filteredUploaders.map(u => (
-            <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 10 }}>
-              <div>
-                <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-main)' }}>{u.full_name}</span>
-                <span style={{ fontSize: 12, color: 'var(--text-muted)', marginLeft: 8 }}>{u.email}</span>
-              </div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: u.can_upload_sgi ? 'var(--primary-color)' : 'var(--text-muted)' }}>
-                {u.can_upload_sgi ? 'Puede subir' : 'Sin permiso'}
-                <input
-                  type="checkbox"
-                  checked={u.can_upload_sgi || false}
-                  onChange={() => handleToggleUploader(u)}
-                  style={{ width: 16, height: 16, accentColor: 'var(--primary-color)', cursor: 'pointer' }}
-                />
-              </label>
-            </div>
-          ))}
-          {filteredUploaders.length === 0 && (
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', padding: '16px 0' }}>No se encontraron usuarios.</p>
-          )}
+        <div className="adm-toolbar">
+          <label className="org-search">
+            <Search size={16} strokeWidth={1.5} aria-hidden="true" />
+            <input
+              type="search"
+              placeholder="Buscar por nombre o email…"
+              aria-label="Buscar editores por nombre o email"
+              value={uploadersSearch}
+              onChange={e => setUploadersSearch(e.target.value)}
+            />
+          </label>
         </div>
-      </div>
+        {filteredUploaders.length === 0 ? (
+          <div className="adm-empty">No se encontraron usuarios.</div>
+        ) : (
+          <ul className="adm-list adm-scroll">
+            {filteredUploaders.map(u => (
+              <li key={u.id} className="adm-row">
+                <span className="adm-row-icon round">{initials(u.full_name)}</span>
+                <div className="adm-row-info">
+                  <div className="adm-row-title"><span className="adm-ellipsis">{u.full_name}</span></div>
+                  <div className="adm-row-meta"><span className="adm-ellipsis">{u.email}</span></div>
+                </div>
+                <div className="adm-row-side">
+                  <span className={`adm-badge ${u.can_upload_sgi ? '' : 'neutral'}`}>{u.can_upload_sgi ? 'Puede subir' : 'Sin permiso'}</span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={!!u.can_upload_sgi}
+                    aria-label={`Permitir a ${u.full_name} subir documentos`}
+                    className={`adm-switch${u.can_upload_sgi ? ' on' : ''}`}
+                    onClick={() => handleToggleUploader(u)}
+                  >
+                    <span className="adm-switch-thumb" />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
-      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: 24 }}>
+      <section className="adm-section">
         <div className="admin-list-header">
-          <span className="admin-count">{categorias.length} categorías · {documentos.length} documentos</span>
-          <button className="btn-add-admin" onClick={() => { setEditingCat({ ...EMPTY_CAT, orden: categorias.length + 1 }); setEditMode('cat'); }}>
-            <Plus size={16} /> Nueva categoría
+          <div>
+            <h3>Categorías y documentos</h3>
+            <p className="adm-panel-desc">{categorias.length} categorías · {documentos.length} documentos</p>
+          </div>
+          <button type="button" className="btn-add-admin" onClick={() => { setEditingCat({ ...EMPTY_CAT, orden: categorias.length + 1 }); vCat.reset(); setEditMode('cat'); }}>
+            <Plus size={16} strokeWidth={1.5} /> Nueva categoría
           </button>
         </div>
-        <div className="sgi-tree">
-          {categorias.filter(c => !c.parent_id).map(cat => renderCategory(cat, 0))}
-          {categorias.length === 0 && <EmptyState message="No hay categorías. Creá la primera con el botón de arriba." />}
-        </div>
-      </div>
+        {categorias.length === 0 ? (
+          <EmptyState message="No hay categorías. Creá la primera con el botón de arriba." />
+        ) : (
+          <ul className="adm-list sgi-adm-tree">
+            {categorias.filter(c => !c.parent_id).map(cat => renderCategory(cat, 0))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 };

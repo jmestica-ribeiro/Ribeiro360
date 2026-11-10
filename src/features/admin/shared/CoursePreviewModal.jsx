@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { SafeHtml } from '../../../components/common/SafeHtml';
 import { X, ChevronLeft, ChevronRight, FileText, BookOpen, ChevronDown } from 'lucide-react';
 import { parseBlocks } from '../../../lib/blockUtils';
 import '../../capacitaciones/CoursePlayer.css';
@@ -20,7 +21,7 @@ const renderBlocks = (contenido) => {
   return blocks.map((block, i) => {
     switch (block.tipo) {
       case 'texto':
-        return <div key={i} className="player-text-block" dangerouslySetInnerHTML={{ __html: block.contenido }} />;
+        return <SafeHtml key={i} className="player-text-block" html={block.contenido} />;
       case 'banner':
         return (
           <div key={i} className="player-banner-block" style={{ backgroundColor: block.metadata?.bg_color, color: block.metadata?.text_color }}>

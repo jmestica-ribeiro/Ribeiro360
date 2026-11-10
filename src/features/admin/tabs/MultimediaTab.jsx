@@ -61,33 +61,25 @@ const MultimediaTab = () => {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+      <div className="adm-pane-head adm-pane-head--row">
         <div>
-          <h3 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-main)', margin: '0 0 4px' }}>
-            Contenido Multimedia
-          </h3>
-          <p style={{ fontSize: 14, color: 'var(--text-muted)', margin: 0 }}>
+          <h3>Contenido Multimedia</h3>
+          <p>
             {fotos.length} foto{fotos.length !== 1 ? 's' : ''} · {etiquetas.length} etiqueta{etiquetas.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            className={`admin-tab${view === 'fotos' ? ' active' : ''}`}
-            style={{ padding: '8px 16px' }}
-            onClick={() => setView('fotos')}
-          >
-            <Images size={16} /> Fotos
-          </button>
-          <button
-            className={`admin-tab${view === 'etiquetas' ? ' active' : ''}`}
-            style={{ padding: '8px 16px' }}
-            onClick={() => setView('etiquetas')}
-          >
-            <Tag size={16} /> Etiquetas
-          </button>
+        <div className="adm-pane-actions">
+          <div className="org-segmented" role="tablist" aria-label="Vista">
+            <button type="button" role="tab" aria-selected={view === 'fotos'} className={view === 'fotos' ? 'active' : ''} onClick={() => setView('fotos')}>
+              <Images size={15} strokeWidth={1.5} /> Fotos
+            </button>
+            <button type="button" role="tab" aria-selected={view === 'etiquetas'} className={view === 'etiquetas' ? 'active' : ''} onClick={() => setView('etiquetas')}>
+              <Tag size={15} strokeWidth={1.5} /> Etiquetas
+            </button>
+          </div>
           {view === 'fotos' && (
-            <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }} onClick={() => setShowSubir(true)}>
-              <Plus size={16} /> Subir foto
+            <button type="button" className="btn-add-admin" onClick={() => setShowSubir(true)}>
+              <Plus size={16} strokeWidth={1.5} /> Subir foto
             </button>
           )}
         </div>
@@ -95,11 +87,11 @@ const MultimediaTab = () => {
 
       {view === 'fotos' && (
         isLoading ? (
-          <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Cargando fotos...</p>
+          <p className="adm-empty">Cargando fotos...</p>
         ) : fotos.length === 0 ? (
           <EmptyState icon={<Images size={36} />} title="Sin fotos" description="Subí la primera foto con el botón de arriba." />
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 14 }}>
+          <div className="adm-photo-grid">
             {fotos.map(foto => (
               <AdminFotoCard key={foto.id} foto={foto} onDelete={handleDeleteFoto} etiquetas={etiquetas} />
             ))}
@@ -108,40 +100,41 @@ const MultimediaTab = () => {
       )}
 
       {view === 'etiquetas' && (
-        <div style={{ maxWidth: 480 }}>
-          <form onSubmit={handleAddEtiqueta} style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-            <input
-              className="subir-foto-input"
-              style={{ flex: 1 }}
-              placeholder="Nueva etiqueta..."
-              value={nuevaEtiqueta}
-              onChange={e => setNuevaEtiqueta(e.target.value)}
-              maxLength={40}
-            />
-            <button type="submit" className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Plus size={15} /> Crear
+        <div className="adm-narrow">
+          <form onSubmit={handleAddEtiqueta} className="adm-inline-form">
+            <label className="org-search">
+              <Tag size={16} strokeWidth={1.5} aria-hidden="true" />
+              <input
+                placeholder="Nueva etiqueta..."
+                aria-label="Nueva etiqueta"
+                value={nuevaEtiqueta}
+                onChange={e => setNuevaEtiqueta(e.target.value)}
+                maxLength={40}
+              />
+            </label>
+            <button type="submit" className="btn-add-admin">
+              <Plus size={16} strokeWidth={1.5} /> Crear
             </button>
           </form>
 
           {etiquetas.length === 0 ? (
             <EmptyState icon={<Tag size={32} />} title="Sin etiquetas" description="Creá la primera etiqueta arriba." />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <ul className="adm-list">
               {etiquetas.map(et => (
-                <div key={et.id} className="portales-tab-row">
-                  <div className="portales-tab-info">
-                    <span className="portales-tab-titulo">{et.nombre}</span>
+                <li key={et.id} className="adm-row">
+                  <span className="adm-row-icon"><Tag size={16} strokeWidth={1.5} /></span>
+                  <div className="adm-row-info">
+                    <div className="adm-row-title">{et.nombre}</div>
                   </div>
-                  <button
-                    className="btn-danger-sm"
-                    onClick={() => handleDeleteEtiqueta(et.id)}
-                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, background: 'transparent', border: '1px solid #ef4444', color: '#ef4444', cursor: 'pointer', fontSize: 13 }}
-                  >
-                    <Trash2 size={13} /> Eliminar
-                  </button>
-                </div>
+                  <div className="adm-actions hover-reveal">
+                    <button type="button" className="adm-action danger" aria-label={`Eliminar etiqueta ${et.nombre}`} onClick={() => handleDeleteEtiqueta(et.id)}>
+                      <Trash2 size={16} strokeWidth={1.5} />
+                    </button>
+                  </div>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
         </div>
       )}
@@ -158,48 +151,43 @@ const MultimediaTab = () => {
 };
 
 // Mini card para la vista admin
-const AdminFotoCard = ({ foto, onDelete, etiquetas }) => {
+const AdminFotoCard = ({ foto, onDelete }) => {
   const tags = foto.etiquetas?.map(e => e.etiqueta).filter(Boolean) ?? [];
   return (
-    <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border-color)' }}>
-      <div style={{ aspectRatio: '4/3', background: 'var(--bg-secondary)', position: 'relative' }}>
+    <article className="adm-photo-card">
+      <div className="adm-photo-media">
         <AdminFotoThumb src={foto.imagen_signed_url} alt={foto.titulo} />
-      </div>
-      <div style={{ padding: '10px 12px' }}>
-        <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-main)', margin: '0 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {foto.titulo}
-        </p>
-        {tags.length > 0 && (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 8 }}>
-            {tags.map(t => (
-              <span key={t.id} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 99, background: 'var(--bg-secondary)', color: 'var(--text-muted)', border: '1px solid var(--border-color)' }}>
-                {t.nombre}
-              </span>
-            ))}
-          </div>
-        )}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-            {foto.likes?.length ?? 0} likes · {foto.comentarios?.length ?? 0} comentarios
-          </span>
+        <div className="adm-photo-overlay">
           <button
+            type="button"
+            className="adm-action danger adm-photo-del"
             onClick={() => onDelete(foto.id, foto.imagen_url)}
-            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', padding: 4 }}
-            title="Eliminar"
+            aria-label={`Eliminar foto ${foto.titulo}`}
           >
-            <Trash2 size={14} />
+            <Trash2 size={16} strokeWidth={1.5} />
           </button>
         </div>
       </div>
-    </div>
+      <div className="adm-photo-body">
+        <p className="adm-photo-title adm-ellipsis">{foto.titulo}</p>
+        {tags.length > 0 && (
+          <div className="adm-photo-tags">
+            {tags.map(t => <span key={t.id} className="adm-badge neutral">{t.nombre}</span>)}
+          </div>
+        )}
+        <span className="adm-photo-meta">
+          {foto.likes?.length ?? 0} likes · {foto.comentarios?.length ?? 0} comentarios
+        </span>
+      </div>
+    </article>
   );
 };
 
 // La signed URL ya viene resuelta en batch desde fetchFotos (evita 1 llamada por thumbnail)
 const AdminFotoThumb = ({ src, alt }) => (
   src
-    ? <img src={src} alt={alt} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-    : <div style={{ width: '100%', height: '100%', background: 'var(--bg-secondary)' }} />
+    ? <img src={src} alt={alt} loading="lazy" />
+    : <div className="adm-photo-placeholder" />
 );
 
 export default MultimediaTab;

@@ -3,7 +3,7 @@
   min-height: 100vh;
   min-height: 100dvh;
   width: 100%;
-  background-color: var(--bg-color);
+  background-color: var(--app-bg);
   position: relative;
 }
 
@@ -19,7 +19,7 @@
   min-height: 100dvh;
   transition: margin-left var(--transition), max-width var(--transition);
   position: relative;
-  background-color: var(--bg-color);
+  background-color: var(--app-bg);
 }
 
 .sidebar-collapsed .main-content {

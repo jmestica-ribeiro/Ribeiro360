@@ -9,7 +9,8 @@ import {
   swapSectorOrden, swapLinkOrden,
   uploadHerramientaArchivo, deleteHerramientaArchivo,
 } from '../../../services/herramientasService';
-import { useToast } from '../../../components/common';
+import { useToast, SubmitButton, FieldError } from '../../../components/common';
+import { useRequiredFields } from '../../../hooks/useRequiredFields';
 import { useConfirm } from '../../../contexts/ConfirmContext';
 import { Select } from '../../../components/common';
 
@@ -44,6 +45,14 @@ const HerramientasTab = () => {
   const [showLinkForm, setShowLinkForm] = useState(false);
 
   const [saving, setSaving] = useState(false);
+  const vs = useRequiredFields([
+    { id: 'herr-sector-nombre', label: 'Nombre', valid: !!sectorForm.nombre.trim() },
+  ]);
+  const vl = useRequiredFields([
+    { id: 'herr-link-nombre', label: 'Nombre', valid: !!linkForm.nombre.trim() },
+    { id: 'herr-link-url', label: 'URL', valid: !!linkForm.url?.trim(), when: linkForm.tipo === 'link' },
+    { id: 'herr-link-archivo', label: 'Archivo', valid: !!(archivoSeleccionado || linkForm.file_path), when: linkForm.tipo === 'archivo' },
+  ]);
   const [archivoSeleccionado, setArchivoSeleccionado] = useState(null);
   const fileInputRef = useRef(null);
 
@@ -65,12 +74,14 @@ const HerramientasTab = () => {
   const openNewSector = () => {
     setEditingSector(null);
     setSectorForm({ ...EMPTY_SECTOR, orden: sectores.length + 1 });
+    vs.reset();
     setShowSectorForm(true);
   };
 
   const openEditSector = (s) => {
     setEditingSector(s.id);
     setSectorForm({ nombre: s.nombre, icono: s.icono, orden: s.orden, activo: s.activo });
+    vs.reset();
     setShowSectorForm(true);
   };
 
@@ -113,6 +124,7 @@ const HerramientasTab = () => {
     setEditingLink(null);
     setArchivoSeleccionado(null);
     setLinkForm({ ...EMPTY_LINK, sector_id: activeSector, orden: linksForSector(activeSector).length + 1 });
+    vl.reset();
     setShowLinkForm(true);
   };
 
@@ -120,6 +132,7 @@ const HerramientasTab = () => {
     setEditingLink(l.id);
     setArchivoSeleccionado(null);
     setLinkForm({ nombre: l.nombre, url: l.url || '', descripcion: l.descripcion || '', icono: l.icono, orden: l.orden, activo: l.activo, sector_id: l.sector_id, tipo: l.tipo || 'link', file_path: l.file_path || null });
+    vl.reset();
     setShowLinkForm(true);
   };
 
@@ -185,188 +198,163 @@ const HerramientasTab = () => {
 
   return (
     <div className="admin-list-panel">
-      <div className="admin-list-header">
+      <div className="adm-pane-head">
         <h3>Herramientas por Sector <span className="admin-count">{sectores.length}</span></h3>
-        <p className="text-muted text-xs" style={{ marginTop: 4 }}>
-          Links y accesos rápidos agrupados por área o sector, visibles para todos los empleados.
-        </p>
+        <p>Links y accesos rápidos agrupados por área o sector, visibles para todos los empleados.</p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 20, alignItems: 'start' }}>
+      <div className="herr-layout">
 
         {/* ── Panel izquierdo: sectores ─────────────────────────────────────── */}
-        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 12, overflow: 'hidden' }}>
-          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontWeight: 700, fontSize: 14 }}>Sectores</span>
-            <button className="btn-primary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={openNewSector}>
-              <Plus size={13} /> Nuevo
+        <aside className="herr-sectores" aria-label="Sectores">
+          <div className="herr-sectores-head">
+            <span className="adm-group-label">Sectores</span>
+            <button type="button" className="adm-pill-btn sm" onClick={openNewSector}>
+              <Plus size={14} strokeWidth={1.5} /> Nuevo
             </button>
           </div>
 
           {sectores.length === 0 ? (
-            <p className="text-muted text-sm" style={{ padding: 16 }}>Sin sectores todavía.</p>
+            <p className="adm-empty">Sin sectores todavía.</p>
           ) : (
-            <div>
+            <ul className="herr-sector-list">
               {sectores.map((s, idx) => (
-                <div
+                <li
                   key={s.id}
+                  className={`herr-sector${activeSector === s.id ? ' active' : ''}`}
                   onClick={() => { setActiveSector(s.id); setShowLinkForm(false); }}
-                  style={{
-                    padding: '10px 14px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    background: activeSector === s.id ? 'var(--primary-color)' : 'transparent',
-                    color: activeSector === s.id ? '#fff' : 'var(--text-main)',
-                    borderBottom: '1px solid var(--border-color)',
-                    transition: 'background 0.15s',
-                  }}
                 >
-                  <Wrench size={14} style={{ flexShrink: 0, opacity: 0.7 }} />
-                  <span style={{ flex: 1, fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.nombre}</span>
-                  <span style={{ fontSize: 11, opacity: 0.6 }}>{linksForSector(s.id).length}</span>
+                  <Wrench size={16} strokeWidth={1.5} className="herr-sector-icon" aria-hidden="true" />
+                  <button
+                    type="button"
+                    className="herr-sector-name adm-ellipsis"
+                    aria-current={activeSector === s.id ? 'true' : undefined}
+                  >
+                    {s.nombre}
+                  </button>
+                  <span className="herr-sector-count">{linksForSector(s.id).length}</span>
 
-                  {/* controles inline (sólo en hover via stop-propagation) */}
-                  <div style={{ display: 'flex', gap: 2, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                    <button
-                      title="Subir"
-                      className="action-btn"
-                      style={{ padding: '2px 4px', color: activeSector === s.id ? '#fff' : undefined, opacity: idx === 0 ? 0.3 : 1 }}
-                      disabled={idx === 0}
-                      onClick={() => handleMoveSector(idx, -1)}
-                    ><ChevronUp size={12} /></button>
-                    <button
-                      title="Bajar"
-                      className="action-btn"
-                      style={{ padding: '2px 4px', color: activeSector === s.id ? '#fff' : undefined, opacity: idx === sectores.length - 1 ? 0.3 : 1 }}
-                      disabled={idx === sectores.length - 1}
-                      onClick={() => handleMoveSector(idx, 1)}
-                    ><ChevronDown size={12} /></button>
-                    <button
-                      title="Editar"
-                      className="action-btn"
-                      style={{ padding: '2px 4px', color: activeSector === s.id ? '#fff' : undefined }}
-                      onClick={() => openEditSector(s)}
-                    ><Pencil size={12} /></button>
-                    <button
-                      title="Eliminar"
-                      className="action-btn delete"
-                      style={{ padding: '2px 4px' }}
-                      onClick={() => handleDeleteSector(s)}
-                    ><Trash2 size={12} /></button>
+                  <div className="adm-actions hover-reveal herr-sector-actions" onClick={e => e.stopPropagation()}>
+                    <button type="button" className="adm-action sm" aria-label={`Subir ${s.nombre}`} disabled={idx === 0} onClick={() => handleMoveSector(idx, -1)}>
+                      <ChevronUp size={14} strokeWidth={1.5} />
+                    </button>
+                    <button type="button" className="adm-action sm" aria-label={`Bajar ${s.nombre}`} disabled={idx === sectores.length - 1} onClick={() => handleMoveSector(idx, 1)}>
+                      <ChevronDown size={14} strokeWidth={1.5} />
+                    </button>
+                    <button type="button" className="adm-action sm" aria-label={`Editar ${s.nombre}`} onClick={() => openEditSector(s)}>
+                      <Pencil size={14} strokeWidth={1.5} />
+                    </button>
+                    <button type="button" className="adm-action sm danger" aria-label={`Eliminar ${s.nombre}`} onClick={() => handleDeleteSector(s)}>
+                      <Trash2 size={14} strokeWidth={1.5} />
+                    </button>
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
-        </div>
+        </aside>
 
         {/* ── Panel derecho: links del sector activo ────────────────────────── */}
-        <div style={{ minWidth: 0 }}>
+        <div className="herr-main">
           {/* Formulario sector */}
           {showSectorForm && (
-            <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 12, padding: '18px 20px', marginBottom: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                <h4 style={{ fontWeight: 700, fontSize: 14 }}>{editingSector ? 'Editar sector' : 'Nuevo sector'}</h4>
-                <button className="action-btn" onClick={() => setShowSectorForm(false)}><X size={16} /></button>
+            <div className="adm-card herr-form">
+              <div className="herr-form-head">
+                <h4>{editingSector ? 'Editar sector' : 'Nuevo sector'}</h4>
+                <button type="button" className="adm-action" aria-label="Cerrar" onClick={() => setShowSectorForm(false)}><X size={16} strokeWidth={1.5} /></button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                <div>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Nombre *</label>
-                  <input className="form-control" value={sectorForm.nombre} onChange={e => setSectorForm(f => ({ ...f, nombre: e.target.value }))} placeholder="Ej: Recursos Humanos" />
+              <div className="herr-form-grid">
+                <div className="form-group">
+                  <label htmlFor="herr-sector-nombre">Nombre *</label>
+                  <input id="herr-sector-nombre" {...vs.fieldProps('herr-sector-nombre')} className="form-control" value={sectorForm.nombre} onChange={e => setSectorForm(f => ({ ...f, nombre: e.target.value }))} placeholder="Ej: Recursos Humanos" />
+                  <FieldError show={vs.isInvalid('herr-sector-nombre')}>Ingresá un nombre</FieldError>
                 </div>
-                <div>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Ícono</label>
-                  <Select value={sectorForm.icono} onChange={v => setSectorForm(f => ({ ...f, icono: v }))} options={ICON_OPTIONS} />
+                <div className="form-group">
+                  <label>Ícono</label>
+                  <Select value={sectorForm.icono} onChange={v => setSectorForm(f => ({ ...f, icono: v }))} options={ICON_OPTIONS} aria-label="Ícono" />
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+              <div className="herr-form-foot">
+                <label className="herr-check">
                   <input type="checkbox" checked={sectorForm.activo} onChange={e => setSectorForm(f => ({ ...f, activo: e.target.checked }))} />
                   Activo
                 </label>
-                <button className="btn-primary" style={{ marginLeft: 'auto' }} onClick={handleSaveSector} disabled={saving}>
-                  <Check size={14} /> {saving ? 'Guardando...' : 'Guardar'}
-                </button>
+                <SubmitButton className="btn-primary" missing={vs.missing} onMissing={vs.revealAll} onClick={handleSaveSector} saving={saving}>
+                  <Check size={16} strokeWidth={1.5} /> Guardar
+                </SubmitButton>
               </div>
             </div>
           )}
 
           {/* Formulario link / archivo */}
           {showLinkForm && (
-            <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 12, padding: '18px 20px', marginBottom: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                <h4 style={{ fontWeight: 700, fontSize: 14 }}>{editingLink ? 'Editar elemento' : 'Nuevo elemento'}</h4>
-                <button className="action-btn" onClick={() => { setShowLinkForm(false); setArchivoSeleccionado(null); }}><X size={16} /></button>
+            <div className="adm-card herr-form">
+              <div className="herr-form-head">
+                <h4>{editingLink ? 'Editar elemento' : 'Nuevo elemento'}</h4>
+                <button type="button" className="adm-action" aria-label="Cerrar" onClick={() => { setShowLinkForm(false); setArchivoSeleccionado(null); }}><X size={16} strokeWidth={1.5} /></button>
               </div>
 
               {/* Selector de tipo */}
-              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              <div className="org-segmented herr-tipo" role="radiogroup" aria-label="Tipo de elemento">
                 {[{ key: 'link', label: 'Link externo', Icon: LinkIcon }, { key: 'archivo', label: 'Archivo', Icon: FileUp }].map(({ key, label, Icon }) => (
                   <button
                     key={key}
                     type="button"
+                    role="radio"
+                    aria-checked={linkForm.tipo === key}
+                    className={linkForm.tipo === key ? 'active' : ''}
                     onClick={() => setLinkForm(f => ({ ...f, tipo: key }))}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 6,
-                      padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-                      border: `2px solid ${linkForm.tipo === key ? 'var(--primary-color)' : 'var(--border-color)'}`,
-                      background: linkForm.tipo === key ? 'var(--primary-color)' : 'transparent',
-                      color: linkForm.tipo === key ? '#000' : 'var(--text-muted)',
-                      cursor: 'pointer',
-                    }}
                   >
-                    <Icon size={14} /> {label}
+                    <Icon size={14} strokeWidth={1.5} /> {label}
                   </button>
                 ))}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                <div>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Nombre *</label>
-                  <input className="form-control" value={linkForm.nombre} onChange={e => setLinkForm(f => ({ ...f, nombre: e.target.value }))} placeholder={linkForm.tipo === 'archivo' ? 'Ej: Manual de Calidad' : 'Ej: Portal SAP'} />
+              <div className="herr-form-grid">
+                <div className="form-group">
+                  <label htmlFor="herr-link-nombre">Nombre *</label>
+                  <input id="herr-link-nombre" {...vl.fieldProps('herr-link-nombre')} className="form-control" value={linkForm.nombre} onChange={e => setLinkForm(f => ({ ...f, nombre: e.target.value }))} placeholder={linkForm.tipo === 'archivo' ? 'Ej: Manual de Calidad' : 'Ej: Portal SAP'} />
+                  <FieldError show={vl.isInvalid('herr-link-nombre')}>Ingresá un nombre</FieldError>
                 </div>
 
                 {linkForm.tipo === 'link' ? (
-                  <div>
-                    <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>URL *</label>
-                    <input className="form-control" value={linkForm.url} onChange={e => setLinkForm(f => ({ ...f, url: e.target.value }))} placeholder="https://..." />
+                  <div className="form-group">
+                    <label htmlFor="herr-link-url">URL *</label>
+                    <input id="herr-link-url" {...vl.fieldProps('herr-link-url')} className="form-control" type="url" inputMode="url" value={linkForm.url} onChange={e => setLinkForm(f => ({ ...f, url: e.target.value }))} placeholder="https://..." />
+                    <FieldError show={vl.isInvalid('herr-link-url')}>Ingresá la URL</FieldError>
                   </div>
                 ) : (
-                  <div>
-                    <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Archivo *</label>
-                    <div
-                      style={{ border: '2px dashed var(--border-color)', borderRadius: 8, padding: '10px 14px', cursor: 'pointer', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', gap: 8 }}
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      <FileUp size={16} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-                      <span style={{ fontSize: 13, color: archivoSeleccionado ? 'var(--text-main)' : 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {archivoSeleccionado ? archivoSeleccionado.name : (linkForm.file_path ? '📎 Archivo guardado (click para reemplazar)' : 'Click para seleccionar archivo')}
+                  <div className="form-group">
+                    <label>Archivo *</label>
+                    <button id="herr-link-archivo" type="button" className="herr-dropzone" onBlur={() => vl.touch('herr-link-archivo')} onClick={() => fileInputRef.current?.click()}>
+                      <FileUp size={16} strokeWidth={1.5} aria-hidden="true" />
+                      <span className={`adm-ellipsis${archivoSeleccionado ? ' has-file' : ''}`}>
+                        {archivoSeleccionado ? archivoSeleccionado.name : (linkForm.file_path ? 'Archivo guardado (click para reemplazar)' : 'Click para seleccionar archivo')}
                       </span>
-                    </div>
-                    <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={e => setArchivoSeleccionado(e.target.files?.[0] ?? null)} />
+                    </button>
+                    <input ref={fileInputRef} type="file" hidden onChange={e => setArchivoSeleccionado(e.target.files?.[0] ?? null)} />
+                    <FieldError show={vl.isInvalid('herr-link-archivo')}>Seleccioná un archivo</FieldError>
                   </div>
                 )}
 
-                <div>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Descripción</label>
-                  <input className="form-control" value={linkForm.descripcion} onChange={e => setLinkForm(f => ({ ...f, descripcion: e.target.value }))} placeholder="Breve descripción (opcional)" />
+                <div className="form-group">
+                  <label htmlFor="herr-link-desc">Descripción</label>
+                  <input id="herr-link-desc" className="form-control" value={linkForm.descripcion} onChange={e => setLinkForm(f => ({ ...f, descripcion: e.target.value }))} placeholder="Breve descripción (opcional)" />
                 </div>
-                <div>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Ícono</label>
-                  <Select value={linkForm.icono} onChange={v => setLinkForm(f => ({ ...f, icono: v }))} options={ICON_OPTIONS} />
+                <div className="form-group">
+                  <label>Ícono</label>
+                  <Select value={linkForm.icono} onChange={v => setLinkForm(f => ({ ...f, icono: v }))} options={ICON_OPTIONS} aria-label="Ícono" />
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+              <div className="herr-form-foot">
+                <label className="herr-check">
                   <input type="checkbox" checked={linkForm.activo} onChange={e => setLinkForm(f => ({ ...f, activo: e.target.checked }))} />
                   Activo
                 </label>
-                <button className="btn-primary" style={{ marginLeft: 'auto' }} onClick={handleSaveLink} disabled={saving}>
-                  <Check size={14} /> {saving ? 'Guardando...' : 'Guardar'}
-                </button>
+                <SubmitButton className="btn-primary" missing={vl.missing} onMissing={vl.revealAll} onClick={handleSaveLink} saving={saving}>
+                  <Check size={16} strokeWidth={1.5} /> Guardar
+                </SubmitButton>
               </div>
             </div>
           )}
@@ -374,50 +362,52 @@ const HerramientasTab = () => {
           {/* Lista de links */}
           {currentSector ? (
             <>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <h4 style={{ fontWeight: 700, fontSize: 15 }}>
+              <div className="herr-main-head">
+                <h4>
                   {currentSector.nombre}
-                  <span className="admin-count" style={{ marginLeft: 8 }}>{linksForSector(activeSector).length}</span>
+                  <span className="admin-count">{linksForSector(activeSector).length}</span>
                 </h4>
-                <button className="btn-primary" style={{ padding: '6px 14px', fontSize: 13 }} onClick={openNewLink}>
-                  <Plus size={14} /> Agregar link
+                <button type="button" className="btn-add-admin" onClick={openNewLink}>
+                  <Plus size={16} strokeWidth={1.5} /> Agregar link
                 </button>
               </div>
 
               {linksForSector(activeSector).length === 0 ? (
-                <p className="text-muted text-sm">Sin links en este sector todavía.</p>
+                <p className="adm-empty">Sin links en este sector todavía.</p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <ul className="adm-list">
                   {linksForSector(activeSector).map((l, idx, arr) => (
-                    <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 10, padding: '12px 16px', minWidth: 0, overflow: 'hidden' }}>
-                      <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <li key={l.id} className={`adm-row${l.activo ? '' : ' muted'}`}>
+                      <span className="adm-row-icon">
                         {l.tipo === 'archivo'
-                          ? <FileText size={16} style={{ color: 'var(--primary-color)' }} />
-                          : <ExternalLink size={16} style={{ color: 'var(--primary-color)' }} />}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-                        <div style={{ fontWeight: 600, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.nombre}</div>
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {l.tipo === 'archivo' ? '📎 Archivo adjunto' : l.url}
-                        </div>
-                        {l.descripcion && <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.descripcion}</div>}
-                      </div>
-                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: l.tipo === 'archivo' ? '#eff6ff' : (l.activo ? '#d1fae5' : '#f3f4f6'), color: l.tipo === 'archivo' ? '#3b82f6' : (l.activo ? '#059669' : '#6b7280'), fontWeight: 600, flexShrink: 0 }}>
-                        {l.tipo === 'archivo' ? 'Archivo' : (l.activo ? 'Activo' : 'Inactivo')}
+                          ? <FileText size={18} strokeWidth={1.5} />
+                          : <ExternalLink size={18} strokeWidth={1.5} />}
                       </span>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
-                        <button className="action-btn" onClick={() => handleMoveLink(idx, -1, activeSector)} disabled={idx === 0} style={{ padding: '2px 6px' }}><ChevronUp size={14} /></button>
-                        <button className="action-btn" onClick={() => handleMoveLink(idx, 1, activeSector)} disabled={idx === arr.length - 1} style={{ padding: '2px 6px' }}><ChevronDown size={14} /></button>
+                      <div className="adm-row-info">
+                        <div className="adm-row-title">
+                          <span className="adm-ellipsis">{l.nombre}</span>
+                          <span className={`adm-badge${l.tipo === 'archivo' ? '' : (l.activo ? ' success' : ' neutral')}`}>
+                            {l.tipo === 'archivo' ? 'Archivo' : (l.activo ? 'Activo' : 'Inactivo')}
+                          </span>
+                        </div>
+                        <div className="adm-row-meta">
+                          <span className="adm-ellipsis herr-url">{l.tipo === 'archivo' ? 'Archivo adjunto' : l.url}</span>
+                          {l.descripcion && <span className="adm-sub adm-ellipsis">{l.descripcion}</span>}
+                        </div>
                       </div>
-                      <button className="action-btn" onClick={() => openEditLink(l)}><Pencil size={15} /></button>
-                      <button className="action-btn delete" onClick={() => handleDeleteLink(l)}><Trash2 size={15} /></button>
-                    </div>
+                      <div className="adm-actions hover-reveal">
+                        <button type="button" className="adm-action" aria-label={`Subir ${l.nombre}`} onClick={() => handleMoveLink(idx, -1, activeSector)} disabled={idx === 0}><ChevronUp size={16} strokeWidth={1.5} /></button>
+                        <button type="button" className="adm-action" aria-label={`Bajar ${l.nombre}`} onClick={() => handleMoveLink(idx, 1, activeSector)} disabled={idx === arr.length - 1}><ChevronDown size={16} strokeWidth={1.5} /></button>
+                        <button type="button" className="adm-action" aria-label={`Editar ${l.nombre}`} onClick={() => openEditLink(l)}><Pencil size={16} strokeWidth={1.5} /></button>
+                        <button type="button" className="adm-action danger" aria-label={`Eliminar ${l.nombre}`} onClick={() => handleDeleteLink(l)}><Trash2 size={16} strokeWidth={1.5} /></button>
+                      </div>
+                    </li>
                   ))}
-                </div>
+                </ul>
               )}
             </>
           ) : (
-            <p className="text-muted text-sm">Seleccioná un sector para ver sus links.</p>
+            <p className="adm-empty">Seleccioná un sector para ver sus links.</p>
           )}
         </div>
       </div>

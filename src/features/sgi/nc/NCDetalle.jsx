@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { formatFecha } from '../../../lib/fechas';
+import { formatFecha, hoyISO } from '../../../lib/fechas';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Check, Upload, X, FileText, Clock, ChevronRight, Loader2, Search, User, HelpCircle, GitBranch, Settings, Package, Cloud, BarChart2, BookOpen, Users, Paperclip, Download } from 'lucide-react';
 import NCExportarPDF from './NCInformePDF';
@@ -18,8 +18,10 @@ import {
 import { notificarAsignacion, notificarCambioEstadoHallazgo } from '../../../lib/notificaciones';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useConfirm } from '../../../contexts/ConfirmContext';
-import { AccessDeniedModal, Select } from '../../../components/common';
+import { AccessDeniedModal, Select, SubmitButton, FieldError } from '../../../components/common';
+import { useRequiredFields } from '../../../hooks/useRequiredFields';
 import './NCDetalle.css';
+import './NCFormRedesign.css';
 
 /* ── Constants ──────────────────────────────────────────────────────────────── */
 const STEPS = [
@@ -254,7 +256,7 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
   const [tab, setTab] = useState('datos'); // unused, kept for compat
   const [hitos, setHitos] = useState([]);
   const [hitosLoading, setHitosLoading] = useState(false);
-  const [hitoForm, setHitoForm] = useState({ descripcion: '', fecha: new Date().toISOString().split('T')[0], porcentaje: 10 });
+  const [hitoForm, setHitoForm] = useState({ descripcion: '', fecha: hoyISO(), porcentaje: 10 });
   const [hitoFiles, setHitoFiles] = useState([]);
   const [savingHito, setSavingHito] = useState(false);
   const hitoFileRef = useRef();
@@ -288,6 +290,11 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
   const avanceCalculado = Math.min(100, hitos.reduce((sum, h) => sum + (h.porcentaje || 0), 0));
   // Máximo que puede aportar el próximo hito
   const maxProximoHito = Math.max(5, 100 - avanceCalculado);
+
+  const req = useRequiredFields([
+    { id: 'nc-acc-desc', label: 'Descripción', valid: !!accionForm.descripcion.trim() },
+    { id: 'nc-hito-files', label: 'Evidencia del avance', valid: hitoFiles.length > 0, when: !!(editingAccion?.id && hitoForm.descripcion.trim()) },
+  ]);
 
   const handleGuardar = async () => {
     if (!accionForm.descripcion.trim()) return;
@@ -355,7 +362,7 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
           adjunto_3: adjuntoUrls[2] || null,
         });
         if (hitoError) console.error('Error hito:', hitoError);
-        setHitoForm({ descripcion: '', fecha: new Date().toISOString().split('T')[0], porcentaje: 10 });
+        setHitoForm({ descripcion: '', fecha: hoyISO(), porcentaje: 10 });
         setHitoFiles([]);
         onHitoSaved?.();
       }
@@ -403,8 +410,9 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
             {/* Bloque: datos de la acción */}
             <div className="ncd-accion-datos">
               <div className="ncd-form-group">
-                <label>Descripción</label>
-                <textarea rows={2} placeholder="Describí la acción a tomar..." value={accionForm.descripcion} onChange={e => setAccionForm(f => ({ ...f, descripcion: e.target.value }))} />
+                <label htmlFor="nc-acc-desc">Descripción <span style={{ color: 'var(--destructive)' }}>*</span></label>
+                <textarea id="nc-acc-desc" {...req.fieldProps('nc-acc-desc')} rows={2} placeholder="Describí la acción a tomar..." value={accionForm.descripcion} onChange={e => setAccionForm(f => ({ ...f, descripcion: e.target.value }))} />
+                <FieldError show={req.isInvalid('nc-acc-desc')}>Describí la acción</FieldError>
               </div>
               <div className="ncd-form-grid cols-2">
                 <div className="ncd-form-group">
@@ -463,6 +471,7 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
                   />
                   <button
                     type="button"
+                    id="nc-hito-files"
                     className="ncd-adjunto-pick-btn"
                     onClick={() => hitoFileRef.current?.click()}
                     disabled={avanceCalculado >= 100}
@@ -481,11 +490,9 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
                       ))}
                     </div>
                   )}
-                  {hitoForm.descripcion.trim() && hitoFiles.length === 0 && (
-                    <p className="ncd-hito-adjunto-hint">
-                      Este campo es obligatorio, por favor, dejá la evidencia de tu acción.
-                    </p>
-                  )}
+                  <FieldError show={!!hitoForm.descripcion.trim() && hitoFiles.length === 0}>
+                    Adjuntá la evidencia de tu acción (obligatorio)
+                  </FieldError>
                 </div>
               </div>
             )}
@@ -545,18 +552,17 @@ function AccionModalInner({ editingAccion, accionForm, setAccionForm, profiles, 
 
         <div className="ncd-accion-modal-footer">
           <button className="ncd-btn-secondary" onClick={onClose}>Cancelar</button>
-          <button
+          <SubmitButton
             className="ncd-btn-primary"
             onClick={handleGuardar}
-            disabled={
-              saving ||
-              !accionForm.descripcion.trim() ||
-              (editingAccion?.id && hitoForm.descripcion.trim() && hitoFiles.length === 0)
-            }
+            missing={req.missing}
+            onMissing={req.revealAll}
+            saving={saving}
+            savingLabel={<><Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> Guardando…</>}
           >
-            {saving ? <Loader2 size={14} style={{ animation: 'spin 0.7s linear infinite' }} /> : <Check size={14} />}
+            <Check size={14} />
             {editingAccion ? 'Guardar cambios' : 'Agregar acción'}
-          </button>
+          </SubmitButton>
         </div>
       </div>
       {accionPicker && (
@@ -626,7 +632,7 @@ export default function NCDetalle() {
   const [form, setForm] = useState({
     tipo: 'NC',
     numero: '',
-    fecha: new Date().toISOString().split('T')[0],
+    fecha: hoyISO(),
     gerencia: '',
     sitio: '',
     area: '',
@@ -781,7 +787,7 @@ export default function NCDetalle() {
           setForm({
             tipo: data.tipo || 'NC',
             numero: data.numero || '',
-            fecha: data.fecha || new Date().toISOString().split('T')[0],
+            fecha: data.fecha || hoyISO(),
             gerencia: data.gerencia || '',
             sitio: data.sitio || '',
             area: data.area || '',
@@ -991,10 +997,14 @@ export default function NCDetalle() {
     };
   };
 
+  const req = useRequiredFields([
+    { id: 'nc-tipo-group', label: 'Tipo de documento', valid: !!form.tipo },
+    { id: 'descripcion', label: 'Descripción', valid: !!form.descripcion.trim() },
+  ]);
+
   /* ── Save / Submit ── */
   const handleSave = async (advance = false) => {
-    if (!form.tipo) { showToast('Selecciona un tipo de documento', 'error'); return; }
-    if (!form.descripcion.trim()) { showToast('La descripción es obligatoria', 'error'); return; }
+    if (!req.isValid) { req.revealAll(); return; }
 
     setSaving(true);
     try {
@@ -1117,7 +1127,7 @@ export default function NCDetalle() {
       {/* Tipo */}
       <div className="ncd-form-section">
         <p className="ncd-section-title">Tipo de Documento</p>
-        <div className="ncd-tipo-group">
+        <div className="ncd-tipo-group" id="nc-tipo-group" tabIndex={-1} role="radiogroup" aria-label="Tipo de documento">
           {TIPOS.map(t => {
             const tc = TIPO_COLORS[t];
             return (
@@ -1128,7 +1138,7 @@ export default function NCDetalle() {
                   id={`tipo-${t}`}
                   value={t}
                   checked={form.tipo === t}
-                  onChange={() => setField('tipo', t)}
+                  onChange={() => { setField('tipo', t); req.touch('nc-tipo-group'); }}
                   className="ncd-tipo-radio"
                 />
                 <label
@@ -1146,6 +1156,7 @@ export default function NCDetalle() {
             );
           })}
         </div>
+        <FieldError show={req.isInvalid('nc-tipo-group')}>Elegí el tipo de documento</FieldError>
       </div>
 
       {/* Fuentes */}
@@ -1328,14 +1339,16 @@ export default function NCDetalle() {
             />
           </div>
           <div className="ncd-form-group full">
-            <label htmlFor="descripcion">Descripción <span style={{ color: '#E71D36' }}>*</span></label>
+            <label htmlFor="descripcion">Descripción <span style={{ color: 'var(--destructive)' }}>*</span></label>
             <textarea
               id="descripcion"
+              {...req.fieldProps('descripcion')}
               rows={4}
               placeholder="Describe el hallazgo con detalle..."
               value={form.descripcion}
               onChange={e => setField('descripcion', e.target.value)}
             />
+            <FieldError show={req.isInvalid('descripcion')}>Describí el hallazgo</FieldError>
           </div>
         </div>
       </div>
@@ -2234,6 +2247,7 @@ export default function NCDetalle() {
                     <button
                       className="ncd-btn-primary"
                       onClick={() => handleSave(true)}
+                      aria-disabled={(!req.isValid && currentStep === 1) || undefined}
                       disabled={saving || !canEdit || sinAcciones || accionesPendientes || verifPendiente || (isCierre && !canVerif)}
                       title={sinAcciones ? 'Agregá al menos una acción antes de continuar' : accionesPendientes ? 'Cerrá todas las acciones antes de continuar' : verifPendiente ? 'Completá la verificación de todas las acciones' : ''}
                       style={isCierre ? { background: '#10B981', borderColor: '#10B981' } : {}}
@@ -2241,7 +2255,9 @@ export default function NCDetalle() {
                       {saving
                         ? <Loader2 size={15} style={{ animation: 'spin 0.7s linear infinite' }} />
                         : <Check size={15} />}
-                      {isCierre ? 'Cerrar hallazgo' : isNew ? 'Guardar y continuar' : 'Siguiente paso'}
+                      {!req.isValid && currentStep === 1 && !isCierre
+                        ? `Falta: ${req.missing.join(' y ')}`
+                        : isCierre ? 'Cerrar hallazgo' : isNew ? 'Guardar y continuar' : 'Siguiente paso'}
                       {accionesPendientes && (
                         <span style={{ fontSize: 11, fontWeight: 500, marginLeft: 4, opacity: 0.8 }}>
                           ({acciones.filter(a => a.estado !== 'cerrada').length} pendiente{acciones.filter(a => a.estado !== 'cerrada').length !== 1 ? 's' : ''})

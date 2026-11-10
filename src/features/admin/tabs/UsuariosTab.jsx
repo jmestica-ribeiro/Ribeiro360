@@ -7,19 +7,19 @@ import { AdminListPanel, LoadingSpinner, Select } from '../../../components/comm
 const ALL_TABS = ['capacitaciones', 'paf', 'onboarding', 'eventos', 'faq', 'organigrama', 'sgi', 'cert-equipos', 'checklist-items', 'vehiculos', 'familias', 'social', 'herramientas'];
 
 const TAB_ICONS = {
-  capacitaciones: <GraduationCap size={14} />,
-  paf:            <Calendar size={14} />,
-  onboarding:     <Rocket size={14} />,
-  eventos:        <Calendar size={14} />,
-  faq:            <MessageCircle size={14} />,
-  organigrama:    <LayoutGrid size={14} />,
-  sgi:            <ShieldCheck size={14} />,
-  'cert-equipos':    <ClipboardCheck size={14} />,
-  'checklist-items': <ClipboardCheck size={14} />,
-  vehiculos:         <Truck size={14} />,
-  familias:          <Tag size={14} />,
-  social:            <Rss size={14} />,
-  herramientas:      <Wrench size={14} />,
+  capacitaciones: <GraduationCap size={14} strokeWidth={1.5} />,
+  paf:            <Calendar size={14} strokeWidth={1.5} />,
+  onboarding:     <Rocket size={14} strokeWidth={1.5} />,
+  eventos:        <Calendar size={14} strokeWidth={1.5} />,
+  faq:            <MessageCircle size={14} strokeWidth={1.5} />,
+  organigrama:    <LayoutGrid size={14} strokeWidth={1.5} />,
+  sgi:            <ShieldCheck size={14} strokeWidth={1.5} />,
+  'cert-equipos':    <ClipboardCheck size={14} strokeWidth={1.5} />,
+  'checklist-items': <ClipboardCheck size={14} strokeWidth={1.5} />,
+  vehiculos:         <Truck size={14} strokeWidth={1.5} />,
+  familias:          <Tag size={14} strokeWidth={1.5} />,
+  social:            <Rss size={14} strokeWidth={1.5} />,
+  herramientas:      <Wrench size={14} strokeWidth={1.5} />,
 };
 
 const TAB_LABELS = {
@@ -39,10 +39,13 @@ const TAB_LABELS = {
 };
 
 const ROLE_BADGE = {
-  superadmin: { label: 'Super Admin', bg: '#1a1a1a', color: '#fff' },
-  admin:      { label: 'Admin',       bg: '#e8f5e9', color: '#2e7d32' },
-  user:       { label: 'Usuario',     bg: 'var(--bg-hover)', color: 'var(--text-muted)' },
+  superadmin: { label: 'Super Admin', tone: '' },
+  admin:      { label: 'Admin',       tone: 'success' },
+  user:       { label: 'Usuario',     tone: 'neutral' },
 };
+
+const initials = (name = '') =>
+  name.trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('') || '?';
 
 // ── Panel de sincronización desde Entra ID ───────────────────────────────────
 const SyncPanel = ({ onSuccess }) => {
@@ -73,97 +76,81 @@ const SyncPanel = ({ onSuccess }) => {
     setPhotoResult(data);
   };
 
+  const busy = isSyncing || isSyncingPhotos;
+
+  const renderStats = (stats) => (
+    <div className="usr-stats">
+      {stats.map(({ label, value, tone }) => (
+        <div key={label} className={`usr-stat ${tone}`}>
+          <span className="usr-stat-value">{value}</span>
+          <span className="usr-stat-label">{label}</span>
+        </div>
+      ))}
+    </div>
+  );
+
+  const renderErrors = (errores) => errores?.length > 0 && (
+    <details className="usr-errors">
+      <summary>{errores.length} error(es) — ver detalle</summary>
+      <ul>{errores.map((e, i) => <li key={i}>{e}</li>)}</ul>
+    </details>
+  );
+
   return (
-    <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 14, padding: '16px 20px', marginBottom: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+    <div className="adm-card usr-sync">
+      <div className="usr-sync-head">
         <div>
-          <p style={{ fontWeight: 700, fontSize: 14 }}>Sincronizar desde Entra ID</p>
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+          <p className="usr-sync-title">Sincronizar desde Entra ID</p>
+          <p className="usr-sync-desc">
             Importa directamente desde Microsoft Graph API todos los usuarios activos e inactivos de tu organización.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-          <button
-            onClick={handleSyncPhotos}
-            disabled={isSyncingPhotos || isSyncing}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 10, background: 'var(--bg-hover)', color: 'var(--text-main)', fontWeight: 700, fontSize: 13, cursor: (isSyncingPhotos || isSyncing) ? 'not-allowed' : 'pointer', opacity: (isSyncingPhotos || isSyncing) ? 0.6 : 1, border: '1px solid var(--border-color)' }}
-          >
-            {isSyncingPhotos ? <LoadingSpinner size={14} /> : <ImageIcon size={14} />}
+        <div className="usr-sync-actions">
+          <button type="button" className="adm-pill-btn" onClick={handleSyncPhotos} disabled={busy}>
+            {isSyncingPhotos ? <LoadingSpinner size={14} strokeWidth={1.5} /> : <ImageIcon size={16} strokeWidth={1.5} />}
             {isSyncingPhotos ? 'Actualizando...' : 'Sincronizar fotos'}
           </button>
-          <button
-            onClick={handleSync}
-            disabled={isSyncing || isSyncingPhotos}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 10, background: 'var(--primary-color)', color: '#141414', fontWeight: 700, fontSize: 13, cursor: (isSyncing || isSyncingPhotos) ? 'not-allowed' : 'pointer', opacity: (isSyncing || isSyncingPhotos) ? 0.6 : 1, border: 'none' }}
-          >
-            {isSyncing ? <LoadingSpinner size={14} /> : <RefreshCw size={14} />}
+          <button type="button" className="btn-add-admin" onClick={handleSync} disabled={busy}>
+            {isSyncing ? <LoadingSpinner size={14} strokeWidth={1.5} /> : <RefreshCw size={16} strokeWidth={1.5} />}
             {isSyncing ? 'Sincronizando...' : 'Sincronizar'}
           </button>
         </div>
       </div>
 
       {errorMsg && (
-        <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 10, background: '#fef2f2', border: '1px solid #fecaca' }}>
-          <AlertCircle size={16} color="#dc2626" />
-          <p style={{ fontSize: 13, color: '#dc2626' }}>{errorMsg}</p>
+        <div className="usr-alert danger" role="alert">
+          <AlertCircle size={16} strokeWidth={1.5} />
+          <p>{errorMsg}</p>
         </div>
       )}
 
       {result && (
-        <div style={{ marginTop: 12, padding: '12px 14px', borderRadius: 10, background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <CheckCircle size={16} color="#16a34a" />
-            <p style={{ fontSize: 13, fontWeight: 700, color: '#16a34a' }}>Sincronización completada</p>
+        <div className="usr-alert success" role="status">
+          <div className="usr-alert-head">
+            <CheckCircle size={16} strokeWidth={1.5} />
+            <p>Sincronización completada</p>
           </div>
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-            {[
-              { label: 'Creados',     value: result.creados,      color: '#16a34a' },
-              { label: 'Ya existían', value: result.ya_existian,  color: '#2563eb' },
-              { label: 'Inactivados', value: result.inactivados,  color: '#f59e0b' },
-              { label: 'Omitidos',    value: result.omitidos,     color: '#9ca3af' },
-            ].map(({ label, value, color }) => (
-              <div key={label} style={{ textAlign: 'center' }}>
-                <p style={{ fontSize: 20, fontWeight: 800, color }}>{value}</p>
-                <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{label}</p>
-              </div>
-            ))}
-          </div>
-          {result.errores?.length > 0 && (
-            <details style={{ marginTop: 10 }}>
-              <summary style={{ fontSize: 12, color: '#dc2626', cursor: 'pointer' }}>{result.errores.length} error(es) — ver detalle</summary>
-              <ul style={{ marginTop: 6, paddingLeft: 16 }}>
-                {result.errores.map((e, i) => <li key={i} style={{ fontSize: 11, color: '#dc2626' }}>{e}</li>)}
-              </ul>
-            </details>
-          )}
+          {renderStats([
+            { label: 'Creados',     value: result.creados,     tone: 'success' },
+            { label: 'Ya existían', value: result.ya_existian, tone: 'info' },
+            { label: 'Inactivados', value: result.inactivados, tone: 'warning' },
+            { label: 'Omitidos',    value: result.omitidos,    tone: 'neutral' },
+          ])}
+          {renderErrors(result.errores)}
         </div>
       )}
 
       {photoResult && (
-        <div style={{ marginTop: 12, padding: '12px 14px', borderRadius: 10, background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <CheckCircle size={16} color="#16a34a" />
-            <p style={{ fontSize: 13, fontWeight: 700, color: '#16a34a' }}>Fotos actualizadas</p>
+        <div className="usr-alert success" role="status">
+          <div className="usr-alert-head">
+            <CheckCircle size={16} strokeWidth={1.5} />
+            <p>Fotos actualizadas</p>
           </div>
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-            {[
-              { label: 'Actualizadas', value: photoResult.actualizados, color: '#16a34a' },
-              { label: 'Sin foto',     value: photoResult.sin_foto,     color: '#9ca3af' },
-            ].map(({ label, value, color }) => (
-              <div key={label} style={{ textAlign: 'center' }}>
-                <p style={{ fontSize: 20, fontWeight: 800, color }}>{value}</p>
-                <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>{label}</p>
-              </div>
-            ))}
-          </div>
-          {photoResult.errores?.length > 0 && (
-            <details style={{ marginTop: 10 }}>
-              <summary style={{ fontSize: 12, color: '#dc2626', cursor: 'pointer' }}>{photoResult.errores.length} error(es) — ver detalle</summary>
-              <ul style={{ marginTop: 6, paddingLeft: 16 }}>
-                {photoResult.errores.map((e, i) => <li key={i} style={{ fontSize: 11, color: '#dc2626' }}>{e}</li>)}
-              </ul>
-            </details>
-          )}
+          {renderStats([
+            { label: 'Actualizadas', value: photoResult.actualizados, tone: 'success' },
+            { label: 'Sin foto',     value: photoResult.sin_foto,     tone: 'neutral' },
+          ])}
+          {renderErrors(photoResult.errores)}
         </div>
       )}
     </div>
@@ -231,32 +218,34 @@ const UsuariosTab = () => {
       <SyncPanel onSuccess={loadUsers} />
 
       {/* Buscador + filtro inactivos */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: 1 }}>
-          <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
+      <div className="adm-toolbar">
+        <label className="org-search">
+          <Search size={16} strokeWidth={1.5} aria-hidden="true" />
           <input
-            className="form-control"
+            type="search"
             placeholder="Buscar por nombre o email..."
+            aria-label="Buscar por nombre o email"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{ paddingLeft: 36, fontSize: 13 }}
           />
-        </div>
+        </label>
         <button
+          type="button"
+          className={`adm-pill-btn${showInactive ? ' active' : ''}`}
+          aria-pressed={showInactive}
           onClick={() => setShowInactive(v => !v)}
-          style={{ flexShrink: 0, padding: '8px 14px', borderRadius: 10, border: `1px solid ${showInactive ? 'var(--primary-color)' : 'var(--border-color)'}`, background: showInactive ? 'rgba(255,220,0,0.1)' : 'var(--bg-card)', color: showInactive ? 'var(--text-main)' : 'var(--text-muted)', fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
         >
           {showInactive ? 'Ocultar inactivos' : 'Ver inactivos'}
         </button>
       </div>
 
       {isLoading ? (
-        <div style={{ display: 'flex', justifyContent: 'center', padding: 24 }}>
+        <div className="adm-empty">
           <LoadingSpinner size={24} />
         </div>
       ) : (
         <>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <ul className="adm-list">
             {users.map(u => {
               const isSelf = u.id === currentUserProfile?.id;
               const currentTabs = u.admin_tabs ?? ALL_TABS;
@@ -266,31 +255,25 @@ const UsuariosTab = () => {
               const isDeleting = deletingId === u.id;
 
               return (
-                <div key={u.id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: '14px', overflow: 'hidden' }}>
-                  <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '15px', color: 'var(--text-main)', flexShrink: 0 }}>
-                        {u.full_name?.charAt(0).toUpperCase()}
+                <li key={u.id} className={`usr-item${u.is_active === false ? ' muted' : ''}`}>
+                  <div className="adm-row">
+                    <span className="adm-row-icon round">{initials(u.full_name)}</span>
+                    <div className="adm-row-info">
+                      <div className="adm-row-title">
+                        <span className="adm-ellipsis">{u.full_name}</span>
+                        {isSelf && <span className="adm-badge">Vos</span>}
+                        {u.is_active === false && <span className="adm-badge warning">Inactivo</span>}
                       </div>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <p style={{ fontWeight: '700', fontSize: '14px', color: u.is_active === false ? 'var(--text-muted)' : 'var(--text-main)' }}>{u.full_name}</p>
-                          {isSelf && <span style={{ fontSize: '11px', background: 'var(--primary-color)', padding: '1px 7px', borderRadius: '10px', fontWeight: '700' }}>Tú</span>}
-                          {u.is_active === false && <span style={{ fontSize: '11px', background: '#fef3c7', color: '#b45309', padding: '1px 7px', borderRadius: '10px', fontWeight: '700' }}>Inactivo</span>}
-                        </div>
-                        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{u.email}</p>
-                      </div>
+                      <div className="adm-row-meta"><span className="adm-ellipsis">{u.email}</span></div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: '700', padding: '4px 10px', borderRadius: '20px', background: roleBadge.bg, color: roleBadge.color }}>
-                        {roleBadge.label}
-                      </span>
+                    <div className="adm-row-side usr-side">
+                      <span className={`adm-badge ${roleBadge.tone}`}>{roleBadge.label}</span>
                       {!isSelf && (
-                        <div style={{ width: '150px' }}>
+                        <div className="usr-role-select">
                           <Select
                             size="sm"
-                            aria-label="Rol"
+                            aria-label={`Rol de ${u.full_name}`}
                             value={u.role || 'user'}
                             onChange={v => handleRoleChange(u.id, v)}
                             options={[{ value: 'user', label: 'Usuario' }, { value: 'admin', label: 'Admin' }, { value: 'superadmin', label: 'Super Admin' }]}
@@ -301,29 +284,18 @@ const UsuariosTab = () => {
                       {/* Eliminar — solo superadmin, no sobre sí mismo */}
                       {isSuperAdmin && !isSelf && (
                         isConfirming ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>¿Confirmar?</span>
-                            <button
-                              onClick={() => handleDelete(u.id)}
-                              disabled={isDeleting}
-                              style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: '#dc2626', color: '#fff', border: 'none', cursor: 'pointer' }}
-                            >
+                          <div className="usr-confirm">
+                            <span>¿Confirmar?</span>
+                            <button type="button" className="usr-confirm-yes" onClick={() => handleDelete(u.id)} disabled={isDeleting}>
                               {isDeleting ? '...' : 'Sí, eliminar'}
                             </button>
-                            <button
-                              onClick={() => setConfirmId(null)}
-                              style={{ fontSize: 12, padding: '4px 10px', borderRadius: 8, background: 'var(--bg-hover)', color: 'var(--text-main)', border: 'none', cursor: 'pointer' }}
-                            >
+                            <button type="button" className="adm-pill-btn sm" onClick={() => setConfirmId(null)}>
                               Cancelar
                             </button>
                           </div>
                         ) : (
-                          <button
-                            onClick={() => setConfirmId(u.id)}
-                            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 32, height: 32, borderRadius: 8, background: 'var(--bg-hover)', border: 'none', cursor: 'pointer', color: '#dc2626' }}
-                            title="Eliminar usuario"
-                          >
-                            <Trash2 size={15} />
+                          <button type="button" className="adm-action danger" aria-label={`Eliminar usuario ${u.full_name}`} onClick={() => setConfirmId(u.id)}>
+                            <Trash2 size={16} strokeWidth={1.5} />
                           </button>
                         )
                       )}
@@ -331,53 +303,52 @@ const UsuariosTab = () => {
                   </div>
 
                   {u.role === 'admin' && (
-                    <div style={{ borderTop: '1px solid var(--border-color)', padding: '14px 20px', background: 'var(--bg-main)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                        <p style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>ACCESO A SECCIONES</p>
+                    <div className="usr-perms">
+                      <div className="usr-perms-head">
+                        <span className="adm-group-label">Acceso a secciones</span>
                         <button
-                          style={{ fontSize: '12px', fontWeight: '600', color: 'var(--primary-color)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                          type="button"
+                          className="usr-link-btn"
                           onClick={() => handleTabsChange(u.id, allSelected ? [] : [...ALL_TABS])}
                         >
                           {allSelected ? 'Quitar todo' : 'Seleccionar todo'}
                         </button>
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(175px, 1fr))', gap: '8px' }}>
+                      <div className="usr-perms-grid">
                         {ALL_TABS.map(tab => {
                           const checked = currentTabs.includes(tab);
                           return (
-                            <label key={tab} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', padding: '8px 12px', borderRadius: '10px', border: `1px solid ${checked ? 'var(--primary-color)' : 'var(--border-color)'}`, background: checked ? 'rgba(255,220,0,0.1)' : 'var(--bg-card)', cursor: 'pointer', userSelect: 'none', transition: 'all 0.15s' }}>
-                              <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '600', color: checked ? 'var(--text-main)' : 'var(--text-muted)' }}>
+                            <div key={tab} className={`usr-perm${checked ? ' on' : ''}`}>
+                              <span className="usr-perm-label">
                                 {TAB_ICONS[tab]} {TAB_LABELS[tab]}
                               </span>
-                              <div
+                              <button
+                                type="button"
+                                role="switch"
+                                aria-checked={checked}
+                                aria-label={`Acceso a ${TAB_LABELS[tab]}`}
+                                className={`adm-switch sm${checked ? ' on' : ''}`}
                                 onClick={() => {
                                   const base = u.admin_tabs ?? ALL_TABS;
                                   const next = checked ? base.filter(t => t !== tab) : [...base, tab];
                                   handleTabsChange(u.id, next);
                                 }}
-                                style={{ width: '32px', height: '18px', borderRadius: '9px', background: checked ? 'var(--primary-color)' : '#d1d5db', transition: 'background 0.2s', cursor: 'pointer', position: 'relative', flexShrink: 0 }}
                               >
-                                <div style={{ position: 'absolute', top: '2px', left: checked ? '16px' : '2px', width: '14px', height: '14px', borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
-                              </div>
-                            </label>
+                                <span className="adm-switch-thumb" />
+                              </button>
+                            </div>
                           );
                         })}
                       </div>
                     </div>
                   )}
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
 
           {/* Paginación */}
           {totalPages > 1 && (() => {
-            const btnStyle = (active) => ({
-              minWidth: 32, height: 32, borderRadius: 8, border: `1px solid ${active ? 'var(--primary-color)' : 'var(--border-color)'}`,
-              background: active ? 'var(--primary-color)' : 'var(--bg-card)', color: active ? '#141414' : 'var(--text-main)',
-              fontWeight: active ? 700 : 400, fontSize: 13, cursor: 'pointer', padding: '0 6px',
-            });
-
             // Genera: [1] … [page-1] [page] [page+1] … [last]
             const pages = new Set([1, totalPages, page, page - 1, page + 1].filter(n => n >= 1 && n <= totalPages));
             const sorted = [...pages].sort((a, b) => a - b);
@@ -388,21 +359,19 @@ const UsuariosTab = () => {
             });
 
             return (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 20 }}>
-                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                  style={{ ...btnStyle(false), display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: page === 1 ? 0.4 : 1, cursor: page === 1 ? 'not-allowed' : 'pointer' }}>
-                  <ChevronLeft size={16} />
+              <nav className="adm-pager" aria-label="Paginación">
+                <button type="button" className="adm-pager-btn" aria-label="Página anterior" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>
+                  <ChevronLeft size={16} strokeWidth={1.5} />
                 </button>
                 {items.map(item =>
                   typeof item === 'string'
-                    ? <span key={item} style={{ fontSize: 13, color: 'var(--text-muted)', padding: '0 2px' }}>…</span>
-                    : <button key={item} onClick={() => setPage(item)} style={btnStyle(item === page)}>{item}</button>
+                    ? <span key={item} className="adm-pager-gap">…</span>
+                    : <button key={item} type="button" className={`adm-pager-btn${item === page ? ' active' : ''}`} aria-current={item === page ? 'page' : undefined} onClick={() => setPage(item)}>{item}</button>
                 )}
-                <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
-                  style={{ ...btnStyle(false), display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: page === totalPages ? 0.4 : 1, cursor: page === totalPages ? 'not-allowed' : 'pointer' }}>
-                  <ChevronRight size={16} />
+                <button type="button" className="adm-pager-btn" aria-label="Página siguiente" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>
+                  <ChevronRight size={16} strokeWidth={1.5} />
                 </button>
-              </div>
+              </nav>
             );
           })()}
         </>

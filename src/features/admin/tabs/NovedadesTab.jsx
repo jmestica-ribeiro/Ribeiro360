@@ -9,7 +9,9 @@ import {
   swapNovedadOrden,
   getNovedadPublicUrl,
 } from '../../../services/novedadesService';
-import { useToast } from '../../../components/common';
+import { useToast, SubmitButton, FieldError } from '../../../components/common';
+import { useRequiredFields } from '../../../hooks/useRequiredFields';
+import { hoyISO } from '../../../lib/fechas';
 import { notificarNuevaPublicacion } from '../../../lib/notificaciones';
 import { useConfirm } from '../../../contexts/ConfirmContext';
 
@@ -24,6 +26,9 @@ const NovedadesTab = () => {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef(null);
+  const vn = useRequiredFields([
+    { id: 'nov-imagen', label: 'Imagen', valid: !!(file || form.imagen_url) },
+  ]);
 
   // Fetch lazy: se llama cuando el tab se monta (al activarlo por primera vez)
   React.useEffect(() => {
@@ -60,6 +65,7 @@ const NovedadesTab = () => {
       notificarNuevaPublicacion({ titulo: form.titulo || 'Nuevo anuncio', tipo: 'anuncio', id: nueva?.[0]?.id });
       setForm({ ...EMPTY_FORM });
       setFile(null);
+      vn.reset();
       await loadNovedades();
     } catch (e) {
       showToast(e.message, 'error');
@@ -98,71 +104,80 @@ const NovedadesTab = () => {
       </div>
 
       {/* Formulario agregar */}
-      <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
-        <h4 style={{ fontWeight: 700, marginBottom: 16, fontSize: 15 }}>Agregar novedad</h4>
+      <div className="adm-card" style={{ marginBottom: 24 }}>
+        <h4 className="adm-card-title">Agregar novedad</h4>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
           <input className="form-control" placeholder="Título (opcional)" value={form.titulo} onChange={e => setForm(f => ({ ...f, titulo: e.target.value }))} />
           <input className="form-control" placeholder="Link (opcional)" value={form.link_url} onChange={e => setForm(f => ({ ...f, link_url: e.target.value }))} />
           <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>Visible hasta (opcional)</label>
+            <label className="adm-field-label">Visible hasta (opcional)</label>
             <input className="form-control" type="date" value={form.fecha_hasta} onChange={e => setForm(f => ({ ...f, fecha_hasta: e.target.value }))} />
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => setFile(e.target.files[0] || null)} />
-          <button className="btn-secondary" onClick={() => fileRef.current?.click()}>
+          <button id="nov-imagen" className="btn-secondary" onClick={() => fileRef.current?.click()}>
             <ImageIcon size={15} /> {file ? file.name : 'Seleccionar imagen'}
           </button>
           {file && <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{(file.size / 1024).toFixed(0)} KB</span>}
+          <FieldError show={vn.isInvalid('nov-imagen')}>Seleccioná una imagen</FieldError>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, marginLeft: 'auto', cursor: 'pointer' }}>
             <input type="checkbox" checked={form.activo} onChange={e => setForm(f => ({ ...f, activo: e.target.checked }))} />
             Activo
           </label>
-          <button className="btn-primary" onClick={handleSave} disabled={uploading || !file}>
-            {uploading ? 'Subiendo...' : '+ Agregar'}
-          </button>
+          <SubmitButton className="btn-primary" missing={vn.missing} onMissing={vn.revealAll} onClick={handleSave} saving={uploading} savingLabel="Subiendo...">
+            + Agregar
+          </SubmitButton>
         </div>
       </div>
 
       {/* Lista */}
       {novedades.length === 0 ? (
-        <p className="text-muted text-sm">No hay novedades todavía.</p>
+        <p className="adm-empty">No hay novedades todavía.</p>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <ul className="adm-list">
           {novedades.map((nov, idx) => {
             const imgUrl = getNovedadPublicUrl(nov.imagen_url);
-            const today = new Date().toISOString().split('T')[0];
+            const today = hoyISO();
             const vencida = nov.fecha_hasta && nov.fecha_hasta < today;
-            const porVencer = nov.fecha_hasta && !vencida && nov.fecha_hasta <= new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0];
+            const porVencer = nov.fecha_hasta && !vencida && nov.fecha_hasta <= hoyISO(new Date(Date.now() + 3 * 86400000));
             return (
-              <div key={nov.id} style={{ display: 'flex', alignItems: 'center', gap: 16, background: 'var(--bg-secondary)', border: `1px solid ${vencida ? '#fca5a5' : 'var(--border-color)'}`, borderRadius: 10, padding: '12px 16px', opacity: vencida ? 0.6 : 1 }}>
-                <div style={{ width: 100, height: 36, borderRadius: 6, overflow: 'hidden', background: '#eee', flexShrink: 0 }}>
-                  {imgUrl && <img src={imgUrl} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+              <li key={nov.id} className={`adm-row${vencida ? ' muted' : ''}`}>
+                <span className="adm-row-thumb adm-row-thumb-wide">
+                  {imgUrl && <img src={imgUrl} alt="" />}
+                </span>
+                <div className="adm-row-info">
+                  <div className="adm-row-title">
+                    {nov.titulo
+                      ? <span className="adm-ellipsis">{nov.titulo}</span>
+                      : <em className="adm-ellipsis adm-placeholder">Sin título</em>}
+                    {nov.fecha_hasta && (
+                      <span className={`adm-badge ${vencida ? 'danger' : porVencer ? 'warning' : 'neutral'}`}>
+                        {vencida ? 'Vencida' : porVencer ? 'Vence' : 'Hasta'} {new Date(nov.fecha_hasta + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </span>
+                    )}
+                  </div>
+                  {nov.link_url && <div className="adm-row-meta"><span className="adm-ellipsis">{nov.link_url}</span></div>}
                 </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ fontWeight: 600, fontSize: 14 }}>{nov.titulo || <em style={{ color: 'var(--text-muted)' }}>Sin título</em>}</span>
-                  {nov.link_url && <div style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nov.link_url}</div>}
-                  {nov.fecha_hasta && (
-                    <div style={{ fontSize: 11, marginTop: 2, fontWeight: 600, color: vencida ? '#ef4444' : porVencer ? '#f59e0b' : '#6b7280' }}>
-                      {vencida ? '⛔ Vencida' : porVencer ? '⚠️ Vence' : 'Hasta'} {new Date(nov.fecha_hasta + 'T00:00:00').toLocaleDateString('es-AR', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </div>
-                  )}
+                <div className="adm-row-side">
+                  <button
+                    type="button"
+                    className={`adm-badge adm-badge-btn ${nov.activo ? 'success' : 'neutral'}`}
+                    aria-pressed={nov.activo}
+                    onClick={() => handleToggle(nov)}
+                  >
+                    {nov.activo ? 'Activo' : 'Inactivo'}
+                  </button>
+                  <div className="adm-actions">
+                    <button type="button" className="adm-action" aria-label="Subir" onClick={() => handleMove(idx, -1)} disabled={idx === 0}><ChevronUp size={16} strokeWidth={1.5} /></button>
+                    <button type="button" className="adm-action" aria-label="Bajar" onClick={() => handleMove(idx, 1)} disabled={idx === novedades.length - 1}><ChevronDown size={16} strokeWidth={1.5} /></button>
+                    <button type="button" className="adm-action danger" aria-label="Eliminar novedad" onClick={() => handleDelete(nov)}><Trash2 size={16} strokeWidth={1.5} /></button>
+                  </div>
                 </div>
-                <button
-                  onClick={() => handleToggle(nov)}
-                  style={{ fontSize: 12, padding: '4px 12px', borderRadius: 20, border: '1px solid', cursor: 'pointer', background: nov.activo ? '#d1fae5' : '#f3f4f6', color: nov.activo ? '#059669' : '#6b7280', borderColor: nov.activo ? '#6ee7b7' : '#e5e7eb', fontWeight: 600 }}
-                >
-                  {nov.activo ? 'Activo' : 'Inactivo'}
-                </button>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <button className="action-btn" onClick={() => handleMove(idx, -1)} disabled={idx === 0} style={{ padding: '2px 6px' }}><ChevronUp size={14} /></button>
-                  <button className="action-btn" onClick={() => handleMove(idx, 1)} disabled={idx === novedades.length - 1} style={{ padding: '2px 6px' }}><ChevronDown size={14} /></button>
-                </div>
-                <button className="action-btn delete" onClick={() => handleDelete(nov)}><Trash2 size={16} /></button>
-              </div>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
     </div>
   );

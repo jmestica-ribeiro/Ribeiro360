@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { hoyISO } from '../../../lib/fechas';
 import { ClipboardCheck, Plus, Search, Pencil, Trash2, X, Save, AlertTriangle, CheckCircle, Clock, Paperclip, ExternalLink, Upload, Table2, CalendarDays, ChevronLeft, ChevronRight, MapPin, Tag, ChevronsUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import {
@@ -264,7 +265,7 @@ export default function CertEquipos() {
   const prevMonth = () => setCalMonth(({ year, month }) => month === 0 ? { year: year - 1, month: 11 } : { year, month: month - 1 });
   const nextMonth = () => setCalMonth(({ year, month }) => month === 11 ? { year: year + 1, month: 0 } : { year, month: month + 1 });
   const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = hoyISO();
 
   const [expandedId, setExpandedId] = useState(null);
   const toggleExpand = (id) => setExpandedId(prev => prev === id ? null : id);

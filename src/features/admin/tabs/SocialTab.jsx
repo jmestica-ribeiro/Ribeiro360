@@ -27,45 +27,32 @@ const SocialTab = () => {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: '24px', borderBottom: '1px solid var(--border-color)', paddingBottom: '0' }}>
-        <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
+      <div className="adm-toolbar adm-social-bar">
+        <div className="org-segmented" role="tablist" aria-label="Contenido social">
           {SUBTABS.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
+              type="button"
+              role="tab"
+              aria-selected={sub === key}
+              className={sub === key ? 'active' : ''}
               onClick={() => setSub(key)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '6px',
-                padding: '10px 16px', background: 'none', border: 'none',
-                borderBottom: sub === key ? '2px solid var(--primary-color)' : '2px solid transparent',
-                color: sub === key ? 'var(--primary-color)' : 'var(--text-muted)',
-                fontWeight: sub === key ? 600 : 400,
-                fontSize: '14px', cursor: 'pointer', marginBottom: '-1px',
-                transition: 'color 0.15s',
-              }}
             >
-              <Icon size={15} /> {label}
+              <Icon size={15} strokeWidth={1.5} /> {label}
             </button>
           ))}
         </div>
 
         <button
+          type="button"
+          className="adm-pill-btn"
           onClick={handleTestEmail}
           disabled={testSending || testSent}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '7px 14px', marginBottom: '8px',
-            background: testSent ? 'var(--bg-hover)' : 'none',
-            border: '1px solid var(--border-color)',
-            borderRadius: '8px', cursor: testSent ? 'default' : 'pointer',
-            fontSize: '12px', fontWeight: 500,
-            color: testSent ? 'var(--text-secondary)' : 'var(--text-muted)',
-            transition: 'all 0.15s', whiteSpace: 'nowrap',
-          }}
           title={`Enviar email de prueba a ${TEST_EMAIL}`}
         >
           {testSent
-            ? <><CheckCircle size={13} /> Email enviado</>
-            : <><Send size={13} /> {testSending ? 'Enviando…' : 'Probar email'}</>}
+            ? <><CheckCircle size={14} strokeWidth={1.5} /> Email enviado</>
+            : <><Send size={14} strokeWidth={1.5} /> {testSending ? 'Enviando…' : 'Probar email'}</>}
         </button>
       </div>
 

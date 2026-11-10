@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { hoyISO } from '../../lib/fechas';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
   PieChart, Pie, Cell,
@@ -1138,7 +1139,7 @@ export default function SGIEstadisticas() {
           const totalCerradas = ncCerradas + incCerradas;
           const pctCierre     = totalGeneral > 0 ? Math.round((totalCerradas / totalGeneral) * 100) : 0;
 
-          const vencidasHoy = new Date().toISOString().split('T')[0];
+          const vencidasHoy = hoyISO();
           const vencidasNC  = acciones.filter(a => a.fecha_vencimiento && a.fecha_vencimiento < vencidasHoy && a.estado !== 'cerrada').length;
           const vencidasInc = accionesInc.filter(a => a.fecha_vencimiento && a.fecha_vencimiento < vencidasHoy && a.estado !== 'cerrada').length;
 
@@ -1276,7 +1277,7 @@ export default function SGIEstadisticas() {
               {/* Listado exportable */}
               {(() => {
                 const fmt = d => d ? new Date(d).toLocaleDateString('es-AR') : '—';
-                const hoy = new Date().toISOString().split('T')[0];
+                const hoy = hoyISO();
 
                 const filas = [
                   ...acciones.map(a => ({
@@ -1326,7 +1327,7 @@ export default function SGIEstadisticas() {
                   })));
                   const wb = XLSX.utils.book_new();
                   XLSX.utils.book_append_sheet(wb, ws, 'Acciones');
-                  XLSX.writeFile(wb, `acciones_${new Date().toISOString().split('T')[0]}.xlsx`);
+                  XLSX.writeFile(wb, `acciones_${hoyISO()}.xlsx`);
                 };
 
                 return (

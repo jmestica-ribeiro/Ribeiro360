@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Save, ChevronLeft, Calendar } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, ChevronLeft, Calendar, Pencil } from 'lucide-react';
 import {
   fetchEventos,
   fetchEventosCategorias,
@@ -9,12 +9,14 @@ import {
   deleteEvento,
 } from '../../../services/eventosService';
 import { fetchProfileValues } from '../../../services/usuariosService';
-import { AdminListPanel, EmptyState, VisibilidadEditor, useToast } from '../../../components/common';
+import { AdminListPanel, EmptyState, VisibilidadEditor, useToast, SubmitButton, FieldError } from '../../../components/common';
+import { useRequiredFields } from '../../../hooks/useRequiredFields';
+import { hoyISO } from '../../../lib/fechas';
 import { notificarNuevoEvento } from '../../../lib/notificaciones';
 import { useConfirm } from '../../../contexts/ConfirmContext';
 import { Select } from '../../../components/common';
 
-const EMPTY_EVENTO = { titulo: '', descripcion: '', fecha: new Date().toISOString().split('T')[0], categoria_id: null, area_id: null };
+const EMPTY_EVENTO = { titulo: '', descripcion: '', fecha: '', categoria_id: null, area_id: null };
 
 const EventosTab = () => {
   const confirm = useConfirm();
@@ -26,6 +28,10 @@ const EventosTab = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editingData, setEditingData] = useState(null);
   const [editingVisibilidad, setEditingVisibilidad] = useState([]);
+  const v = useRequiredFields([
+    { id: 'evt-titulo', label: 'Título', valid: !!editingData?.titulo?.trim() },
+    { id: 'evt-fecha', label: 'Fecha', valid: !!editingData?.fecha },
+  ]);
 
   useEffect(() => {
     loadData();
@@ -45,8 +51,9 @@ const EventosTab = () => {
   };
 
   const handleCreate = () => {
-    setEditingData({ ...EMPTY_EVENTO, categoria_id: categorias[0]?.id || null, area_id: areas[0]?.id || null });
+    setEditingData({ ...EMPTY_EVENTO, fecha: hoyISO(), categoria_id: categorias[0]?.id || null, area_id: areas[0]?.id || null });
     setEditingVisibilidad([]);
+    v.reset();
     setIsEditing(true);
   };
 
@@ -54,6 +61,7 @@ const EventosTab = () => {
     setEditingData({ ...evento, categoria_id: evento.categoria_id, area_id: evento.area_id });
     const { data } = await fetchEventoVisibilidad(evento.id);
     setEditingVisibilidad(data || []);
+    v.reset();
     setIsEditing(true);
   };
 
@@ -99,13 +107,14 @@ const EventosTab = () => {
           <div className="form-header">
             <h3>{editingData?.id ? 'Editar Evento' : 'Nuevo Evento'}</h3>
             <div className="form-header-actions">
-              <button className="btn-primary" onClick={handleSave}><Save size={16} /> Guardar</button>
+              <SubmitButton className="btn-primary" missing={v.missing} onMissing={v.revealAll} onClick={handleSave}><Save size={16} /> Guardar</SubmitButton>
             </div>
           </div>
           <div className="form-body">
             <div className="form-group">
-              <label>Título *</label>
-              <input className="form-control" value={editingData.titulo} onChange={e => setEditingData(d => ({ ...d, titulo: e.target.value }))} placeholder="Ej: Reunión de equipo" />
+              <label htmlFor="evt-titulo">Título *</label>
+              <input id="evt-titulo" {...v.fieldProps('evt-titulo')} className="form-control" value={editingData.titulo} onChange={e => setEditingData(d => ({ ...d, titulo: e.target.value }))} placeholder="Ej: Reunión de equipo" />
+              <FieldError show={v.isInvalid('evt-titulo')}>Ingresá un título</FieldError>
             </div>
             <div className="form-group">
               <label>Descripción</label>
@@ -113,8 +122,9 @@ const EventosTab = () => {
             </div>
             <div className="form-row">
               <div className="form-group">
-                <label>Fecha *</label>
-                <input type="date" className="form-control" value={editingData.fecha} onChange={e => setEditingData(d => ({ ...d, fecha: e.target.value }))} />
+                <label htmlFor="evt-fecha">Fecha *</label>
+                <input id="evt-fecha" {...v.fieldProps('evt-fecha')} type="date" className="form-control" value={editingData.fecha} onChange={e => setEditingData(d => ({ ...d, fecha: e.target.value }))} />
+                <FieldError show={v.isInvalid('evt-fecha')}>Elegí una fecha</FieldError>
               </div>
               <div className="form-group">
                 <label>Categoría</label>
@@ -153,30 +163,35 @@ const EventosTab = () => {
         <EmptyState icon={<Calendar size={40} />} message="No hay eventos creados aún." />
       ) : (
         Object.entries(grouped).map(([month, evs]) => (
-          <div key={month} className="eventos-month-group">
-            <h4 className="eventos-month-title">{month.charAt(0).toUpperCase() + month.slice(1)}</h4>
-            <div className="eventos-list">
-              {evs.map(ev => (
-                <div key={ev.id} className="evento-item">
-                  <div className="evento-date-badge">
-                    <span className="evento-day">{new Date(ev.fecha + 'T00:00:00').getDate()}</span>
-                    <span className="evento-month-short">{new Date(ev.fecha + 'T00:00:00').toLocaleDateString('es-AR', { month: 'short' })}</span>
-                  </div>
-                  <div className="evento-info">
-                    <span className="evento-titulo">{ev.titulo}</span>
-                    <div className="evento-tags">
-                      {ev.categoria && <span className="evento-tag" style={{ backgroundColor: ev.categoria.color + '20', color: ev.categoria.color }}>{ev.categoria.nombre}</span>}
-                      {ev.area && <span className="evento-tag" style={{ backgroundColor: ev.area.color + '20', color: ev.area.color }}>{ev.area.nombre}</span>}
+          <section key={month}>
+            <h4 className="adm-group-label">{month.charAt(0).toUpperCase() + month.slice(1)}</h4>
+            <ul className="adm-list">
+              {evs.map(ev => {
+                const fecha = new Date(ev.fecha + 'T00:00:00');
+                return (
+                  <li key={ev.id} className="adm-row" style={{ '--tone': ev.categoria?.color || 'var(--accent)' }}>
+                    <span className="adm-row-icon adm-date">
+                      <strong>{fecha.getDate()}</strong>
+                      <small>{fecha.toLocaleDateString('es-AR', { month: 'short' })}</small>
+                    </span>
+                    <div className="adm-row-info">
+                      <div className="adm-row-title"><span className="adm-ellipsis">{ev.titulo}</span></div>
+                      {(ev.categoria || ev.area) && (
+                        <div className="adm-row-meta">
+                          {ev.categoria && <span className="adm-badge tone" style={{ '--tone': ev.categoria.color }}>{ev.categoria.nombre}</span>}
+                          {ev.area && <span className="adm-badge tone" style={{ '--tone': ev.area.color }}>{ev.area.nombre}</span>}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                  <div className="admin-item-actions">
-                    <button className="btn-icon-admin" onClick={() => handleEdit(ev)}><Edit2 size={15} /></button>
-                    <button className="btn-icon-admin danger" onClick={() => handleDelete(ev.id)}><Trash2 size={15} /></button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+                    <div className="adm-actions hover-reveal">
+                      <button type="button" className="adm-action" aria-label={`Editar ${ev.titulo}`} onClick={() => handleEdit(ev)}><Pencil size={16} strokeWidth={1.5} /></button>
+                      <button type="button" className="adm-action danger" aria-label={`Eliminar ${ev.titulo}`} onClick={() => handleDelete(ev.id)}><Trash2 size={16} strokeWidth={1.5} /></button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
         ))
       )}
     </AdminListPanel>

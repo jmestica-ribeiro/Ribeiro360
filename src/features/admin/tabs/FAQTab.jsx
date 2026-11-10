@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, Save, ChevronLeft, MessageCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, ChevronLeft, MessageCircle, Pencil } from 'lucide-react';
 import { fetchFaqPreguntas, fetchFaqSectores, saveFaqPregunta, deleteFaqPregunta } from '../../../services/faqService';
-import { AdminListPanel, EmptyState, useToast } from '../../../components/common';
+import { AdminListPanel, EmptyState, useToast, SubmitButton, FieldError } from '../../../components/common';
+import { useRequiredFields } from '../../../hooks/useRequiredFields';
 import { useConfirm } from '../../../contexts/ConfirmContext';
 import { Select } from '../../../components/common';
 
@@ -14,6 +15,10 @@ const FAQTab = () => {
   const [sectores, setSectores] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editingData, setEditingData] = useState(null);
+  const v = useRequiredFields([
+    { id: 'faq-pregunta', label: 'Pregunta', valid: !!editingData?.pregunta?.trim() },
+    { id: 'faq-respuesta', label: 'Respuesta', valid: !!editingData?.respuesta?.trim() },
+  ]);
 
   useEffect(() => {
     loadData();
@@ -30,11 +35,13 @@ const FAQTab = () => {
 
   const handleCreate = () => {
     setEditingData({ ...EMPTY_PREGUNTA, sector_id: sectores[0]?.id || null });
+    v.reset();
     setIsEditing(true);
   };
 
   const handleEdit = (item) => {
     setEditingData({ ...item, links: item.links || [] });
+    v.reset();
     setIsEditing(true);
   };
 
@@ -71,17 +78,19 @@ const FAQTab = () => {
           <div className="form-header">
             <h3>{editingData?.id ? 'Editar Pregunta' : 'Nueva Pregunta'}</h3>
             <div className="form-header-actions">
-              <button className="btn-primary" onClick={handleSave}><Save size={16} /> Guardar</button>
+              <SubmitButton className="btn-primary" missing={v.missing} onMissing={v.revealAll} onClick={handleSave}><Save size={16} /> Guardar</SubmitButton>
             </div>
           </div>
           <div className="form-body">
             <div className="form-group">
-              <label>Pregunta *</label>
-              <input className="form-control" value={editingData.pregunta} onChange={e => setEditingData(d => ({ ...d, pregunta: e.target.value }))} placeholder="¿Cuál es la pregunta?" />
+              <label htmlFor="faq-pregunta">Pregunta *</label>
+              <input id="faq-pregunta" {...v.fieldProps('faq-pregunta')} className="form-control" value={editingData.pregunta} onChange={e => setEditingData(d => ({ ...d, pregunta: e.target.value }))} placeholder="¿Cuál es la pregunta?" />
+              <FieldError show={v.isInvalid('faq-pregunta')}>Ingresá la pregunta</FieldError>
             </div>
             <div className="form-group">
-              <label>Respuesta *</label>
-              <textarea className="form-control" rows={5} value={editingData.respuesta} onChange={e => setEditingData(d => ({ ...d, respuesta: e.target.value }))} placeholder="Escribí la respuesta completa..." />
+              <label htmlFor="faq-respuesta">Respuesta *</label>
+              <textarea id="faq-respuesta" {...v.fieldProps('faq-respuesta')} className="form-control" rows={5} value={editingData.respuesta} onChange={e => setEditingData(d => ({ ...d, respuesta: e.target.value }))} placeholder="Escribí la respuesta completa..." />
+              <FieldError show={v.isInvalid('faq-respuesta')}>Ingresá la respuesta</FieldError>
             </div>
             <div className="form-row">
               <div className="form-group">
@@ -155,32 +164,32 @@ const FAQTab = () => {
         <EmptyState icon={<MessageCircle size={40} />} message="No hay preguntas cargadas aún." />
       ) : (
         Object.entries(grouped).map(([sector, { color, items }]) => (
-          <div key={sector} className="eventos-month-group">
-            <h4 className="eventos-month-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: color, display: 'inline-block' }} />
-              {sector}
-              <span className="admin-count" style={{ marginLeft: 4 }}>{items.length}</span>
+          <section key={sector} style={{ '--tone': color }}>
+            <h4 className="adm-group-label adm-group-label-row">
+              <span className="adm-badge tone">{sector}</span>
+              <span>{items.length}</span>
             </h4>
-            <div className="eventos-list">
+            <ul className="adm-list">
               {items.map(p => (
-                <div key={p.id} className="evento-item">
-                  <div className="evento-info">
-                    <span className="evento-titulo">{p.pregunta}</span>
-                    <span style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2, display: 'block' }}>
-                      {p.respuesta.slice(0, 80)}{p.respuesta.length > 80 ? '…' : ''}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {!p.activo && <span style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', backgroundColor: '#fee2e2', padding: '2px 8px', borderRadius: 20 }}>Inactivo</span>}
-                    <div className="admin-item-actions">
-                      <button className="btn-icon-admin" onClick={() => handleEdit(p)}><Edit2 size={15} /></button>
-                      <button className="btn-icon-admin danger" onClick={() => handleDelete(p.id)}><Trash2 size={15} /></button>
+                <li key={p.id} className={`adm-row${!p.activo ? ' muted' : ''}`}>
+                  <span className="adm-row-icon"><MessageCircle size={18} strokeWidth={1.5} /></span>
+                  <div className="adm-row-info">
+                    <div className="adm-row-title">
+                      <span className="adm-ellipsis">{p.pregunta}</span>
+                      {!p.activo && <span className="adm-badge danger">Inactivo</span>}
+                    </div>
+                    <div className="adm-row-meta">
+                      <span className="adm-ellipsis">{p.respuesta.slice(0, 80)}{p.respuesta.length > 80 ? '…' : ''}</span>
                     </div>
                   </div>
-                </div>
+                  <div className="adm-actions hover-reveal">
+                    <button type="button" className="adm-action" aria-label="Editar pregunta" onClick={() => handleEdit(p)}><Pencil size={16} strokeWidth={1.5} /></button>
+                    <button type="button" className="adm-action danger" aria-label="Eliminar pregunta" onClick={() => handleDelete(p.id)}><Trash2 size={16} strokeWidth={1.5} /></button>
+                  </div>
+                </li>
               ))}
-            </div>
-          </div>
+            </ul>
+          </section>
         ))
       )}
     </AdminListPanel>

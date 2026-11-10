@@ -28,7 +28,7 @@ function useIsMobile(query = '(max-width: 640px)') {
 export function Select({
   options, value, onChange, multiple = false, searchable, placeholder = 'Seleccionar…',
   disabled = false, error = false, name, size = 'md', clearable = false,
-  emptyText = 'Sin resultados', className = '', id, 'aria-label': ariaLabel,
+  emptyText = 'Sin resultados', className = '', panelClassName = '', id, 'aria-label': ariaLabel,
 }) {
   const opts = useMemo(() => normalize(options), [options]);
   const isSearchable = searchable ?? opts.length > 8;
@@ -294,7 +294,7 @@ export function Select({
       {open && createPortal(
         isMobile ? (
           <div className="sel-sheet-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) close(); }}>
-            <div className="sel-sheet" ref={panelRef} role="presentation">
+            <div className={`sel-sheet ${panelClassName}`} ref={panelRef} role="presentation">
               <div className="sel-sheet-grip" />
               {searchBox}
               {list}
@@ -304,7 +304,7 @@ export function Select({
         ) : (
           <div
             ref={panelRef}
-            className="sel-panel"
+            className={`sel-panel ${panelClassName}`}
             style={pos ? { ...pos, position: 'fixed' } : { visibility: 'hidden', position: 'fixed' }}
           >
             {searchBox}

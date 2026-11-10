@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText, BookOpen, ClipboardList, Folder, ChevronRight, ChevronLeft,
   Plus, X, Download, History, CheckCircle, ShieldCheck, Search,
-  AlertCircle, Edit2, Trash2, Save, Lock, Unlock, Tag, Clock, FolderPlus,
+  AlertCircle, Edit2, Trash2, Save, Lock, Unlock, Tag, Clock, FolderPlus, Minus, Paperclip, Upload,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -24,7 +24,10 @@ import {
   fetchGerentes,
 } from '../../services/sgiService';
 import './SGI.css';
-import { Select } from '../../components/common';
+import './SGIDocModal.css';
+import { Select, SubmitButton, FieldError } from '../../components/common';
+import { useRequiredFields } from '../../hooks/useRequiredFields';
+import { hoyISO } from '../../lib/fechas';
 
 const ICON_MAP = { FileText, BookOpen, ClipboardList, Folder, ShieldCheck };
 
@@ -157,8 +160,9 @@ const SGI = () => {
   // ── Admin actions ─────────────────────────────────────────────────────────
   const openNewDoc = () => {
     setEditingDoc(null);
-    setDocForm({ ...EMPTY_DOC_FORM, categoria_id: currentCategory?.id || '', fecha_emision: new Date().toISOString().split('T')[0] });
+    setDocForm({ ...EMPTY_DOC_FORM, categoria_id: currentCategory?.id || '', fecha_emision: hoyISO() });
     setTagInput('');
+    docV.reset();
     setShowDocModal(true);
   };
 
@@ -180,6 +184,7 @@ const SGI = () => {
       fecha_emision: refVersion?.fecha_emision || '',
       notas_cambios: refVersion?.notas_cambios || '',
     });
+    docV.reset();
     setShowDocModal(true);
   };
 
@@ -248,19 +253,54 @@ const SGI = () => {
     ? categories.filter(c => c.parent_id === currentCategory.id)
     : [];
   
+  const folderNombre = folderForm.nombre.trim();
+  const folderDuplicado = !!folderNombre && categories.some(c => getCatSlug(c.nombre) === getCatSlug(folderNombre));
+  const folderV = useRequiredFields([
+    { id: 'sgi-folder-nombre', label: 'Nombre', valid: !!folderNombre && !folderDuplicado },
+  ]);
+
+  const docV = useRequiredFields([
+    { id: 'docm-titulo', label: 'Título', valid: !!docForm.titulo.trim() },
+    { id: 'docm-aprob', label: 'Gerente aprobador', valid: !!docForm.aprobador_id, when: docForm.documento_controlado },
+  ]);
+
+  // Siguiente código según los existentes en la carpeta (prefijo más usado + número siguiente)
+  const codigoSugerido = (() => {
+    if (editingDoc || docForm.codigo.trim()) return null;
+    const stats = {};
+    documents.forEach(d => {
+      const m = /^(.*?)(\d+)$/.exec((d.codigo || '').trim());
+      if (!m) return;
+      const st = (stats[m[1]] ||= { count: 0, max: 0, pad: m[2].length });
+      st.count += 1;
+      st.max = Math.max(st.max, parseInt(m[2], 10));
+      st.pad = Math.max(st.pad, m[2].length);
+    });
+    const best = Object.entries(stats).sort((a, b) => b[1].count - a[1].count)[0];
+    if (!best) return null;
+    const [prefijo, { max, pad }] = best;
+    const sugerido = `${prefijo}${String(max + 1).padStart(pad, '0')}`;
+    return documents.some(d => (d.codigo || '').trim() === sugerido) ? null : sugerido;
+  })();
+
+  // Gerentes del mismo departamento que quien carga
+  const gerenteSugerido = gerentes.filter(g => g.id !== profile?.id && g.department && g.department === profile?.department);
+  const toggleControlado = () => setDocForm(f => {
+    const on = !f.documento_controlado;
+    const aprobador = on && !f.aprobador_id && gerenteSugerido.length === 1 ? gerenteSugerido[0].id : f.aprobador_id;
+    return { ...f, documento_controlado: on, aprobador_id: aprobador };
+  });
+
   const openNewFolder = () => {
     setFolderForm({ nombre: '', descripcion: '' });
+    folderV.reset();
     setShowFolderModal(true);
   };
 
   const handleSaveFolder = async () => {
-    const nombre = folderForm.nombre.trim();
-    if (!nombre || !currentCategory) return;
+    const nombre = folderNombre;
     // La ruta /sgi/:categoria usa el slug del nombre: debe ser único en todo el árbol
-    if (categories.some(c => getCatSlug(c.nombre) === getCatSlug(nombre))) {
-      toast.warning('Ya existe una carpeta con ese nombre', { description: 'Elegí un nombre distinto.' });
-      return;
-    }
+    if (!folderV.isValid || !currentCategory) { folderV.revealAll(); return; }
     setIsSavingFolder(true);
     const { error } = await saveSgiCategoria({
       nombre,
@@ -593,45 +633,81 @@ const SGI = () => {
       {/* ── Modal: Nuevo / Editar documento ── */}
       <AnimatePresence>
         {showDocModal && (
-          <div className="sgi-modal-backdrop" onClick={() => setShowDocModal(false)}>
-            <motion.div className="sgi-modal sgi-modal-wide"
-              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }} onClick={e => e.stopPropagation()}>
-              <div className="sgi-modal-header">
-                <h4>{editingDoc ? 'Editar documento' : 'Agregar documento'}</h4>
-                <button className="sgi-modal-close" onClick={() => setShowDocModal(false)}><X size={18} /></button>
-              </div>
-              <div className="sgi-modal-body">
-                {/* Sección: Identificación */}
-                <div className="sgi-form-section">
-                  <div className="sgi-form-section-title">
-                    <FileText size={14} />
-                    Identificación
-                  </div>
-                  <div className="sgi-form-two-col">
-                    <div className="sgi-form-group">
-                      <label>Título <span className="sgi-required">*</span></label>
-                      <input value={docForm.titulo} onChange={e => setDocForm(f => ({ ...f, titulo: e.target.value }))} placeholder="Título del documento" />
+          <motion.div
+            className="docm-overlay"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onMouseDown={e => { if (e.target === e.currentTarget) setShowDocModal(false); }}
+          >
+            <motion.div
+              className="docm"
+              role="dialog" aria-modal="true" aria-labelledby="docm-title"
+              initial={{ scale: 0.98, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.98, opacity: 0 }} transition={{ duration: 0.18, ease: 'easeOut' }}
+              onKeyDown={e => { if (e.key === 'Escape' && !e.defaultPrevented) setShowDocModal(false); }}
+            >
+              <header className="docm-header">
+                <div>
+                  <nav className="docm-crumb" aria-label="Ubicación">
+                    <span>{currentCategory?.nombre || 'Documentos'}</span>
+                    <ChevronRight size={12} strokeWidth={1.5} aria-hidden="true" />
+                    <span>{editingDoc ? 'Editar' : 'Nuevo'}</span>
+                  </nav>
+                  <h2 id="docm-title" className="docm-title">{editingDoc ? 'Editar documento' : 'Agregar documento'}</h2>
+                  <p className="docm-subtitle">
+                    {editingDoc
+                      ? 'Actualizá la información del documento.'
+                      : 'Completá la información para registrar un nuevo documento controlado.'}
+                  </p>
+                </div>
+                <button type="button" className="docm-close" aria-label="Cerrar" onClick={() => setShowDocModal(false)}>
+                  <X size={18} strokeWidth={1.5} />
+                </button>
+              </header>
+
+              <div className="docm-body">
+                {/* Identificación */}
+                <section className="docm-section" aria-labelledby="docm-sec-id">
+                  <h3 id="docm-sec-id" className="docm-section-label"><FileText size={14} strokeWidth={1.5} /> Identificación</h3>
+                  <div className="docm-grid">
+                    <div className="docm-field docm-span-6">
+                      <label htmlFor="docm-titulo">Título <span className="docm-req" aria-hidden="true">*</span></label>
+                      <input id="docm-titulo" autoFocus required aria-required="true" {...docV.fieldProps('docm-titulo')} value={docForm.titulo} onChange={e => setDocForm(f => ({ ...f, titulo: e.target.value }))} placeholder="Título del documento" />
+                      <FieldError show={docV.isInvalid('docm-titulo')}>Ingresá un título</FieldError>
                     </div>
-                    <div className="sgi-form-group">
-                      <label>Código</label>
-                      <input value={docForm.codigo} onChange={e => setDocForm(f => ({ ...f, codigo: e.target.value }))} placeholder="Ej: POE-001" />
+                    <div className="docm-field docm-span-6">
+                      <label htmlFor="docm-codigo">Código</label>
+                      <input id="docm-codigo" value={docForm.codigo} onChange={e => setDocForm(f => ({ ...f, codigo: e.target.value }))} placeholder={codigoSugerido ? `Ej: ${codigoSugerido}` : 'Ej: POE-001'} />
+                      {codigoSugerido && (
+                        <button type="button" className="docm-suggest" onClick={() => setDocForm(f => ({ ...f, codigo: codigoSugerido }))}>
+                          Usar <span>{codigoSugerido}</span>
+                        </button>
+                      )}
                     </div>
-                    <div className="sgi-form-group">
-                      <label>Tipo de documento</label>
-                      <Select value={docForm.tipo_documento} onChange={v => setDocForm(f => ({ ...f, tipo_documento: v }))} options={['Procedimiento', 'Manual', 'Instructivo', 'Registro', 'Formato', 'Programa', 'Estándar', 'Otro']} aria-label="Tipo de documento" />
+                    <div className="docm-field docm-span-6">
+                      <label id="docm-tipo-label">Tipo de documento</label>
+                      <Select
+                        className="docm-select"
+                        panelClassName="docm-select-panel"
+                        value={docForm.tipo_documento}
+                        onChange={v => setDocForm(f => ({ ...f, tipo_documento: v }))}
+                        options={['Procedimiento', 'Manual', 'Instructivo', 'Registro', 'Formato', 'Programa', 'Estándar', 'Otro']}
+                        aria-label="Tipo de documento"
+                      />
                     </div>
-                    <div className="sgi-form-group">
-                      <label>Etiquetas</label>
-                      <div className="sgi-tag-input-wrap">
+                    <div className="docm-field docm-span-6">
+                      <label htmlFor="docm-tags">Etiquetas</label>
+                      <div className="docm-tags">
                         {docForm.etiquetas.map((tag, i) => (
-                          <span key={i} className="sgi-tag-chip">
+                          <span key={i} className="docm-chip">
                             {tag}
-                            <button type="button" onClick={() => setDocForm(f => ({ ...f, etiquetas: f.etiquetas.filter((_, j) => j !== i) }))}>×</button>
+                            <button type="button" aria-label={`Quitar etiqueta ${tag}`} onClick={() => setDocForm(f => ({ ...f, etiquetas: f.etiquetas.filter((_, j) => j !== i) }))}>
+                              <X size={11} strokeWidth={2} />
+                            </button>
                           </span>
                         ))}
                         <input
-                          className="sgi-tag-input"
+                          id="docm-tags"
                           value={tagInput}
                           onChange={e => setTagInput(e.target.value)}
                           onKeyDown={e => {
@@ -649,108 +725,133 @@ const SGI = () => {
                         />
                       </div>
                     </div>
-                    <div className="sgi-form-group" style={{ gridColumn: '1 / -1' }}>
-                      <label>Descripción</label>
-                      <textarea rows={3} value={docForm.descripcion} onChange={e => setDocForm(f => ({ ...f, descripcion: e.target.value }))} placeholder="Breve descripción del propósito del documento..." />
+                    <div className="docm-field docm-span-12">
+                      <label htmlFor="docm-desc">Descripción</label>
+                      <textarea id="docm-desc" value={docForm.descripcion} onChange={e => setDocForm(f => ({ ...f, descripcion: e.target.value }))} placeholder="Breve descripción del propósito del documento..." />
+                      <span className="docm-counter" aria-hidden="true">{(docForm.descripcion || '').length} caracteres</span>
                     </div>
                   </div>
-                </div>
+                </section>
 
-                {/* Sección: Versión y Control */}
-                <div className="sgi-form-section">
-                  <div className="sgi-form-section-title">
-                    <History size={14} />
-                    Versión y Control
-                  </div>
-                  <div className="sgi-form-three-col">
-                    <div className="sgi-form-group">
-                      <label>Revisión</label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={docForm.numero_version}
-                        onChange={e => setDocForm(f => ({ ...f, numero_version: e.target.value }))}
-                        placeholder="0"
-                      />
-                    </div>
-                    <div className="sgi-form-group">
-                      <label>Fecha de emisión</label>
-                      <input type="date" value={docForm.fecha_emision} onChange={e => setDocForm(f => ({ ...f, fecha_emision: e.target.value }))} />
-                    </div>
-                    <div className="sgi-form-group">
-                      <label>Período de Retención</label>
-                      <input value={docForm.periodo_retencion} onChange={e => setDocForm(f => ({ ...f, periodo_retencion: e.target.value }))} placeholder="Ej: 5 años" />
-                    </div>
-                  </div>
-                  <div className="sgi-form-group" style={{ marginTop: 12 }}>
-                    <label>Histórico / Notas de cambio</label>
-                    <textarea rows={3} value={docForm.notas_cambios} onChange={e => setDocForm(f => ({ ...f, notas_cambios: e.target.value }))} placeholder="Describí los cambios introducidos en esta revisión..." />
-                  </div>
-                </div>
-
-                {/* Sección: Acceso y Aprobación */}
-                <div className="sgi-form-section">
-                  <div className="sgi-form-section-title">
-                    <ShieldCheck size={14} />
-                    Acceso y Aprobación
-                  </div>
-                  <div className="sgi-form-two-col">
-                    <div className="sgi-form-group">
-                      <label>Acceso</label>
-                      <Select value={docForm.acceso} onChange={v => setDocForm(f => ({ ...f, acceso: v }))} options={['No Confidencial', 'Confidencial', 'Restringido']} aria-label="Acceso" />
-                    </div>
-                    <div className="sgi-form-group">
-                      <label>Documento Controlado</label>
-                      <Select value={docForm.documento_controlado ? 'si' : 'no'} onChange={v => setDocForm(f => ({ ...f, documento_controlado: v === 'si' }))} options={[{ value: 'no', label: 'No requiere aprobación' }, { value: 'si', label: 'Sí, requiere aprobación' }]} aria-label="Documento controlado" />
-                    </div>
-                  </div>
-                  {docForm.documento_controlado && (
-                    <>
-                      <div className="sgi-form-group" style={{ marginTop: 12 }}>
-                        <label>Gerente aprobador <span style={{ color: '#E71D36' }}>*</span></label>
-                        <Select
-                          value={docForm.aprobador_id}
-                          onChange={v => setDocForm(f => ({ ...f, aprobador_id: v }))}
-                          error={!docForm.aprobador_id}
-                          placeholder="— Seleccionar gerente —"
-                          options={gerentes.map(g => ({ value: g.id, label: `${g.full_name}${g.department ? ` (${g.department})` : ''}` }))}
-                          aria-label="Gerente aprobador"
-                        />
-                        {!docForm.aprobador_id && (
-                          <span style={{ fontSize: 11, color: '#E71D36', marginTop: 4, display: 'block' }}>
-                            Requerido para documentos controlados
-                          </span>
-                        )}
+                {/* Versión y control */}
+                <section className="docm-section" aria-labelledby="docm-sec-ver">
+                  <h3 id="docm-sec-ver" className="docm-section-label"><History size={14} strokeWidth={1.5} /> Versión y control</h3>
+                  <div className="docm-grid">
+                    <div className="docm-field docm-span-4">
+                      <label htmlFor="docm-rev">Revisión</label>
+                      <div className="docm-stepper">
+                        <button type="button" aria-label="Restar revisión" onClick={() => setDocForm(f => ({ ...f, numero_version: String(Math.max(0, (parseInt(f.numero_version, 10) || 0) - 1)) }))}>
+                          <Minus size={14} strokeWidth={1.5} />
+                        </button>
+                        <input id="docm-rev" type="number" min="0" inputMode="numeric" value={docForm.numero_version} onChange={e => setDocForm(f => ({ ...f, numero_version: e.target.value }))} placeholder="0" />
+                        <button type="button" aria-label="Sumar revisión" onClick={() => setDocForm(f => ({ ...f, numero_version: String((parseInt(f.numero_version, 10) || 0) + 1) }))}>
+                          <Plus size={14} strokeWidth={1.5} />
+                        </button>
                       </div>
-                      <div className="sgi-approval-notice">
-                        <CheckCircle size={15} />
+                    </div>
+                    <div className="docm-field docm-span-4">
+                      <label htmlFor="docm-fecha">Fecha de emisión</label>
+                      <input id="docm-fecha" type="date" value={docForm.fecha_emision} onChange={e => setDocForm(f => ({ ...f, fecha_emision: e.target.value }))} />
+                    </div>
+                    <div className="docm-field docm-span-4">
+                      <label htmlFor="docm-ret">Período de retención</label>
+                      <input id="docm-ret" value={docForm.periodo_retencion} onChange={e => setDocForm(f => ({ ...f, periodo_retencion: e.target.value }))} placeholder="Ej: 5 años" />
+                    </div>
+                    <div className="docm-field docm-span-12">
+                      <label htmlFor="docm-notas">Histórico / Notas de cambio</label>
+                      <textarea id="docm-notas" value={docForm.notas_cambios} onChange={e => setDocForm(f => ({ ...f, notas_cambios: e.target.value }))} placeholder="Describí los cambios introducidos en esta revisión..." />
+                      <span className="docm-counter" aria-hidden="true">{(docForm.notas_cambios || '').length} caracteres</span>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Acceso y aprobación */}
+                <section className="docm-section" aria-labelledby="docm-sec-acc">
+                  <h3 id="docm-sec-acc" className="docm-section-label"><ShieldCheck size={14} strokeWidth={1.5} /> Acceso y aprobación</h3>
+                  <div className="docm-grid">
+                    <div className="docm-field docm-span-12">
+                      <span className="docm-label" id="docm-acceso-label">Acceso</span>
+                      <div className="docm-segmented" role="radiogroup" aria-labelledby="docm-acceso-label">
+                        {['No Confidencial', 'Confidencial', 'Restringido'].map(opt => (
+                          <label key={opt} className={`docm-segment${docForm.acceso === opt ? ' active' : ''}`}>
+                            <input
+                              type="radio"
+                              name="docm-acceso"
+                              value={opt}
+                              checked={docForm.acceso === opt}
+                              onChange={() => setDocForm(f => ({ ...f, acceso: opt }))}
+                            />
+                            {opt}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="docm-field docm-span-12">
+                      <div className="docm-switch-row">
                         <div>
-                          <strong>Este documento pasará a revisión.</strong> Al guardar, quedará en estado <em>en revisión</em> hasta que CMASS lo revise y lo derive al gerente seleccionado para su aprobación.
+                          <span className="docm-switch-title" id="docm-ctrl-label">Documento controlado</span>
+                          <span className="docm-switch-desc" id="docm-ctrl-desc">Sujeto a control de versiones y aprobación.</span>
                         </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={docForm.documento_controlado}
+                          aria-labelledby="docm-ctrl-label"
+                          aria-describedby="docm-ctrl-desc"
+                          className={`docm-switch${docForm.documento_controlado ? ' on' : ''}`}
+                          onClick={toggleControlado}
+                        >
+                          <span className="docm-switch-thumb" />
+                        </button>
                       </div>
-                    </>
-                  )}
-                </div>
-
-                {/* Sección: Archivo y Ubicación */}
-                <div className="sgi-form-section" style={{ borderBottom: 'none', marginBottom: 0, paddingBottom: 0 }}>
-                  <div className="sgi-form-section-title">
-                    <Download size={14} />
-                    Archivo y Ubicación
+                    </div>
+                    {docForm.documento_controlado && (
+                      <>
+                        <div className="docm-field docm-span-12">
+                          <label id="docm-aprob-label">Gerente aprobador <span className="docm-req" aria-hidden="true">*</span></label>
+                          <Select
+                            id="docm-aprob"
+                            className="docm-select"
+                            panelClassName="docm-select-panel"
+                            value={docForm.aprobador_id}
+                            onChange={v => { setDocForm(f => ({ ...f, aprobador_id: v })); docV.touch('docm-aprob'); }}
+                            error={docV.isInvalid('docm-aprob')}
+                            placeholder="Seleccionar gerente"
+                            options={gerentes.map(g => ({
+                              value: g.id,
+                              label: `${g.full_name}${g.department ? ` (${g.department})` : ''}`,
+                              description: gerenteSugerido.some(x => x.id === g.id) ? 'Gerente de tu área' : undefined,
+                            }))}
+                            aria-label="Gerente aprobador"
+                          />
+                          <FieldError show={docV.isInvalid('docm-aprob')}>Requerido para documentos controlados</FieldError>
+                        </div>
+                        <div className="docm-span-12 docm-notice">
+                          <CheckCircle size={16} strokeWidth={1.5} />
+                          <p>
+                            <strong>Este documento pasará a revisión.</strong> Al guardar, quedará <em>en revisión</em> hasta que CMASS lo revise y lo derive al gerente seleccionado para su aprobación.
+                          </p>
+                        </div>
+                      </>
+                    )}
                   </div>
-                  <div className="sgi-form-two-col">
-                    <div className="sgi-form-group">
-                      <label>Archivo (PDF / Word / Excel)</label>
-                      <label className="sgi-file-upload-label">
+                </section>
+
+                {/* Archivo y ubicación */}
+                <section className="docm-section" aria-labelledby="docm-sec-file">
+                  <h3 id="docm-sec-file" className="docm-section-label"><Paperclip size={14} strokeWidth={1.5} /> Archivo y ubicación</h3>
+                  <div className="docm-grid">
+                    <div className="docm-field docm-span-6">
+                      <label htmlFor="docm-file">Archivo (PDF / Word / Excel)</label>
+                      <label className="docm-file">
                         <input
+                          id="docm-file"
                           type="file"
                           accept=".pdf,.doc,.docx,.xls,.xlsx"
                           onChange={e => setDocForm(f => ({ ...f, _archivo: e.target.files[0] || null }))}
                         />
-                        <span className="sgi-file-upload-btn">
-                          <Download size={13} /> Elegir archivo
-                        </span>
-                        <span className="sgi-file-upload-name">
+                        <span className="docm-file-btn"><Upload size={14} strokeWidth={1.5} /> Elegir archivo</span>
+                        <span className="docm-file-name">
                           {docForm._archivo
                             ? docForm._archivo.name
                             : editingDoc
@@ -759,72 +860,105 @@ const SGI = () => {
                         </span>
                       </label>
                     </div>
-                    <div className="sgi-form-group">
-                      <label>Lugar de Ubicación Física</label>
-                      <input value={docForm.lugar_ubicacion} onChange={e => setDocForm(f => ({ ...f, lugar_ubicacion: e.target.value }))} placeholder="Ej: Archivero 3, Cajón B" />
+                    <div className="docm-field docm-span-6">
+                      <label htmlFor="docm-lugar">Lugar de ubicación física</label>
+                      <input id="docm-lugar" value={docForm.lugar_ubicacion} onChange={e => setDocForm(f => ({ ...f, lugar_ubicacion: e.target.value }))} placeholder="Ej: Archivero 3, Cajón B" />
                     </div>
                   </div>
+                </section>
+              </div>
+
+              <footer className="docm-footer">
+                <span className="docm-footer-note">Los campos con <span className="docm-req">*</span> son obligatorios</span>
+                <div className="docm-footer-actions">
+                  <button type="button" className="docm-btn docm-btn-secondary" onClick={() => setShowDocModal(false)}>Cancelar</button>
+                  <SubmitButton className="docm-btn docm-btn-primary" missing={docV.missing} onMissing={docV.revealAll} onClick={handleSaveDoc} saving={isSaving}>
+                    <Save size={16} strokeWidth={1.5} /> Guardar documento
+                  </SubmitButton>
                 </div>
-              </div>
-              <div className="sgi-modal-footer">
-                <button className="btn-sgi-secondary" onClick={() => setShowDocModal(false)}>Cancelar</button>
-                <button className="btn-sgi-primary" onClick={handleSaveDoc} disabled={isSaving || !docForm.titulo}>
-                  <Save size={14} /> {isSaving ? 'Guardando...' : 'Guardar'}
-                </button>
-              </div>
+              </footer>
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
       {/* ── Modal: Nueva carpeta ── */}
       <AnimatePresence>
         {showFolderModal && (
-          <div className="sgi-modal-backdrop" onClick={() => setShowFolderModal(false)}>
-            <motion.div className="sgi-modal"
+          <motion.div
+            className="docm-overlay"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            onMouseDown={e => { if (e.target === e.currentTarget) setShowFolderModal(false); }}
+          >
+            <motion.div
+              className="docm docm-sm"
               role="dialog" aria-modal="true" aria-labelledby="sgi-folder-title"
-              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }} onClick={e => e.stopPropagation()}
-              onKeyDown={e => { if (e.key === 'Escape') setShowFolderModal(false); }}>
-              <div className="sgi-modal-header">
-                <h4 id="sgi-folder-title">Nueva carpeta en {currentCategory?.nombre}</h4>
-                <button className="sgi-modal-close" aria-label="Cerrar" onClick={() => setShowFolderModal(false)}><X size={18} /></button>
-              </div>
-              <form
-                onSubmit={e => { e.preventDefault(); handleSaveFolder(); }}
-              >
-                <div className="sgi-modal-body">
-                  <div className="sgi-form-group">
-                    <label htmlFor="sgi-folder-nombre">Nombre *</label>
-                    <input
-                      id="sgi-folder-nombre"
-                      autoFocus
-                      value={folderForm.nombre}
-                      onChange={e => setFolderForm(f => ({ ...f, nombre: e.target.value }))}
-                      placeholder="Ej: Procedimientos de Obra"
-                      maxLength={80}
-                    />
-                  </div>
-                  <div className="sgi-form-group" style={{ marginTop: 12 }}>
-                    <label htmlFor="sgi-folder-desc">Descripción</label>
-                    <input
-                      id="sgi-folder-desc"
-                      value={folderForm.descripcion}
-                      onChange={e => setFolderForm(f => ({ ...f, descripcion: e.target.value }))}
-                      placeholder="Opcional"
-                      maxLength={160}
-                    />
-                  </div>
+              initial={{ scale: 0.98, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.98, opacity: 0 }} transition={{ duration: 0.18, ease: 'easeOut' }}
+              onKeyDown={e => { if (e.key === 'Escape' && !e.defaultPrevented) setShowFolderModal(false); }}
+            >
+              <header className="docm-header">
+                <div>
+                  <nav className="docm-crumb" aria-label="Ubicación">
+                    <span>{currentCategory?.nombre || 'SGI'}</span>
+                    <ChevronRight size={12} strokeWidth={1.5} aria-hidden="true" />
+                    <span>Nueva carpeta</span>
+                  </nav>
+                  <h2 id="sgi-folder-title" className="docm-title">Nueva carpeta</h2>
+                  <p className="docm-subtitle">Se creará dentro de <strong>{currentCategory?.nombre}</strong>.</p>
                 </div>
-                <div className="sgi-modal-footer">
-                  <button type="button" className="btn-sgi-secondary" onClick={() => setShowFolderModal(false)}>Cancelar</button>
-                  <button type="submit" className="btn-sgi-primary" disabled={isSavingFolder || !folderForm.nombre.trim()}>
-                    <FolderPlus size={14} /> {isSavingFolder ? 'Creando...' : 'Crear carpeta'}
-                  </button>
+                <button type="button" className="docm-close" aria-label="Cerrar" onClick={() => setShowFolderModal(false)}>
+                  <X size={18} strokeWidth={1.5} />
+                </button>
+              </header>
+              <form className="docm-form" onSubmit={e => { e.preventDefault(); handleSaveFolder(); }}>
+                <div className="docm-body">
+                  <section className="docm-section" aria-labelledby="sgi-folder-sec">
+                    <h3 id="sgi-folder-sec" className="docm-section-label"><Folder size={14} strokeWidth={1.5} /> Datos de la carpeta</h3>
+                    <div className="docm-grid">
+                      <div className="docm-field docm-span-12">
+                        <label htmlFor="sgi-folder-nombre">Nombre <span className="docm-req" aria-hidden="true">*</span></label>
+                        <input
+                          id="sgi-folder-nombre"
+                          autoFocus
+                          required
+                          aria-required="true"
+                          {...folderV.fieldProps('sgi-folder-nombre')}
+                          aria-invalid={folderDuplicado || folderV.isInvalid('sgi-folder-nombre') || undefined}
+                          value={folderForm.nombre}
+                          onChange={e => setFolderForm(f => ({ ...f, nombre: e.target.value }))}
+                          placeholder="Ej: Procedimientos de Obra"
+                          maxLength={80}
+                        />
+                        <FieldError show={folderDuplicado}>Ya existe una carpeta con ese nombre</FieldError>
+                        <FieldError show={!folderDuplicado && folderV.isInvalid('sgi-folder-nombre')}>Ingresá un nombre</FieldError>
+                      </div>
+                      <div className="docm-field docm-span-12">
+                        <label htmlFor="sgi-folder-desc">Descripción</label>
+                        <input
+                          id="sgi-folder-desc"
+                          value={folderForm.descripcion}
+                          onChange={e => setFolderForm(f => ({ ...f, descripcion: e.target.value }))}
+                          placeholder="Opcional"
+                          maxLength={160}
+                        />
+                      </div>
+                    </div>
+                  </section>
                 </div>
+                <footer className="docm-footer">
+                  <span className="docm-footer-note">Los campos con <span className="docm-req">*</span> son obligatorios</span>
+                  <div className="docm-footer-actions">
+                    <button type="button" className="docm-btn docm-btn-secondary" onClick={() => setShowFolderModal(false)}>Cancelar</button>
+                    <SubmitButton className="docm-btn docm-btn-primary" missing={folderV.missing} onMissing={folderV.revealAll} onClick={handleSaveFolder} saving={isSavingFolder} savingLabel="Creando...">
+                      <FolderPlus size={16} strokeWidth={1.5} /> Crear carpeta
+                    </SubmitButton>
+                  </div>
+                </footer>
               </form>
             </motion.div>
-          </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

@@ -193,7 +193,7 @@ const ChecklistPDF = ({ detalle, tipoLabel, onClose }) => {
 
         <div className="cheqpdf-preview">
           <div ref={printRef} className="cheqpdf-document">
-            <style dangerouslySetInnerHTML={{ __html: PRINT_STYLES }} />
+            <style>{PRINT_STYLES}</style>
             <div className="doc">
 
               {/* ── Header ── */}

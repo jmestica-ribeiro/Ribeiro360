@@ -764,3 +764,147 @@
   .foto-detalle-right { width: 100%; border-left: none; border-top: 1px solid var(--border-color); }
   .multimedia-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
 }
+
+
+/* == Rediseno modal Subir foto (estilo docm) == */
+.foto-detalle-overlay:has(.subir-foto-modal) {
+  z-index: var(--z-modal);
+  background: rgba(17, 24, 39, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+body.dark-theme .foto-detalle-overlay:has(.subir-foto-modal) { background: rgba(0, 0, 0, 0.6); }
+.subir-foto-modal {
+  background: var(--surface);
+  border: none;
+  border-radius: 24px;
+  box-shadow: 0 20px 60px -20px rgba(17, 24, 39, 0.18), 0 2px 6px rgba(17, 24, 39, 0.04);
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
+  overflow: hidden;
+}
+.subir-foto-header {
+  padding: 28px 32px 16px;
+  border-bottom: none;
+  flex-shrink: 0;
+}
+.subir-foto-header h3 {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.subir-foto-header .foto-detalle-close {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: transparent; border: none; color: var(--ink-faint);
+}
+@media (hover: hover) {
+  .subir-foto-header .foto-detalle-close:hover { background: var(--field-bg); color: var(--ink); }
+}
+.subir-foto-form {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 32px;
+  gap: var(--space-6);
+}
+.subir-foto-dropzone {
+  background: var(--surface-subtle);
+  border: 1.5px dashed var(--border-soft);
+  border-radius: 16px;
+  color: var(--ink-muted);
+}
+.subir-foto-icon { color: var(--ink-faint); }
+@media (hover: hover) {
+  .subir-foto-dropzone:hover { border-color: var(--accent); background: var(--accent-soft); }
+}
+.subir-foto-fields {
+  padding: var(--space-6);
+  background: var(--surface-subtle);
+  border-radius: 16px;
+  gap: 24px;
+}
+.subir-foto-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.subir-foto-input {
+  min-height: 44px;
+  padding: 0 14px;
+  background: var(--field-bg);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  box-shadow: none;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.subir-foto-textarea { min-height: 96px; padding: 12px 14px; line-height: 1.5; resize: vertical; }
+.subir-foto-input::placeholder { color: var(--ink-faint); }
+.subir-foto-input:focus {
+  outline: none;
+  background: var(--surface);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-ring);
+}
+.subir-foto-modal .foto-tag.selectable.selected { background: var(--accent-soft); color: var(--accent-ink); border-color: var(--accent-border); }
+.subir-foto-footer {
+  position: sticky;
+  bottom: 0;
+  margin: 0 -32px;
+  padding: 20px 32px;
+  border-top: 1px solid var(--divider);
+  background: var(--surface);
+}
+.foto-detalle-overlay .subir-foto-modal .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 22px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: var(--shadow-btn);
+  transform: none;
+}
+.foto-detalle-overlay .subir-foto-modal .btn-primary:disabled { opacity: 0.4; }
+.foto-detalle-overlay .subir-foto-modal .btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 22px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--border-soft);
+  font-size: 14px;
+  font-weight: 600;
+  box-shadow: none;
+}
+@media (hover: hover) {
+  .foto-detalle-overlay .subir-foto-modal .btn-primary:not(:disabled):hover { background: var(--accent-hover); }
+  .foto-detalle-overlay .subir-foto-modal .btn-secondary:hover { background: var(--field-bg); }
+}
+@media (max-width: 640px) {
+  .foto-detalle-overlay:has(.subir-foto-modal) { padding: 0; align-items: stretch; }
+  .subir-foto-modal { width: 100%; max-width: none; max-height: none; height: 100vh; height: 100dvh; border-radius: 0; }
+  .subir-foto-header { padding: calc(20px + var(--safe-top)) 20px 12px; }
+  .subir-foto-form { padding: 0 16px; }
+  .subir-foto-fields { padding: 20px 16px; }
+  .subir-foto-footer { margin: 0 -16px; padding: 14px 16px calc(14px + var(--safe-bottom)); }
+  .subir-foto-footer > * { flex: 1; }
+}

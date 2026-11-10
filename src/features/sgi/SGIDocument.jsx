@@ -470,8 +470,11 @@ const ConfirmActionForm = ({ actionMode, actionComment, setActionComment, isActi
   };
   const { title, placeholder } = LABELS[actionMode] || {};
   return (
-    <div className="sgi-aprobacion-confirm">
+    <div className={`sgi-aprobacion-confirm mode-${actionMode}`}>
+      <p className="sgi-aprobacion-confirm-title">{title}</p>
+      <label htmlFor="sgi-aprobacion-comment" className="sgi-aprobacion-confirm-label">Comentario</label>
       <textarea
+        id="sgi-aprobacion-comment"
         className="sgi-aprobacion-textarea"
         rows={3}
         placeholder={placeholder}
@@ -480,13 +483,13 @@ const ConfirmActionForm = ({ actionMode, actionComment, setActionComment, isActi
       />
       <div className="sgi-aprobacion-btn-row">
         <button
-          className={actionMode === 'reject' ? 'btn-sgi-aprobacion-danger' : 'btn-sgi-aprobacion-primary'}
+          className={actionMode === 'reject' ? 'btn-sgi-aprobacion-danger solid' : 'btn-sgi-aprobacion-primary'}
           disabled={isActioning}
           onClick={onConfirm}
         >
           {isActioning ? 'Procesando...' : title}
         </button>
-        <button className="btn-sgi-aprobacion-secondary" onClick={onCancel}>Cancelar</button>
+        <button type="button" className="btn-sgi-aprobacion-secondary" onClick={onCancel}>Cancelar</button>
       </div>
     </div>
   );

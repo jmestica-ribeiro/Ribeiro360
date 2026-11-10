@@ -62,12 +62,38 @@
   /* Elevación y z-index centralizados */
   --z-base: 1; --z-dropdown: 900; --z-sticky: 950; --z-sidebar: 1000;
   --z-overlay: 1100; --z-modal: 1200; --z-popover: 1300; --z-toast: 1400;
+  /* Paneles de Select: por encima de cualquier modal (algunos usan z-index 2000-9999) */
+  --z-select: 10000;
 
   /* Safe areas */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-left: env(safe-area-inset-left, 0px);
+
+  /* Acento UI (violeta). El amarillo --primary-color queda para marca */
+  /* Amarillo Ribeiro: fondo/relleno. Texto sobre amarillo → --accent-contrast.
+     Texto/íconos de acento sobre fondo claro → --accent-ink (el amarillo no da contraste). */
+  --accent: #F2DC00;
+  --accent-hover: #E3CE00;
+  --accent-contrast: #1A1A1A;
+  --accent-ink: #6E5F00;
+  --accent-soft: #FCF6C2;
+  --accent-ring: rgba(201, 182, 0, 0.35);
+  --accent-border: rgba(201, 182, 0, 0.6);
+  --app-bg: #F4F4F6;
+  --surface: #FFFFFF;
+  --surface-subtle: #FAFAFB;
+  --field-bg: #F3F4F6;
+  --divider: #F1F1F4;
+  --border-soft: #E5E7EB;
+  --ink: #111827;
+  --ink-2: #374151;
+  --ink-3: #4B5563;
+  --ink-muted: #6B7280;
+  --ink-faint: #9CA3AF;
+  --shadow-card: 0 1px 2px rgba(17, 24, 39, 0.04), 0 8px 24px -12px rgba(17, 24, 39, 0.08);
+  --shadow-btn: 0 1px 2px rgba(17, 24, 39, 0.06);
 
   /* Movimiento */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -95,6 +121,26 @@ body.dark-theme {
   --info-bg: #0B1B3A; --info-border: #1E3A8A;
   --surface-elevated: #2C2D2E;
   --overlay-bg: rgba(0, 0, 0, 0.65);
+  --accent: #F2DC00;
+  --accent-hover: #FFE81A;
+  --accent-contrast: #1A1A1A;
+  --accent-ink: #F2DC00;
+  --accent-soft: rgba(242, 220, 0, 0.14);
+  --accent-ring: rgba(242, 220, 0, 0.3);
+  --accent-border: rgba(242, 220, 0, 0.45);
+  --app-bg: #141518;
+  --surface: #1C1D20;
+  --surface-subtle: #222327;
+  --field-bg: #2A2B30;
+  --divider: #2A2B30;
+  --border-soft: #3A3B41;
+  --ink: #F3F4F6;
+  --ink-2: #D1D5DB;
+  --ink-3: #C4C8CF;
+  --ink-muted: #9CA3AF;
+  --ink-faint: #6B7280;
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px -12px rgba(0, 0, 0, 0.5);
+  --shadow-btn: 0 1px 2px rgba(0, 0, 0, 0.4);
   color-scheme: dark;
 
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
@@ -168,7 +214,7 @@ img { height: auto; }
 }
 
 :focus-visible {
-  outline: 2px solid var(--primary-color);
+  outline: 2px solid var(--accent-ink);
   outline-offset: 2px;
   border-radius: var(--radius-xs);
 }

@@ -1,0 +1,242 @@
+/* Formularios de alta NC / acciones / hitos — lenguaje visual docm.
+   Prefijo `:root body` para ganar especificidad a las reglas base y a sus variantes dark. */
+
+/* Contenedor del paso */
+:root body .ncd-content-panel {
+  background: var(--surface);
+  border: none;
+  border-radius: 24px;
+  box-shadow: var(--shadow-card);
+}
+:root body .ncd-panel-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--divider);
+  padding: 24px 32px 20px;
+}
+:root body .ncd-panel-header-text h3 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+:root body .ncd-panel-header-text p { font-size: 14px; color: var(--ink-muted); }
+:root body .ncd-panel-step-badge {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+:root body .ncd-panel-body { padding: 24px 32px 32px; }
+:root body .ncd-panel-footer {
+  background: var(--surface);
+  border-top: 1px solid var(--divider);
+}
+
+/* Secciones */
+:root body .ncd-form-section {
+  background: var(--surface-subtle);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: var(--space-4);
+}
+:root body .ncd-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  border-bottom: none;
+  padding-bottom: 0;
+  margin: 0 0 20px;
+}
+:root body .ncd-form-grid { column-gap: 20px; row-gap: 24px; }
+
+/* Campos */
+:root body .ncd-form-group label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+:root body .ncd-form-group input:not([type="checkbox"]):not([type="radio"]):not([type="file"]),
+:root body .ncd-form-group select,
+:root body .ncd-form-group textarea {
+  min-height: 44px;
+  padding: 0 14px;
+  background: var(--field-bg);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-size: 14px;
+  color: var(--ink);
+  box-shadow: none;
+}
+:root body .ncd-form-group textarea { padding: 12px 14px; min-height: 96px; line-height: 1.5; }
+:root body .ncd-form-group input::placeholder,
+:root body .ncd-form-group textarea::placeholder { color: var(--ink-faint); }
+:root body .ncd-form-group input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):focus,
+:root body .ncd-form-group select:focus,
+:root body .ncd-form-group textarea:focus {
+  background: var(--surface);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-ring);
+}
+:root body .ncd-input-readonly {
+  background: var(--field-bg);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: var(--ink-muted);
+}
+:root body .ncd-form-group input[type="checkbox"],
+:root body .ncd-form-group input[type="radio"],
+:root body .ncd-check-inline input[type="checkbox"] { accent-color: var(--accent); }
+
+/* Select custom dentro de formularios */
+:root body .ncd-form-group .sel-trigger {
+  background: var(--field-bg);
+  border-color: transparent;
+  border-radius: 999px;
+  padding-left: 18px;
+}
+:root body .ncd-form-group .sel-trigger.open,
+:root body .ncd-form-group .sel-trigger:focus-visible {
+  background: var(--surface);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-ring);
+}
+
+/* Selector de tipo (mantiene el color semántico del tipo) */
+:root body .ncd-tipo-label {
+  border-radius: 999px;
+  border-width: 1px;
+  border-color: transparent;
+  background: var(--field-bg);
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
+/* Chips de normas */
+:root body .ncd-norma-chip {
+  border: 1px solid transparent;
+  background: var(--field-bg);
+  color: var(--ink-muted);
+  font-weight: 500;
+}
+:root body .ncd-norma-chip.active {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+/* Botones de selección de personas */
+:root body .ncd-person-btn,
+:root body .ncd-person-picker-btn,
+:root body .ncd-multi-person-btn {
+  min-height: 44px;
+  background: var(--field-bg);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: var(--ink);
+}
+:root body .ncd-step2-chip {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border-color: transparent;
+}
+
+/* Botones */
+:root body .ncd-btn-primary {
+  min-height: 44px;
+  padding: 0 22px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border: none;
+  font-weight: 600;
+  box-shadow: var(--shadow-btn);
+}
+:root body .ncd-btn-primary:disabled { opacity: 0.4; }
+:root body .ncd-btn-secondary {
+  min-height: 44px;
+  padding: 0 22px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--border-soft);
+  font-weight: 600;
+}
+@media (hover: hover) {
+  :root body .ncd-btn-primary:hover:not(:disabled) { opacity: 1; background: var(--accent-hover); }
+  :root body .ncd-btn-secondary:hover { background: var(--field-bg); border-color: var(--border-soft); }
+}
+
+/* Modales de acción / hito / picker */
+:root body .ncd-accion-modal,
+:root body .ncd-picker-modal,
+:root body .ncd-confirm-rectif-modal {
+  background: var(--surface);
+  border-radius: 24px;
+  box-shadow: 0 20px 60px -20px rgba(17, 24, 39, 0.25);
+}
+:root body .ncd-accion-modal-header,
+:root body .ncd-picker-header {
+  padding: 24px 28px 16px;
+  border-bottom: 1px solid var(--divider);
+}
+:root body .ncd-accion-modal-header h4,
+:root body .ncd-picker-header h4 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+:root body .ncd-accion-modal-body { padding: 24px 28px; gap: 20px; }
+:root body .ncd-accion-datos { padding: 24px 28px 20px; border-bottom: 1px solid var(--divider); }
+:root body .ncd-accion-avance-block { padding: 20px 28px 24px; background: var(--surface-subtle); }
+:root body .ncd-accion-col-right { background: var(--surface); border-left: 1px solid var(--divider); }
+:root body .ncd-accion-modal-footer {
+  padding: 16px 28px;
+  background: var(--surface);
+  border-top: 1px solid var(--divider);
+}
+:root body .ncd-picker-search input {
+  min-height: 40px;
+  background: var(--field-bg);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--ink);
+}
+:root body .ncd-picker-search input:focus {
+  background: var(--surface);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-ring);
+  outline: none;
+}
+:root body .ncd-hito-form {
+  background: var(--surface-subtle);
+  border: none;
+  border-radius: 16px;
+}
+:root body .ncd-hito-file-chip,
+:root body .ncd-adjunto-pick-btn {
+  border-radius: 999px;
+}
+:root body .ncd-causa-raiz-box textarea,
+:root body .ncd-step5-detalle textarea {
+  background: var(--field-bg);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: var(--ink);
+}
+:root body .ncd-causa-raiz-box textarea:focus,
+:root body .ncd-step5-detalle textarea:focus {
+  background: var(--surface);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-ring);
+  outline: none;
+}
+
+@media (max-width: 640px) {
+  :root body .ncd-panel-header { padding: 20px 16px 16px; }
+  :root body .ncd-panel-body { padding: 16px; }
+  :root body .ncd-form-section { padding: 20px 16px; }
+  :root body .ncd-accion-modal { border-radius: 20px 20px 0 0; }
+}

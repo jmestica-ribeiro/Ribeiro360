@@ -54,7 +54,7 @@
 
 /* Panel flotante (desktop) */
 .sel-panel {
-  z-index: var(--z-popover);
+  z-index: var(--z-select);
   display: flex;
   flex-direction: column;
   background: var(--surface-elevated);
@@ -101,7 +101,7 @@
 
 /* Bottom sheet (móvil) */
 .sel-sheet-overlay {
-  position: fixed; inset: 0; z-index: var(--z-popover);
+  position: fixed; inset: 0; z-index: var(--z-select);
   background: var(--overlay-bg);
   display: flex; align-items: flex-end;
   animation: sel-fade 0.15s ease;

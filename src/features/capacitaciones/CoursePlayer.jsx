@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { SafeHtml } from '../../components/common/SafeHtml';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft,
@@ -214,7 +215,7 @@ const CoursePlayer = ({ course, onBack }) => {
       return blocks.map((block, i) => {
         switch (block.tipo) {
           case 'texto':
-            return <div key={i} className="player-text-block" dangerouslySetInnerHTML={{ __html: block.contenido }} />;
+            return <SafeHtml key={i} className="player-text-block" html={block.contenido} />;
           case 'banner':
             return (
               <div 

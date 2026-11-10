@@ -9,7 +9,8 @@ const srcDir = path.join(__dirname, '..', 'src');
 // Reglas de Seguridad e Integridad Puras para React/Supabase
 const SECURITY_RULES = [
   {
-    regex: /dangerouslySetInnerHTML/g,
+    // Se permite solo si el HTML pasa por sanitizeHtml() en la misma línea (ver src/lib/sanitize.js)
+    regex: /dangerouslySetInnerHTML(?!=\{\{\s*__html:\s*sanitizeHtml\()/g,
     name: 'Posible XSS (Cross-Site Scripting)',
     severity: 'ALTA',
     message: 'El uso de dangerouslySetInnerHTML expone la intranet a inyección de scripts externos. Evitar su uso o garantizar la sanitización (ej: DOMPurify).'
