@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, KeyRound } from 'lucide-react';
 import '../Explorar.css';
 
 const PLATAFORMAS = [
@@ -35,9 +35,61 @@ const PLATAFORMAS = [
     emoji: '🚛',
     tag: 'Flota',
   },
+  {
+    label: 'Avances MIE · Saneamiento',
+    desc: 'Página online de seguimiento de avances del MIE en Saneamiento.',
+    url: 'https://infectious-demand-mood-generations.trycloudflare.com',
+    gradient: 'linear-gradient(135deg, #064e3b 0%, #059669 100%)',
+    emoji: '💧',
+    tag: 'Obras',
+    aviso: 'Solicitá tu código de acceso',
+  },
+  {
+    label: 'Análisis de Flota + Combustible',
+    desc: 'Análisis de la flota y consumo de combustible.',
+    url: 'https://studied-nelson-relatively-following.trycloudflare.com/',
+    gradient: 'linear-gradient(135deg, #7f1d1d 0%, #dc2626 100%)',
+    emoji: '⛽',
+    tag: 'Flota',
+    aviso: 'Solicitá tu código de acceso',
+  },
+  {
+    label: 'Cámaras',
+    desc: 'Visualización de cámaras.',
+    url: 'https://landscape-headquarters-trend-directed.trycloudflare.com/',
+    gradient: 'linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%)',
+    emoji: '📹',
+    tag: 'Seguridad',
+    aviso: 'Solicitá tu código de acceso',
+  },
 ];
 
-function PlatformCard({ label, desc, url, gradient, emoji, tag }) {
+const TABLEROS_PYMO = [
+  {
+    label: 'Tablero KPIs',
+    desc: 'Indicadores clave de desempeño del CIO.',
+    url: 'https://kpi-cio.muletdamian.workers.dev/',
+    gradient: 'linear-gradient(135deg, #0c4a6e 0%, #0284c7 100%)',
+    emoji: '📈',
+    tag: 'KPIs',
+  },
+  {
+    label: 'Tablero Historial de tareas',
+    desc: 'Historial y seguimiento de tareas del CIO.',
+    url: 'https://tareas-cio.muletdamian.workers.dev/',
+    gradient: 'linear-gradient(135deg, #3f3f46 0%, #52525b 100%)',
+    emoji: '🗂️',
+    tag: 'Tareas',
+  },
+];
+
+// Cada sección es una "carpeta" con subtítulo. Para sumar otra, agregar un objeto acá.
+const SECCIONES = [
+  { titulo: 'Plataformas', items: PLATAFORMAS },
+  { titulo: 'Tableros Pymo', items: TABLEROS_PYMO },
+];
+
+function PlatformCard({ label, desc, url, gradient, emoji, tag, aviso }) {
   return (
     <a
       href={url}
@@ -75,6 +127,16 @@ function PlatformCard({ label, desc, url, gradient, emoji, tag }) {
             <ExternalLink size={14} color="var(--text-muted)" />
           </div>
           <p style={{ margin: 0, fontSize: '15px', color: 'var(--text-muted)', lineHeight: '1.5' }}>{desc}</p>
+          {aviso && (
+            <div role="note" style={{
+              marginTop: '14px', display: 'flex', alignItems: 'center', gap: '8px',
+              padding: '8px 12px', borderRadius: '10px',
+              background: 'var(--warning-bg)', border: '1px solid var(--warning-border)',
+              color: 'var(--warning)', fontSize: '13px', fontWeight: '600',
+            }}>
+              <KeyRound size={14} aria-hidden="true" /> {aviso}
+            </div>
+          )}
         </div>
       </div>
     </a>
@@ -83,13 +145,16 @@ function PlatformCard({ label, desc, url, gradient, emoji, tag }) {
 
 const PortalCIO = () => (
   <div className="portal-cio">
-    <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '24px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '24px' }}>
-        {PLATAFORMAS.map((p, i) => (
-          <PlatformCard key={i} {...p} />
-        ))}
-      </div>
-    </div>
+    {SECCIONES.map(sec => (
+      <section key={sec.titulo} style={{ borderTop: '1px solid var(--border-color)', paddingTop: '24px', marginBottom: '32px' }}>
+        <h3 style={{ margin: '0 0 16px', fontSize: '18px', fontWeight: '700', color: 'var(--text-main)' }}>{sec.titulo}</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '24px' }}>
+          {sec.items.map(p => (
+            <PlatformCard key={p.url} {...p} />
+          ))}
+        </div>
+      </section>
+    ))}
   </div>
 );
 
