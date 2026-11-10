@@ -424,6 +424,15 @@ body.dark-theme .docm-field input[type="date"] { color-scheme: dark; }
 }
 .docm-switch.on .docm-switch-thumb { transform: translateX(18px); }
 
+.docm-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--dm-muted);
+}
+.docm-segment:has(svg) { gap: 6px; }
+.docm-segment svg { flex-shrink: 0; }
+.docm-field input[aria-invalid="true"] { border-color: var(--dm-danger); }
+
 .docm-hint-error {
   margin-top: 6px;
   font-size: 12px;

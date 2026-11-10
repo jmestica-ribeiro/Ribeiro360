@@ -4,6 +4,7 @@ import {
   FileText, BookOpen, ClipboardList, Folder, ChevronRight, ChevronLeft,
   Plus, X, Download, History, CheckCircle, ShieldCheck, Search,
   AlertCircle, Edit2, Trash2, Save, Lock, Unlock, Tag, Clock, FolderPlus, Minus, Paperclip, Upload,
+  Link2, ExternalLink,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -19,6 +20,7 @@ import {
   uploadSgiArchivo,
   softDeleteSgiDocumento,
   getSgiSignedUrl,
+  isSgiLinkExterno,
   fetchSgiVersionesPendientes,
   searchSgiDocumentos,
   fetchGerentes,
@@ -41,6 +43,8 @@ const EMPTY_DOC_FORM = {
   documento_controlado: false, aprobador_id: '',
   numero_version: '0', fecha_emision: '', notas_cambios: '',
   _archivo: null,
+  _fuente: 'archivo', // 'archivo' | 'link'
+  _link: '',
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -94,6 +98,13 @@ const SGI = () => {
   const [docForm, setDocForm] = useState(EMPTY_DOC_FORM);
   const [isSaving, setIsSaving] = useState(false);
   const [tagInput, setTagInput] = useState('');
+  const [linkTouched, setLinkTouched] = useState(false);
+  const linkValido = (() => {
+    const v = docForm._link.trim();
+    if (!isSgiLinkExterno(v)) return false;
+    try { new URL(v); return true; } catch { return false; }
+  })();
+  const linkError = docForm._fuente === 'link' && linkTouched && docForm._link.trim() !== '' && !linkValido;
 
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [folderForm, setFolderForm] = useState({ nombre: '', descripcion: '' });
@@ -163,6 +174,7 @@ const SGI = () => {
     setDocForm({ ...EMPTY_DOC_FORM, categoria_id: currentCategory?.id || '', fecha_emision: hoyISO() });
     setTagInput('');
     docV.reset();
+    setLinkTouched(false);
     setShowDocModal(true);
   };
 
@@ -183,14 +195,19 @@ const SGI = () => {
       numero_version: refVersion?.numero_version || '0',
       fecha_emision: refVersion?.fecha_emision || '',
       notas_cambios: refVersion?.notas_cambios || '',
+      _archivo: null,
+      _fuente: isSgiLinkExterno(refVersion?.archivo_url) ? 'link' : 'archivo',
+      _link: isSgiLinkExterno(refVersion?.archivo_url) ? refVersion.archivo_url : '',
     });
     docV.reset();
+    setLinkTouched(false);
     setShowDocModal(true);
   };
 
   const handleSaveDoc = async () => {
     if (!docForm.titulo || !docForm.categoria_id) return;
     if (docForm.documento_controlado && !docForm.aprobador_id) return;
+    if (docForm._fuente === 'link' && docForm._link.trim() && !linkValido) { setLinkTouched(true); return; }
     setIsSaving(true);
     const docPayload = {
       titulo: docForm.titulo, codigo: docForm.codigo || null, descripcion: docForm.descripcion || null,
@@ -203,7 +220,9 @@ const SGI = () => {
     };
 
     let archivoPath = null;
-    if (docForm._archivo) {
+    if (docForm._fuente === 'link') {
+      archivoPath = docForm._link.trim() || null;
+    } else if (docForm._archivo) {
       const { path } = await uploadSgiArchivo(
         editingDoc?.id || 'new',
         docForm.numero_version,
@@ -602,9 +621,9 @@ const SGI = () => {
                               const { data } = await getSgiSignedUrl(doc.versionActual.archivo_url, 60);
                               if (data?.signedUrl) window.open(data.signedUrl, '_blank');
                             }}
-                            title="Descargar versión vigente"
+                            title={isSgiLinkExterno(doc.versionActual.archivo_url) ? 'Abrir link de la versión vigente' : 'Descargar versión vigente'}
                           >
-                            <Download size={14} />
+                            {isSgiLinkExterno(doc.versionActual.archivo_url) ? <ExternalLink size={14} /> : <Download size={14} />}
                           </button>
                         )}
                       </>
@@ -841,25 +860,65 @@ const SGI = () => {
                 <section className="docm-section" aria-labelledby="docm-sec-file">
                   <h3 id="docm-sec-file" className="docm-section-label"><Paperclip size={14} strokeWidth={1.5} /> Archivo y ubicación</h3>
                   <div className="docm-grid">
-                    <div className="docm-field docm-span-6">
-                      <label htmlFor="docm-file">Archivo (PDF / Word / Excel)</label>
-                      <label className="docm-file">
-                        <input
-                          id="docm-file"
-                          type="file"
-                          accept=".pdf,.doc,.docx,.xls,.xlsx"
-                          onChange={e => setDocForm(f => ({ ...f, _archivo: e.target.files[0] || null }))}
-                        />
-                        <span className="docm-file-btn"><Upload size={14} strokeWidth={1.5} /> Elegir archivo</span>
-                        <span className="docm-file-name">
-                          {docForm._archivo
-                            ? docForm._archivo.name
-                            : editingDoc
-                              ? 'Dejá vacío para mantener el actual'
-                              : 'Ningún archivo seleccionado'}
-                        </span>
-                      </label>
+                    <div className="docm-field docm-span-12">
+                      <span className="docm-label" id="docm-fuente-label">Origen del documento</span>
+                      <div className="docm-segmented" role="radiogroup" aria-labelledby="docm-fuente-label">
+                        {[
+                          { value: 'archivo', label: 'Adjuntar archivo', Icon: Upload },
+                          { value: 'link', label: 'Link externo', Icon: Link2 },
+                        ].map(({ value, label, Icon }) => (
+                          <label key={value} className={`docm-segment${docForm._fuente === value ? ' active' : ''}`}>
+                            <input
+                              type="radio"
+                              name="docm-fuente"
+                              value={value}
+                              checked={docForm._fuente === value}
+                              onChange={() => setDocForm(f => ({ ...f, _fuente: value }))}
+                            />
+                            <Icon size={14} strokeWidth={1.5} /> {label}
+                          </label>
+                        ))}
+                      </div>
                     </div>
+                    {docForm._fuente === 'archivo' ? (
+                      <div className="docm-field docm-span-6">
+                        <label htmlFor="docm-file">Archivo (PDF / Word / Excel)</label>
+                        <label className="docm-file">
+                          <input
+                            id="docm-file"
+                            type="file"
+                            accept=".pdf,.doc,.docx,.xls,.xlsx"
+                            onChange={e => setDocForm(f => ({ ...f, _archivo: e.target.files[0] || null }))}
+                          />
+                          <span className="docm-file-btn"><Upload size={14} strokeWidth={1.5} /> Elegir archivo</span>
+                          <span className="docm-file-name">
+                            {docForm._archivo
+                              ? docForm._archivo.name
+                              : editingDoc
+                                ? 'Dejá vacío para mantener el actual'
+                                : 'Ningún archivo seleccionado'}
+                          </span>
+                        </label>
+                      </div>
+                    ) : (
+                      <div className="docm-field docm-span-6">
+                        <label htmlFor="docm-link">URL del documento</label>
+                        <input
+                          id="docm-link"
+                          type="url"
+                          inputMode="url"
+                          value={docForm._link}
+                          onChange={e => setDocForm(f => ({ ...f, _link: e.target.value }))}
+                          onBlur={() => setLinkTouched(true)}
+                          placeholder="https://… (SharePoint, OneDrive, Drive, etc.)"
+                          aria-invalid={linkError ? true : undefined}
+                          aria-describedby="docm-link-help"
+                        />
+                        {linkError
+                          ? <FieldError show>Ingresá un link válido que empiece con http:// o https://</FieldError>
+                          : <span id="docm-link-help" className="docm-hint">Se abrirá en una pestaña nueva al consultar el documento.</span>}
+                      </div>
+                    )}
                     <div className="docm-field docm-span-6">
                       <label htmlFor="docm-lugar">Lugar de ubicación física</label>
                       <input id="docm-lugar" value={docForm.lugar_ubicacion} onChange={e => setDocForm(f => ({ ...f, lugar_ubicacion: e.target.value }))} placeholder="Ej: Archivero 3, Cajón B" />

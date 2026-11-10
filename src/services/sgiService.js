@@ -371,7 +371,12 @@ export async function rejectSgiVersion(versionId, comentario = null) {
   return { data, error };
 }
 
+/** true si archivo_url es un link externo (http/https) en lugar de un path de Storage. */
+export const isSgiLinkExterno = (path) => /^https?:\/\//i.test(String(path || '').trim());
+
 export async function getSgiSignedUrl(path, seconds = 60) {
+  // Los links externos se guardan tal cual en archivo_url: no requieren firma.
+  if (isSgiLinkExterno(path)) return { data: { signedUrl: String(path).trim() }, error: null };
   const { data, error } = await supabase.storage
     .from('sgi-documentos')
     .createSignedUrl(path, seconds);
