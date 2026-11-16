@@ -1,4 +1,13 @@
 /**
+ * Devuelve true si el perfil tiene un puesto de gerencia
+ * ("Gerente", "Gerente General", "Gerente RRHH", etc.) y está activo.
+ */
+export function isGerente(profile) {
+  if (!profile || profile.is_active === false) return false;
+  return /^\s*gerente\b/i.test(profile.job_title ?? '');
+}
+
+/**
  * Devuelve true si el perfil del usuario satisface TODAS las reglas de visibilidad.
  * Un array vacío de reglas significa visible para todos.
  *

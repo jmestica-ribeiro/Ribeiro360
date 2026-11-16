@@ -30,6 +30,7 @@ import './SGIDocModal.css';
 import { Select, SubmitButton, FieldError } from '../../components/common';
 import { useRequiredFields } from '../../hooks/useRequiredFields';
 import { hoyISO } from '../../lib/fechas';
+import { isGerente } from '../../lib/visibilidad';
 
 const ICON_MAP = { FileText, BookOpen, ClipboardList, Folder, ShieldCheck };
 
@@ -263,7 +264,11 @@ const SGI = () => {
   const pendientes = pendientesRaw.filter(ver => {
     if (isTester) return true;
     if (ver.estado_aprobacion === 'en_revision' && isRevisorCmass) return true;
-    if (ver.estado_aprobacion === 'pendiente_aprobacion' && profile?.job_title === 'Gerente' && ver.documento?.creador?.department === profile?.department) return true;
+    if (ver.estado_aprobacion === 'pendiente_aprobacion') {
+      const aprobadorId = ver.documento?.aprobador_id;
+      if (aprobadorId) return aprobadorId === profile?.id;
+      return isGerente(profile) && ver.documento?.creador?.department === profile?.department;
+    }
     return false;
   });
 
@@ -838,7 +843,7 @@ const SGI = () => {
                             placeholder="Seleccionar gerente"
                             options={gerentes.map(g => ({
                               value: g.id,
-                              label: `${g.full_name}${g.department ? ` (${g.department})` : ''}`,
+                              label: `${g.full_name}${(g.department || g.job_title) ? ` (${g.department || g.job_title})` : ''}`,
                               description: gerenteSugerido.some(x => x.id === g.id) ? 'Gerente de tu área' : undefined,
                             }))}
                             aria-label="Gerente aprobador"

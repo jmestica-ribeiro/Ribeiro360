@@ -13,6 +13,7 @@ import {
 } from '../../services/sgiService';
 import { useAuth } from '../../contexts/AuthContext';
 import { notificarDocumentoSGI } from '../../lib/notificaciones';
+import { isGerente } from '../../lib/visibilidad';
 import './SGI.css';
 import './SGIDocument.css';
 import { Select } from '../../components/common';
@@ -126,7 +127,7 @@ const SGIDocument = () => {
   const aprobadorEspecifico = documento.aprobador_id || documento.aprobador_perfil?.id;
   const isAprobadorGerente = aprobadorEspecifico
     ? profile?.id === aprobadorEspecifico || isTester
-    : (profile?.job_title === 'Gerente' && !!creadorDept && profile?.department === creadorDept) || isTester;
+    : (isGerente(profile) && !!creadorDept && profile?.department === creadorDept) || isTester;
   const showAprobacionCircuito = documento.documento_controlado && currentEstado;
 
   return (

@@ -246,8 +246,9 @@ export async function searchSgiDocumentos(query, { isAdmin = false } = {}) {
 export async function fetchGerentes() {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, department')
-    .eq('job_title', 'Gerente')
+    .select('id, full_name, department, job_title')
+    .ilike('job_title', 'gerente%')
+    .or('is_active.eq.true,is_active.is.null')
     .not('full_name', 'is', null)
     .order('full_name');
   if (error) console.error('[sgiService] fetchGerentes:', error.message);
@@ -288,7 +289,7 @@ export async function fetchSgiVersionesByDocumento(documentoId) {
 export async function fetchSgiVersionesPendientes() {
   const { data, error } = await supabase
     .from('sgi_versiones')
-    .select('id, estado_aprobacion, numero_version, documento:sgi_documentos!documento_id(id, titulo, codigo, activo, created_by, categoria:sgi_categorias(nombre, color, icono))')
+    .select('id, estado_aprobacion, numero_version, documento:sgi_documentos!documento_id(id, titulo, codigo, activo, created_by, aprobador_id, categoria:sgi_categorias(nombre, color, icono))')
     .in('estado_aprobacion', ['en_revision', 'pendiente_aprobacion']);
   if (error) console.error('[sgiService] fetchSgiVersionesPendientes:', error.message);
   const active = (data ?? []).filter(v => v.documento?.activo !== false);
