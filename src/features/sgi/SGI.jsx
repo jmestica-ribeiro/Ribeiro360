@@ -25,6 +25,7 @@ import {
   searchSgiDocumentos,
   fetchGerentes,
 } from '../../services/sgiService';
+import { notificarDocumentoPublicado } from '../../lib/notificaciones';
 import './SGI.css';
 import './SGIDocModal.css';
 import { Select, SubmitButton, FieldError } from '../../components/common';
@@ -244,7 +245,9 @@ const SGI = () => {
       ...(archivoPath && { archivo_url: archivoPath }),
     } : null;
 
-    await saveSgiDocumento(fullDocPayload, versionData);
+    const { data: saved } = await saveSgiDocumento(fullDocPayload, versionData);
+    // Documento no controlado → queda vigente al instante: avisar a todos
+    if (saved?.publicadoVersionId) notificarDocumentoPublicado({ versionId: saved.publicadoVersionId });
 
     setShowDocModal(false);
     setEditingDoc(null);

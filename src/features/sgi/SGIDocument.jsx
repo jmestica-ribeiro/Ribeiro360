@@ -12,7 +12,7 @@ import {
   updateSgiDocumentoAprobador, fetchGerentes,
 } from '../../services/sgiService';
 import { useAuth } from '../../contexts/AuthContext';
-import { notificarDocumentoSGI } from '../../lib/notificaciones';
+import { notificarDocumentoSGI, notificarDocumentoPublicado } from '../../lib/notificaciones';
 import { isGerente } from '../../lib/visibilidad';
 import './SGI.css';
 import './SGIDocument.css';
@@ -80,9 +80,11 @@ const SGIDocument = () => {
       // Notificar al aprobador que hay una versión esperando su aprobación
       if (aprobadorId) notificarDocumentoSGI({ userId: aprobadorId, ...docParams, evento: 'pendiente_aprobacion' });
     } else if (actionMode === 'approve') {
-      await approveSgiVersion(pendienteVersion.id, documento.id, profile, actionComment || null);
+      const { error: approveErr } = await approveSgiVersion(pendienteVersion.id, documento.id, profile, actionComment || null);
       // Notificar al revisor que su versión fue aprobada
       if (pendienteVersion.revisor_id) notificarDocumentoSGI({ userId: pendienteVersion.revisor_id, ...docParams, evento: 'aprobado' });
+      // La versión quedó vigente → aviso general a todos los usuarios (según config de Admin › SGI)
+      if (!approveErr) notificarDocumentoPublicado({ versionId: pendienteVersion.id });
     } else if (actionMode === 'reject') {
       await rejectSgiVersion(pendienteVersion.id, actionComment || null);
       // Notificar al revisor que su versión fue rechazada

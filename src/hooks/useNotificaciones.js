@@ -2,6 +2,17 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { TIPOS_NC } from '../lib/notificaciones';
 import { visMatchesProfile, courseIsVisible } from '../lib/visibilidad';
+import { fetchNotifConfig, NOTIF_SGI_PUBLICADO, SGI_PUBLICADO_DEFAULTS } from '../services/notifConfigService';
+
+// Aplica la config de Admin › SGI a las versiones SGI que aparecen en la campana
+function filtrarSgiPorConfig(versiones, cfg) {
+  const enabled = cfg?.enabled ?? SGI_PUBLICADO_DEFAULTS.enabled;
+  const op = { ...SGI_PUBLICADO_DEFAULTS.opciones, ...(cfg?.opciones || {}) };
+  if (!enabled || !op.campana) return [];
+  return (versiones || []).filter(v =>
+    !op.excluir_confidenciales || !v.documento?.acceso || v.documento.acceso === 'No Confidencial'
+  );
+}
 
 const WINDOW_DAYS = 30;
 
@@ -111,7 +122,7 @@ export const useNotificaciones = (profile) => {
     since.setDate(since.getDate() - WINDOW_DAYS);
     const sinceISO = since.toISOString();
 
-    const [eventosRes, eventosVisRes, cursosRes, cursosVisRes, cursosDestRes, sgiRes, ncRes] = await Promise.all([
+    const [eventosRes, eventosVisRes, cursosRes, cursosVisRes, cursosDestRes, sgiRes, ncRes, sgiCfgRes] = await Promise.all([
       supabase
         .from('eventos')
         .select('id, titulo, fecha, created_at, categoria:eventos_categorias(nombre, color)')
@@ -129,7 +140,7 @@ export const useNotificaciones = (profile) => {
       supabase.from('cursos_destinatarios').select('curso_id').eq('user_id', profile.id),
       supabase
         .from('sgi_versiones')
-        .select('id, numero_version, fecha_emision, documento_id, documento:sgi_documentos(titulo)')
+        .select('id, numero_version, fecha_emision, documento_id, documento:sgi_documentos(titulo, acceso)')
         .gte('fecha_emision', sinceISO.split('T')[0])
         .eq('vigente', true)
         .order('fecha_emision', { ascending: false })
@@ -141,7 +152,9 @@ export const useNotificaciones = (profile) => {
         .gt('created_at', sinceISO)
         .order('created_at', { ascending: false })
         .limit(20),
+      fetchNotifConfig(NOTIF_SGI_PUBLICADO),
     ]);
+    const sgiVisibles = filtrarSgiPorConfig(sgiRes.data, sgiCfgRes.data);
 
     if (eventosRes.error) console.error('[notif] eventos:', eventosRes.error.message);
     if (cursosRes.error)  console.error('[notif] cursos:', cursosRes.error.message);
@@ -154,14 +167,14 @@ export const useNotificaciones = (profile) => {
       cursos: cursosRes.data,
       cursosVis: cursosVisRes.data,
       cursosDest: cursosDestRes.data,
-      sgi: sgiRes.data,
+      sgi: sgiVisibles,
       nc: ncRes.data,
     };
 
     const items = buildItems(
       eventosRes.data, eventosVisRes.data,
       cursosRes.data, cursosVisRes.data, cursosDestRes.data,
-      sgiRes.data, ncRes.data,
+      sgiVisibles, ncRes.data,
       currentLastSeen
     );
 

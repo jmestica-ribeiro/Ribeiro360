@@ -19,6 +19,8 @@ import { EmptyState, useToast, SubmitButton, FieldError } from '../../../compone
 import { fetchSgiUploaders, updateCanUploadSgi } from '../../../services/usuariosService';
 import { useConfirm } from '../../../contexts/ConfirmContext';
 import { Select } from '../../../components/common';
+import { notificarDocumentoPublicado } from '../../../lib/notificaciones';
+import SgiNotifConfig from './SgiNotifConfig';
 
 const initials = (name = '') =>
   name.trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('') || '?';
@@ -148,8 +150,9 @@ const SGITab = () => {
     const { id, _ver_id, numero_version, fecha_emision, notas_cambios, ...docFields } = editingDoc;
     const docPayload = { ...docFields };
     if (id) docPayload.id = id;
-    const { error } = await saveSgiDocumento(docPayload, { _ver_id, numero_version, fecha_emision, notas_cambios });
+    const { data: saved, error } = await saveSgiDocumento(docPayload, { _ver_id, numero_version, fecha_emision, notas_cambios });
     if (error) return showToast(error.message, 'error');
+    if (saved?.publicadoVersionId) notificarDocumentoPublicado({ versionId: saved.publicadoVersionId });
     await loadSGI();
     closeEdit();
   };
@@ -183,10 +186,14 @@ const SGITab = () => {
       documento_id: editingVer.documento_id,
       revisor: editingVer.revisor || null,
       aprobador: editingVer.aprobador || null,
+      // Versión nueva cargada como vigente por un admin = publicada directamente
+      ...(!editingVer.id && editingVer.vigente && { estado_aprobacion: 'aprobado' }),
     };
 
-    const { error } = await saveSgiVersion(payload);
+    const { data: savedVer, error } = await saveSgiVersion(payload);
     if (error) { showToast(error.message, 'error'); return; }
+    // Nueva revisión marcada vigente → aviso general
+    if (!editingVer.id && payload.vigente && savedVer?.[0]?.id) notificarDocumentoPublicado({ versionId: savedVer[0].id });
     await Promise.all([loadSGI(), refreshVersionesDoc(editingVer.documento_id)]);
     closeEdit();
   };
@@ -488,12 +495,21 @@ const SGITab = () => {
     </div>
   );
 
+  // Documento real (el primero con versión vigente) para la vista previa del aviso
+  const ejemploVer = versiones[0];
+  const ejemploDoc = ejemploVer && documentos.find(d => d.id === ejemploVer.documento_id);
+  const ejemploNotif = ejemploDoc
+    ? { titulo: ejemploDoc.titulo, codigo: ejemploDoc.codigo, versionNumero: ejemploVer.numero_version, documentoId: ejemploDoc.id }
+    : null;
+
   const filteredUploaders = uploaders.filter(u =>
     !uploadersSearch || u.full_name?.toLowerCase().includes(uploadersSearch.toLowerCase()) || u.email?.toLowerCase().includes(uploadersSearch.toLowerCase())
   );
 
   return (
     <div className="admin-list-panel adm-panel">
+      <SgiNotifConfig ejemplo={ejemploNotif} />
+
       <section className="adm-section">
         <div className="admin-list-header">
           <div>

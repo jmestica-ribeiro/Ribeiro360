@@ -98,6 +98,8 @@ export async function saveSgiDocumento(docPayload, versionData) {
     savedDocId = data?.[0]?.id;
   }
 
+  // publicadoVersionId: id de la versión que quedó vigente en este guardado (para notificar)
+  let publicadoVersionId = null;
   if (savedDocId && versionData?.numero_version) {
     const isControlado = docFields.documento_controlado ?? false;
     if (versionData._ver_id) {
@@ -132,11 +134,12 @@ export async function saveSgiDocumento(docPayload, versionData) {
           p_version_id: nuevaVersion.id,
         });
         if (rpcError) console.error('[sgiService] saveSgiDocumento (set vigente):', rpcError.message);
+        else publicadoVersionId = nuevaVersion.id;
       }
     }
   }
 
-  return { error: null };
+  return { data: { documentoId: savedDocId, publicadoVersionId }, error: null };
 }
 
 export async function softDeleteSgiDocumento(id) {

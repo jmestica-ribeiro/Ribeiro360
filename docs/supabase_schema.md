@@ -25,6 +25,14 @@
 | departamento | string | text | PK — nombre exacto del departamento |
 | publico | boolean | | Si true, visible para todos los empleados |
 
+### notif_config
+| Columna | Tipo | Formato | Info |
+|:---|:---|:---|:---|
+| key | string | text | PK — tipo de aviso (ej: `sgi_documento_publicado`) |
+| enabled | boolean | | Interruptor general |
+| opciones | object | jsonb | SGI: email, campana, nuevos, revisiones, excluir_confidenciales, mensaje_extra |
+| updated_by | string | uuid | Admin que lo modificó |
+
 ### sgi_categorias
 | Columna | Tipo | Formato | Info |
 |:---|:---|:---|:---|
@@ -51,6 +59,7 @@
 | numero_version | string | | |
 | vigente | boolean | | Solo una activa |
 | archivo_url | string | | Path en Storage |
+| notificado_at | string | timestamptz | Cuándo se envió el email masivo de publicación (evita duplicados) |
 
 ### nc_hallazgos
 | Columna | Tipo | Formato | Info |

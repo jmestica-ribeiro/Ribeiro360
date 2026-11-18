@@ -102,6 +102,23 @@ export function notificarDocumentoSGI({ userId, documentoTitulo, versionNumero, 
     .catch(err => console.warn('[notif] sgi invoke failed:', err?.message));
 }
 
+// ── notificarDocumentoPublicado ────────────────────────────────────────────────
+
+/**
+ * Avisa por email a todos los usuarios que una versión SGI quedó vigente.
+ * La Edge Function lee los datos de la DB, aplica la config de Admin › SGI
+ * (on/off, nuevos/revisiones, confidenciales) y evita envíos duplicados.
+ */
+export function notificarDocumentoPublicado({ versionId }) {
+  if (!versionId) return;
+  supabase.functions
+    .invoke('send-nc-email', { body: { notifType: 'sgi_publicado', versionId } })
+    .then(({ error: fnErr }) => {
+      if (fnErr) console.warn('[notif] sgi publicado email error:', fnErr.message);
+    })
+    .catch(err => console.warn('[notif] sgi publicado invoke failed:', err?.message));
+}
+
 // ── notificarAccionIncidente ───────────────────────────────────────────────────
 
 /**

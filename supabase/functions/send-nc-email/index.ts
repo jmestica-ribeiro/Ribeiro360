@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { handleCors, getCorsHeaders } from '../_shared/cors.ts';
-import { getAuthenticatedUser, getAdminClient } from '../_shared/auth.ts';
+import { getAuthenticatedUser, getAdminClient, requireAdminRole } from '../_shared/auth.ts';
 
 const APP_URL = 'https://intranet.ribeiro.ar';
 
@@ -31,8 +31,9 @@ function emailLayout(params: {
   link: string;
   linkLabel: string;
   footer?: string;
+  extraHtml?: string;
 }): string {
-  const { primerNombre, subtitulo, mensaje, badgeLabel, badgeValue, badgeLabel2, badgeValue2, link, linkLabel, footer } = params;
+  const { primerNombre, subtitulo, mensaje, badgeLabel, badgeValue, badgeLabel2, badgeValue2, link, linkLabel, footer, extraHtml } = params;
 
   const badge2Html = badgeLabel2 ? `
                   <td style="padding:16px 20px;border-left:1px solid #e5e7eb;">
@@ -70,6 +71,7 @@ function emailLayout(params: {
             <td style="padding:32px;">
               <p style="margin:0 0 8px;font-size:15px;color:#6b7280;">Hola, <strong style="color:#111827;">${primerNombre}</strong></p>
               <h2 style="margin:0 0 20px;font-size:22px;font-weight:700;color:#111827;line-height:1.3;">${mensaje}</h2>
+              ${extraHtml ?? ''}
               <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:28px;">
                 <tr>
                   <td style="padding:16px 20px;">
@@ -137,6 +139,41 @@ function buildSgiHtml(fullName: string, documentoTitulo: string, versionNumero: 
     link: `${APP_URL}/sgi/documento/${documentoId}`,
     linkLabel: 'Ver documento →',
     footer: 'Este email fue generado automáticamente por Ribeiro 360.<br />Si creés que fue un error, contactá al área de SGI.',
+  });
+}
+
+function escapeHtml(s: string): string {
+  const map: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  return String(s ?? '').replace(/[&<>"']/g, c => map[c]);
+}
+
+type SgiPublicado = { documentoId: string; titulo: string; codigo?: string | null; versionNumero?: string | null; esNuevo: boolean; mensajeExtra?: string | null };
+
+function sgiPublicadoSubject(d: SgiPublicado): string {
+  return d.esNuevo
+    ? `Nuevo documento SGI: ${d.titulo} · Ribeiro 360`
+    : `Documento SGI actualizado: ${d.titulo} · Ribeiro 360`;
+}
+
+function buildSgiPublicadoHtml(fullName: string, d: SgiPublicado): string {
+  const titulo = escapeHtml(d.titulo);
+  const extra = d.mensajeExtra?.trim()
+    ? `<p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6;white-space:pre-line;">${escapeHtml(d.mensajeExtra.trim())}</p>`
+    : '';
+  return emailLayout({
+    primerNombre: escapeHtml(fullName?.split(' ')[0] || 'Hola'),
+    subtitulo: 'SGI · Documentos',
+    mensaje: d.esNuevo
+      ? `Se publicó un nuevo documento: "${titulo}"`
+      : `Hay una nueva revisión vigente de "${titulo}"`,
+    extraHtml: extra,
+    badgeLabel: 'Documento',
+    badgeValue: d.codigo ? `${escapeHtml(d.codigo)} · ${titulo}` : titulo,
+    badgeLabel2: 'Revisión',
+    badgeValue2: d.versionNumero ? `Rev. ${escapeHtml(d.versionNumero)}` : '—',
+    link: `${APP_URL}/sgi/documento/${encodeURIComponent(d.documentoId)}`,
+    linkLabel: 'Ver documento →',
+    footer: 'Este email fue generado automáticamente por Ribeiro 360 al publicarse un documento del SGI.',
   });
 }
 
@@ -339,6 +376,25 @@ async function sendEmail(resendKey: string, to: string, subject: string, html: s
   }
 }
 
+// ── Helper: envío masivo por lotes (Resend batch, máx. 100 por request) ─────
+// Evita el rate limit de Resend (~2 req/s), que hace fallar un Promise.all con cientos de emails.
+
+async function sendBatch(resendKey: string, emails: { to: string; subject: string; html: string }[]): Promise<{ sent: number; failed: number }> {
+  let sent = 0, failed = 0;
+  for (let i = 0; i < emails.length; i += 100) {
+    const chunk = emails.slice(i, i + 100);
+    const res = await fetch('https://api.resend.com/emails/batch', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${resendKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(chunk.map(e => ({ from: 'Ribeiro 360 <notificaciones@notificaciones.ribeiro.ar>', to: [e.to], subject: e.subject, html: e.html }))),
+    });
+    if (res.ok) sent += chunk.length;
+    else { failed += chunk.length; console.error('[send-nc-email] batch error', res.status, await res.text()); }
+    if (i + 100 < emails.length) await new Promise(r => setTimeout(r, 600));
+  }
+  return { sent, failed };
+}
+
 // ── Serve ─────────────────────────────────────────────────────────────────────
 
 serve(async (req: Request) => {
@@ -348,7 +404,7 @@ serve(async (req: Request) => {
   const corsHeaders = getCorsHeaders(req);
 
   try {
-    await getAuthenticatedUser(req);
+    const authUser = await getAuthenticatedUser(req);
     const adminClient = getAdminClient();
 
     const resendKey = Deno.env.get('RESEND_API_KEY');
@@ -361,6 +417,92 @@ serve(async (req: Request) => {
 
     const body = await req.json();
     const notifType: string = body.notifType ?? 'nc';
+    const json = (obj: unknown, status = 200) =>
+      new Response(JSON.stringify(obj), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
+    // ── SGI documento publicado: todos los usuarios ───────────────────────
+    // mode 'send'    → envío real. Los datos se leen de la DB (no se confía en el cliente),
+    //                  se respeta notif_config y se marca la versión para no reenviar.
+    // mode 'preview' → (admin) devuelve asunto + HTML + cantidad de destinatarios, sin enviar.
+    // mode 'test'    → (admin) envía el email de muestra solo al admin que lo pide.
+    if (notifType === 'sgi_publicado') {
+      const mode: string = body.mode ?? 'send';
+
+      if (mode === 'preview' || mode === 'test') {
+        await requireAdminRole(adminClient, authUser.id);
+        const sample: SgiPublicado = {
+          documentoId: body.documentoId ?? 'preview',
+          titulo: String(body.titulo || 'Procedimiento de ejemplo'),
+          codigo: body.codigo ?? null,
+          versionNumero: body.versionNumero ?? null,
+          esNuevo: body.esNuevo !== false,
+          mensajeExtra: body.mensajeExtra ?? null,
+        };
+        const { data: me } = await adminClient.from('profiles').select('full_name, email').eq('id', authUser.id).single();
+        if (mode === 'preview') {
+          const { count } = await adminClient.from('profiles').select('id', { count: 'exact', head: true }).not('email', 'is', null);
+          return json({ ok: true, subject: sgiPublicadoSubject(sample), html: buildSgiPublicadoHtml(me?.full_name ?? 'Nombre', sample), recipients: count ?? 0 });
+        }
+        const to = me?.email ?? authUser.email;
+        if (!to) return json({ error: 'Tu usuario no tiene email' }, 400);
+        await sendEmail(resendKey, to, `[PRUEBA] ${sgiPublicadoSubject(sample)}`, buildSgiPublicadoHtml(me?.full_name ?? '', sample));
+        return json({ ok: true, sent: 1, to });
+      }
+
+      const { versionId } = body;
+      if (!versionId) return json({ error: 'Falta versionId' }, 400);
+
+      const { data: cfg } = await adminClient.from('notif_config').select('enabled, opciones').eq('key', 'sgi_documento_publicado').maybeSingle();
+      const op = (cfg?.opciones ?? {}) as Record<string, unknown>;
+      if (!cfg?.enabled || !op.email) return json({ ok: true, sent: 0, skipped: 'deshabilitado' });
+
+      const { data: ver, error: vErr } = await adminClient
+        .from('sgi_versiones')
+        .select('id, documento_id, numero_version, vigente, estado_aprobacion, notificado_at, documento:sgi_documentos(id, titulo, codigo, acceso, activo)')
+        .eq('id', versionId)
+        .single();
+      if (vErr || !ver) return json({ error: 'Versión no encontrada' }, 404);
+      const doc = ver.documento as unknown as { id: string; titulo: string; codigo: string | null; acceso: string | null; activo: boolean } | null;
+
+      if (!ver.vigente || !doc || doc.activo === false) return json({ ok: true, sent: 0, skipped: 'no_vigente' });
+      if (['en_revision', 'pendiente_aprobacion', 'rechazado'].includes(ver.estado_aprobacion)) return json({ ok: true, sent: 0, skipped: 'no_aprobado' });
+      if (ver.notificado_at) return json({ ok: true, sent: 0, skipped: 'ya_notificado' });
+      if (op.excluir_confidenciales && doc.acceso && doc.acceso !== 'No Confidencial') return json({ ok: true, sent: 0, skipped: 'confidencial' });
+
+      // ¿Primer publicación del documento o revisión de uno existente?
+      const { count: previas } = await adminClient
+        .from('sgi_versiones')
+        .select('id', { count: 'exact', head: true })
+        .eq('documento_id', ver.documento_id)
+        .neq('id', ver.id)
+        .or('estado_aprobacion.eq.aprobado,estado_aprobacion.is.null');
+      const esNuevo = (previas ?? 0) === 0;
+      if (esNuevo && op.nuevos === false) return json({ ok: true, sent: 0, skipped: 'nuevos_off' });
+      if (!esNuevo && op.revisiones === false) return json({ ok: true, sent: 0, skipped: 'revisiones_off' });
+
+      // Marca condicional antes de enviar: dos llamadas simultáneas no pueden enviar dos veces.
+      const { data: claimed } = await adminClient
+        .from('sgi_versiones')
+        .update({ notificado_at: new Date().toISOString() })
+        .eq('id', ver.id)
+        .is('notificado_at', null)
+        .select('id');
+      if (!claimed?.length) return json({ ok: true, sent: 0, skipped: 'ya_notificado' });
+
+      const { data: allProfiles, error: pErr } = await adminClient.from('profiles').select('full_name, email').not('email', 'is', null);
+      if (pErr) throw pErr;
+
+      const data: SgiPublicado = {
+        documentoId: doc.id, titulo: doc.titulo, codigo: doc.codigo, versionNumero: ver.numero_version,
+        esNuevo, mensajeExtra: (op.mensaje_extra as string) || null,
+      };
+      const subject = sgiPublicadoSubject(data);
+      const result = await sendBatch(resendKey, (allProfiles ?? []).map((p: { full_name: string; email: string }) => ({
+        to: p.email, subject, html: buildSgiPublicadoHtml(p.full_name, data),
+      })));
+      if (result.failed) console.error('[send-nc-email] sgi_publicado fallos:', result.failed);
+      return json({ ok: true, ...result });
+    }
 
     // ── NC: múltiples usuarios ─────────────────────────────────────────────
     if (notifType === 'nc') {
@@ -536,6 +678,9 @@ serve(async (req: Request) => {
 
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Error interno';
+    if (message === 'FORBIDDEN') {
+      return new Response(JSON.stringify({ error: 'Requiere rol admin' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
     if (message === 'UNAUTHORIZED') {
       return new Response(JSON.stringify({ error: 'No autenticado' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
