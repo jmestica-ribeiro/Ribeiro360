@@ -66,6 +66,26 @@ export async function saveSgiCategoria(payload) {
   return { data, error };
 }
 
+/**
+ * Mueve/reordena carpetas (drag & drop del admin).
+ * @param {{ id, parent_id, orden }[]} cambios - solo las carpetas que cambiaron
+ */
+export async function moveSgiCategorias(cambios) {
+  const results = await Promise.all(cambios.map(({ id, parent_id, orden }) =>
+    supabase.from('sgi_categorias').update({ parent_id: parent_id || null, orden }).eq('id', id)
+  ));
+  const error = results.find(r => r.error)?.error ?? null;
+  if (error) console.error('[sgiService] moveSgiCategorias:', error.message);
+  return { data: null, error };
+}
+
+/** Mueve un documento a otra carpeta (drag & drop del admin). */
+export async function moveSgiDocumento(documentoId, categoriaId) {
+  const { error } = await supabase.from('sgi_documentos').update({ categoria_id: categoriaId }).eq('id', documentoId);
+  if (error) console.error('[sgiService] moveSgiDocumento:', error.message);
+  return { data: null, error };
+}
+
 export async function deleteSgiCategoria(id) {
   const { error } = await supabase.from('sgi_categorias').delete().eq('id', id);
   if (error) console.error('[sgiService] deleteSgiCategoria:', error.message);

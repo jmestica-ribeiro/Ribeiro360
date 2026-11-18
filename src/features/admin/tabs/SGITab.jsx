@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, ChevronLeft, ChevronRight, ChevronDown, FileText, FolderPlus, FilePlus, Download, Folder, Pencil, Search } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Trash2, Save, ChevronLeft, ChevronRight, ChevronDown, FileText, FolderPlus, FilePlus, Download, Folder, Pencil, Search, GripVertical, Move, X, CornerDownRight, ArrowUpDown, FolderInput } from 'lucide-react';
 import { formatFecha, hoyISO } from '../../../lib/fechas';
 import { useRequiredFields } from '../../../hooks/useRequiredFields';
 import {
@@ -14,6 +14,8 @@ import {
   deleteSgiVersion,
   uploadSgiArchivo,
   getSgiSignedUrl,
+  moveSgiCategorias,
+  moveSgiDocumento,
 } from '../../../services/sgiService';
 import { EmptyState, useToast, SubmitButton, FieldError } from '../../../components/common';
 import { fetchSgiUploaders, updateCanUploadSgi } from '../../../services/usuariosService';
@@ -47,7 +49,7 @@ const sugerirCodigo = (docs) => {
 
 const SGITab = () => {
   const confirm = useConfirm();
-  const { showToast } = useToast();
+  const { showToast, toast } = useToast();
   const [categorias, setCategorias] = useState([]);
   const [documentos, setDocumentos] = useState([]);
   const [versiones, setVersiones] = useState([]); // solo la version vigente de cada documento
@@ -204,6 +206,155 @@ const SGITab = () => {
     await Promise.all([loadSGI(), refreshVersionesDoc(documentoId)]);
   };
 
+  // ── Drag & drop ───────────────────────────────────────────────────────────
+  // Carpeta sobre carpeta: borde superior/inferior = antes/después (mismo nivel), centro = adentro.
+  // Documento sobre carpeta (o sobre otro documento) = mover a esa carpeta.
+  const [drag, setDrag] = useState(null);             // { type: 'cat' | 'doc', id }
+  const [dropTarget, setDropTarget] = useState(null); // { id: carpetaId, pos: 'before' | 'inside' | 'after' }
+  const expandTimer = useRef(null);
+  const HINT_KEY = 'sgi-admin-dnd-hint-closed';
+  const [showDndHint, setShowDndHint] = useState(() => {
+    try { return localStorage.getItem(HINT_KEY) !== '1'; } catch { return true; }
+  });
+  const closeDndHint = () => {
+    setShowDndHint(false);
+    try { localStorage.setItem(HINT_KEY, '1'); } catch { /* sin storage: solo se oculta en esta sesión */ }
+  };
+
+  const catName = (id) => categorias.find(c => c.id === id)?.nombre ?? 'la carpeta';
+  const sameParent = (a, b) => (a ?? null) === (b ?? null);
+
+  const isDescendant = (catId, ancestorId) => {
+    let c = categorias.find(x => x.id === catId);
+    while (c?.parent_id) {
+      if (c.parent_id === ancestorId) return true;
+      c = categorias.find(x => x.id === c.parent_id);
+    }
+    return false;
+  };
+
+  const clearDrag = () => {
+    clearTimeout(expandTimer.current);
+    setDrag(null);
+    setDropTarget(null);
+  };
+
+  const handleDragStart = (e, type, id) => {
+    e.stopPropagation();
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id); // requerido por Firefox
+    setDrag({ type, id });
+  };
+
+  // targetCatId: carpeta destino; overCat: true si el puntero está sobre la fila de esa carpeta
+  const handleDragOver = (e, targetCatId, overCat) => {
+    if (!drag) return;
+    const invalid = () => { if (dropTarget) setDropTarget(null); };
+    let pos = 'inside';
+    if (drag.type === 'cat') {
+      // No se puede soltar sobre un documento, sobre sí misma ni dentro de una subcarpeta propia
+      if (!overCat || targetCatId === drag.id || isDescendant(targetCatId, drag.id)) return invalid();
+      const { top, height } = e.currentTarget.getBoundingClientRect();
+      const y = (e.clientY - top) / height;
+      pos = y < 0.25 ? 'before' : y > 0.75 ? 'after' : 'inside';
+    } else if (documentos.find(d => d.id === drag.id)?.categoria_id === targetCatId) {
+      return invalid(); // ya está en esa carpeta
+    }
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dropTarget?.id !== targetCatId || dropTarget?.pos !== pos) {
+      setDropTarget({ id: targetCatId, pos });
+      // Abrir la carpeta si el puntero se queda encima
+      clearTimeout(expandTimer.current);
+      if (pos === 'inside' && !expandedCats[targetCatId]) {
+        expandTimer.current = setTimeout(() => setExpandedCats(s => ({ ...s, [targetCatId]: true })), 700);
+      }
+    }
+  };
+
+  const applyCatMoves = (moves) => setCategorias(prev =>
+    prev.map(c => { const m = moves.find(x => x.id === c.id); return m ? { ...c, parent_id: m.parent_id, orden: m.orden } : c; })
+      .sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
+  );
+
+  const handleDrop = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const d = drag, t = dropTarget;
+    clearDrag();
+    if (!d || !t) return;
+
+    if (d.type === 'doc') {
+      const doc = documentos.find(x => x.id === d.id);
+      if (!doc || doc.categoria_id === t.id) return;
+      const prevCat = doc.categoria_id;
+      const setCat = (catId) => setDocumentos(prev => prev.map(x => x.id === doc.id ? { ...x, categoria_id: catId } : x));
+      setCat(t.id);
+      setExpandedCats(s => ({ ...s, [t.id]: true }));
+      const { error } = await moveSgiDocumento(doc.id, t.id);
+      if (error) { setCat(prevCat); return showToast('No se pudo mover el documento', 'error'); }
+      toast.success({
+        title: `“${doc.titulo}” movido a ${catName(t.id)}`,
+        action: { label: 'Deshacer', onClick: async () => {
+          setCat(prevCat);
+          const { error: undoErr } = await moveSgiDocumento(doc.id, prevCat);
+          if (undoErr) { showToast('No se pudo deshacer', 'error'); loadSGI(); }
+        } },
+      });
+      return;
+    }
+
+    // Carpeta: recalcular el orden de los hermanos en el nivel destino
+    const moved = categorias.find(c => c.id === d.id);
+    const target = categorias.find(c => c.id === t.id);
+    if (!moved || !target) return;
+    const newParent = t.pos === 'inside' ? target.id : (target.parent_id ?? null);
+    const siblings = categorias.filter(c => sameParent(c.parent_id, newParent) && c.id !== moved.id);
+    const idx = t.pos === 'inside' ? siblings.length
+      : siblings.findIndex(c => c.id === target.id) + (t.pos === 'after' ? 1 : 0);
+    siblings.splice(idx, 0, moved);
+
+    const moves = siblings
+      .map((c, i) => ({ id: c.id, parent_id: newParent, orden: i + 1 }))
+      .filter(m => { const c = categorias.find(x => x.id === m.id); return !sameParent(c.parent_id, m.parent_id) || c.orden !== m.orden; });
+    if (moves.length === 0) return;
+    const snapshot = moves.map(m => { const c = categorias.find(x => x.id === m.id); return { id: c.id, parent_id: c.parent_id ?? null, orden: c.orden }; });
+
+    applyCatMoves(moves);
+    if (t.pos === 'inside') setExpandedCats(s => ({ ...s, [target.id]: true }));
+    const { error } = await moveSgiCategorias(moves);
+    if (error) { showToast('No se pudo mover la carpeta', 'error'); return loadSGI(); }
+    toast.success({
+      title: t.pos === 'inside' ? `“${moved.nombre}” movida a ${target.nombre}` : `“${moved.nombre}” reordenada`,
+      action: { label: 'Deshacer', onClick: async () => {
+        applyCatMoves(snapshot);
+        const { error: undoErr } = await moveSgiCategorias(snapshot);
+        if (undoErr) { showToast('No se pudo deshacer', 'error'); loadSGI(); }
+      } },
+    });
+  };
+
+  // Texto de la barra flotante mientras se arrastra: qué pasa si soltás ahora
+  const dragStatus = (() => {
+    if (!drag) return null;
+    const item = drag.type === 'doc'
+      ? documentos.find(x => x.id === drag.id)?.titulo
+      : categorias.find(x => x.id === drag.id)?.nombre;
+    if (!dropTarget) {
+      return { item, accion: drag.type === 'doc' ? 'Soltalo sobre una carpeta' : 'Soltala sobre otra carpeta' };
+    }
+    const destino = catName(dropTarget.id);
+    const accion = dropTarget.pos === 'before' ? `Ubicar antes de “${destino}”`
+      : dropTarget.pos === 'after' ? `Ubicar después de “${destino}”`
+      : `Mover dentro de “${destino}”`;
+    return { item, accion, ok: true };
+  })();
+
+  const dropClass = (catId) => {
+    if (dropTarget?.id !== catId) return '';
+    return ` drop-${dropTarget.pos}`;
+  };
+
   // ── Tree helpers ──────────────────────────────────────────────────────────
   const getRecursiveDocCount = (catId) => {
     const directDocs = documentos.filter(d => d.categoria_id === catId).length;
@@ -222,7 +373,18 @@ const SGITab = () => {
 
     return (
       <React.Fragment key={cat.id}>
-        <li className="adm-row sgi-adm-cat" style={{ '--depth': depth, ...(tone ? { '--tone': tone } : {}) }}>
+        <li
+          className={`adm-row sgi-adm-cat sgi-dnd${drag?.id === cat.id ? ' is-dragging' : ''}${dropClass(cat.id)}`}
+          style={{ '--depth': depth, ...(tone ? { '--tone': tone } : {}) }}
+          draggable
+          title="Arrastrá para mover o reordenar"
+          data-drop-label="Soltar acá"
+          onDragStart={e => handleDragStart(e, 'cat', cat.id)}
+          onDragOver={e => handleDragOver(e, cat.id, true)}
+          onDrop={handleDrop}
+          onDragEnd={clearDrag}
+        >
+          <span className="sgi-grip" aria-hidden="true"><GripVertical size={16} strokeWidth={1.5} /></span>
           <button
             type="button"
             className="adm-action"
@@ -259,7 +421,17 @@ const SGITab = () => {
               const docVers = versionesPorDoc[doc.id];
               return (
                 <React.Fragment key={doc.id}>
-                  <li className="adm-row" style={{ '--depth': depth + 1 }}>
+                  <li
+                    className={`adm-row sgi-dnd${drag?.id === doc.id ? ' is-dragging' : ''}`}
+                    style={{ '--depth': depth + 1 }}
+                    draggable
+                    title="Arrastrá a otra carpeta para moverlo"
+                    onDragStart={e => handleDragStart(e, 'doc', doc.id)}
+                    onDragOver={e => handleDragOver(e, cat.id, false)}
+                    onDrop={handleDrop}
+                    onDragEnd={clearDrag}
+                  >
+                    <span className="sgi-grip" aria-hidden="true"><GripVertical size={16} strokeWidth={1.5} /></span>
                     <button
                       type="button"
                       className="adm-action"
@@ -571,12 +743,37 @@ const SGITab = () => {
             <Plus size={16} strokeWidth={1.5} /> Nueva categoría
           </button>
         </div>
+        {categorias.length > 0 && showDndHint && (
+          <div className="sgi-dnd-hint" role="note">
+            <span className="sgi-dnd-hint-icon"><Move size={18} strokeWidth={1.5} /></span>
+            <div className="sgi-dnd-hint-body">
+              <strong>Reorganizá arrastrando</strong>
+              <span>Tomá cualquier carpeta o documento desde <GripVertical size={13} strokeWidth={1.5} className="sgi-inline-icon" /> y soltalo donde quieras:</span>
+              <ul>
+                <li><FolderInput size={14} strokeWidth={1.5} /> <b>Centro de una carpeta</b>: lo mete adentro</li>
+                <li><ArrowUpDown size={14} strokeWidth={1.5} /> <b>Borde de arriba o abajo</b>: reordena la carpeta en ese nivel</li>
+                <li><CornerDownRight size={14} strokeWidth={1.5} /> Si te quedás encima de una carpeta cerrada, se abre sola</li>
+              </ul>
+            </div>
+            <button type="button" className="adm-action sm" aria-label="Ocultar ayuda" title="Entendido, no mostrar más" onClick={closeDndHint}>
+              <X size={14} strokeWidth={1.5} />
+            </button>
+          </div>
+        )}
         {categorias.length === 0 ? (
           <EmptyState message="No hay categorías. Creá la primera con el botón de arriba." />
         ) : (
-          <ul className="adm-list sgi-adm-tree">
+          <ul className={`adm-list sgi-adm-tree${drag ? ' is-dnd-active' : ''}`}>
             {categorias.filter(c => !c.parent_id).map(cat => renderCategory(cat, 0))}
           </ul>
+        )}
+        {dragStatus && (
+          <div className={`sgi-dnd-status${dragStatus.ok ? ' ok' : ''}`} role="status" aria-live="polite">
+            <Move size={15} strokeWidth={1.5} />
+            <span className="sgi-dnd-status-item">{dragStatus.item}</span>
+            <span className="sgi-dnd-status-sep">→</span>
+            <span>{dragStatus.accion}</span>
+          </div>
         )}
       </section>
     </div>

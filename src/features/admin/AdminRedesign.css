@@ -1265,6 +1265,105 @@ button.adm-badge { border: none; cursor: pointer; font-family: inherit; min-heig
 .adm-date strong { font-size: 16px; font-weight: 700; }
 .adm-date small { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
 
+/* Árbol SGI: drag & drop de carpetas y documentos */
+.sgi-dnd { cursor: grab; transition: background 0.12s, box-shadow 0.12s, opacity 0.12s; }
+.sgi-dnd:active { cursor: grabbing; }
+.sgi-dnd.is-dragging { opacity: 0.4; }
+.sgi-dnd.drop-inside { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); border-radius: 10px; }
+.sgi-dnd.drop-before { box-shadow: inset 0 3px 0 0 var(--accent); }
+.sgi-dnd.drop-after  { box-shadow: inset 0 -3px 0 0 var(--accent); }
+.sgi-dnd.drop-inside::after {
+  content: attr(data-drop-label);
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+}
+.sgi-dnd.drop-inside .adm-actions, .sgi-dnd.drop-inside .adm-row-side { visibility: hidden; }
+
+/* Manija ⋮⋮: siempre visible tenue, se marca al pasar el mouse */
+.sgi-grip {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  margin-right: -6px;
+  flex-shrink: 0;
+  color: var(--ink-faint);
+  opacity: 0.6;
+  transition: opacity 0.15s, color 0.15s;
+}
+@media (hover: hover) {
+  .sgi-dnd:hover > .sgi-grip { opacity: 1; color: var(--accent-ink); }
+}
+/* Mientras se arrastra, ocultar acciones para que el árbol sea solo destino */
+.sgi-adm-tree.is-dnd-active .adm-actions { opacity: 0 !important; pointer-events: none; }
+
+/* Cartel de ayuda */
+.sgi-dnd-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4, 16px);
+  padding: 14px 16px;
+  border: 1px solid var(--accent-border);
+  border-radius: 14px;
+  background: var(--accent-soft);
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.sgi-dnd-hint-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--accent-ink);
+}
+.sgi-dnd-hint-body { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+.sgi-dnd-hint-body strong { color: var(--ink); font-size: 14px; }
+.sgi-dnd-hint-body ul { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.sgi-dnd-hint-body li { display: flex; align-items: center; gap: 8px; }
+.sgi-dnd-hint-body li svg { flex-shrink: 0; color: var(--accent-ink); }
+.sgi-dnd-hint-body b { color: var(--ink); font-weight: 600; }
+.sgi-inline-icon { vertical-align: -2px; color: var(--accent-ink); }
+
+/* Barra flotante mientras se arrastra */
+.sgi-dnd-status {
+  position: fixed;
+  left: 50%;
+  bottom: calc(24px + var(--safe-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: var(--z-overlay, 1000);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(640px, calc(100vw - 32px));
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-lg);
+  color: var(--ink-muted);
+  font-size: 13px;
+  pointer-events: none;
+  animation: sgi-dnd-in 0.15s var(--ease-out, ease-out);
+}
+.sgi-dnd-status.ok { border-color: var(--accent-border); color: var(--ink); }
+.sgi-dnd-status.ok svg { color: var(--accent-ink); }
+.sgi-dnd-status-item { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: var(--ink); }
+.sgi-dnd-status-sep { color: var(--ink-faint); }
+@keyframes sgi-dnd-in { from { opacity: 0; transform: translate(-50%, 8px); } }
+@media (prefers-reduced-motion: reduce) { .sgi-dnd-status { animation: none; } }
+
 /* Reordenables (Onboarding) */
 .adm-row-draggable { cursor: grab; background: var(--surface); }
 .adm-row-draggable:active { cursor: grabbing; }
