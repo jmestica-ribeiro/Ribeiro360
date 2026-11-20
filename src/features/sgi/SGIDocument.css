@@ -591,3 +591,22 @@
   .sgi-aprobacion-action-area { padding: var(--space-4); }
   .sgi-aprobacion-btn-row > button { flex: 1; }
 }
+
+/* ── Vista previa in-app ── */
+.sgi-hero-file-actions { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.sgi-hero-dl-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sgi-hero-dl-link:hover { color: var(--text-main); background: var(--surface-subtle); }
+.sgi-file-btns { display: inline-flex; gap: 4px; justify-content: center; }

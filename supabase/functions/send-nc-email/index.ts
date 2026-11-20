@@ -63,9 +63,10 @@ function buildSgiHtml(fullName: string, documentoTitulo: string, versionNumero: 
 }
 
 
-type SgiPublicado = { documentoId: string; titulo: string; codigo?: string | null; versionNumero?: string | null; esNuevo: boolean; mensajeExtra?: string | null };
+type SgiPublicado = { documentoId: string; titulo: string; codigo?: string | null; versionNumero?: string | null; esNuevo: boolean; mensajeExtra?: string | null; obligatoria?: boolean };
 
 function sgiPublicadoSubject(d: SgiPublicado): string {
+  if (d.obligatoria) return `Lectura obligatoria: ${d.titulo} · Ribeiro 360`;
   return d.esNuevo
     ? `Nuevo documento SGI: ${d.titulo} · Ribeiro 360`
     : `Documento SGI actualizado: ${d.titulo} · Ribeiro 360`;
@@ -76,19 +77,28 @@ function buildSgiPublicadoHtml(fullName: string, d: SgiPublicado): string {
   const extra = d.mensajeExtra?.trim()
     ? `<p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.6;white-space:pre-line;">${escapeHtml(d.mensajeExtra.trim())}</p>`
     : '';
+  const avisoObligatoria = d.obligatoria
+    ? `<div style="margin:0 0 20px;padding:14px 16px;border-radius:10px;background:#FEF3C7;border:1px solid #F59E0B;">
+        <p style="margin:0 0 4px;font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#92400E;">⚠ Lectura obligatoria</p>
+        <p style="margin:0;font-size:14px;color:#78350F;line-height:1.5;">Ingresá al documento, leelo completo y presioná <strong>“Confirmar lectura”</strong>. Tu confirmación queda registrada.</p>
+      </div>`
+    : '';
+  const revision = d.versionNumero ? `Rev. ${escapeHtml(d.versionNumero)}` : '—';
   return emailLayout({
     primerNombre: escapeHtml(fullName?.split(' ')[0] || 'Hola'),
-    subtitulo: 'SGI · Documentos',
-    mensaje: d.esNuevo
-      ? `Se publicó un nuevo documento: "${titulo}"`
-      : `Hay una nueva revisión vigente de "${titulo}"`,
-    extraHtml: extra,
+    subtitulo: d.obligatoria ? 'SGI · Lectura obligatoria' : 'SGI · Documentos',
+    mensaje: d.obligatoria
+      ? `Tenés un documento de lectura obligatoria: "${titulo}"`
+      : d.esNuevo
+        ? `Se publicó un nuevo documento: "${titulo}"`
+        : `Hay una nueva revisión vigente de "${titulo}"`,
+    extraHtml: avisoObligatoria + extra,
     badgeLabel: 'Documento',
     badgeValue: d.codigo ? `${escapeHtml(d.codigo)} · ${titulo}` : titulo,
-    badgeLabel2: 'Revisión',
-    badgeValue2: d.versionNumero ? `Rev. ${escapeHtml(d.versionNumero)}` : '—',
+    badgeLabel2: d.obligatoria ? 'Acción requerida' : 'Revisión',
+    badgeValue2: d.obligatoria ? `Confirmar lectura · ${revision}` : revision,
     link: `${APP_URL}/sgi/documento/${encodeURIComponent(d.documentoId)}`,
-    linkLabel: 'Ver documento →',
+    linkLabel: d.obligatoria ? 'Leer y confirmar →' : 'Ver documento →',
     footer: 'Este email fue generado automáticamente por Ribeiro 360 al publicarse un documento del SGI.',
   });
 }
@@ -434,10 +444,11 @@ serve(async (req: Request) => {
           versionNumero: body.versionNumero ?? null,
           esNuevo: body.esNuevo !== false,
           mensajeExtra: body.mensajeExtra ?? null,
+          obligatoria: body.obligatoria === true,
         };
         const { data: me } = await adminClient.from('profiles').select('full_name, email').eq('id', authUser.id).single();
         if (mode === 'preview') {
-          const { count } = await adminClient.from('profiles').select('id', { count: 'exact', head: true }).not('email', 'is', null);
+          const { count } = await adminClient.from('profiles').select('id', { count: 'exact', head: true }).not('email', 'is', null).or('is_active.eq.true,is_active.is.null');
           return json({ ok: true, subject: sgiPublicadoSubject(sample), html: buildSgiPublicadoHtml(me?.full_name ?? 'Nombre', sample), recipients: count ?? 0 });
         }
         const to = me?.email ?? authUser.email;
@@ -451,18 +462,51 @@ serve(async (req: Request) => {
 
       const { data: cfg } = await adminClient.from('notif_config').select('enabled, opciones').eq('key', 'sgi_documento_publicado').maybeSingle();
       const op = (cfg?.opciones ?? {}) as Record<string, unknown>;
-      if (!cfg?.enabled || !op.email) return json({ ok: true, sent: 0, skipped: 'deshabilitado' });
 
       const { data: ver, error: vErr } = await adminClient
         .from('sgi_versiones')
-        .select('id, documento_id, numero_version, vigente, estado_aprobacion, notificado_at, documento:sgi_documentos(id, titulo, codigo, acceso, activo)')
+        .select('id, documento_id, numero_version, vigente, estado_aprobacion, notificado_at, lectura_notificada_at, documento:sgi_documentos(id, titulo, codigo, acceso, activo, lectura_obligatoria)')
         .eq('id', versionId)
         .single();
       if (vErr || !ver) return json({ error: 'Versión no encontrada' }, 404);
-      const doc = ver.documento as unknown as { id: string; titulo: string; codigo: string | null; acceso: string | null; activo: boolean } | null;
+      const doc = ver.documento as unknown as { id: string; titulo: string; codigo: string | null; acceso: string | null; activo: boolean; lectura_obligatoria: boolean } | null;
 
       if (!ver.vigente || !doc || doc.activo === false) return json({ ok: true, sent: 0, skipped: 'no_vigente' });
       if (['en_revision', 'pendiente_aprobacion', 'rechazado'].includes(ver.estado_aprobacion)) return json({ ok: true, sent: 0, skipped: 'no_aprobado' });
+
+      // Lectura obligatoria: se avisa siempre a todos (independiente del aviso general y sus filtros),
+      // salvo que se desactive explícitamente en Admin › SGI. Tiene su propia marca anti-duplicados.
+      const obligatoria = doc.lectura_obligatoria === true && op.email_obligatoria !== false;
+      const { data: activos, error: pErr } = await adminClient
+        .from('profiles')
+        .select('full_name, email')
+        .not('email', 'is', null)
+        .or('is_active.eq.true,is_active.is.null');
+      if (pErr) throw pErr;
+
+      if (obligatoria) {
+        if (ver.lectura_notificada_at) return json({ ok: true, sent: 0, skipped: 'ya_notificado' });
+        const ahora = new Date().toISOString();
+        const { data: claimedLect } = await adminClient
+          .from('sgi_versiones')
+          .update({ lectura_notificada_at: ahora, notificado_at: ver.notificado_at ?? ahora })
+          .eq('id', ver.id)
+          .is('lectura_notificada_at', null)
+          .select('id');
+        if (!claimedLect?.length) return json({ ok: true, sent: 0, skipped: 'ya_notificado' });
+        const dataOb: SgiPublicado = {
+          documentoId: doc.id, titulo: doc.titulo, codigo: doc.codigo, versionNumero: ver.numero_version,
+          esNuevo: true, mensajeExtra: (op.mensaje_extra as string) || null, obligatoria: true,
+        };
+        const subjectOb = sgiPublicadoSubject(dataOb);
+        const resOb = await sendBatch(resendKey, (activos ?? []).map((p: { full_name: string; email: string }) => ({
+          to: p.email, subject: subjectOb, html: buildSgiPublicadoHtml(p.full_name, dataOb),
+        })));
+        if (resOb.failed) console.error('[send-nc-email] sgi lectura obligatoria fallos:', resOb.failed);
+        return json({ ok: true, obligatoria: true, ...resOb });
+      }
+
+      if (!cfg?.enabled || !op.email) return json({ ok: true, sent: 0, skipped: 'deshabilitado' });
       if (ver.notificado_at) return json({ ok: true, sent: 0, skipped: 'ya_notificado' });
       if (op.excluir_confidenciales && doc.acceso && doc.acceso !== 'No Confidencial') return json({ ok: true, sent: 0, skipped: 'confidencial' });
 
@@ -486,15 +530,12 @@ serve(async (req: Request) => {
         .select('id');
       if (!claimed?.length) return json({ ok: true, sent: 0, skipped: 'ya_notificado' });
 
-      const { data: allProfiles, error: pErr } = await adminClient.from('profiles').select('full_name, email').not('email', 'is', null);
-      if (pErr) throw pErr;
-
       const data: SgiPublicado = {
         documentoId: doc.id, titulo: doc.titulo, codigo: doc.codigo, versionNumero: ver.numero_version,
         esNuevo, mensajeExtra: (op.mensaje_extra as string) || null,
       };
       const subject = sgiPublicadoSubject(data);
-      const result = await sendBatch(resendKey, (allProfiles ?? []).map((p: { full_name: string; email: string }) => ({
+      const result = await sendBatch(resendKey, (activos ?? []).map((p: { full_name: string; email: string }) => ({
         to: p.email, subject, html: buildSgiPublicadoHtml(p.full_name, data),
       })));
       if (result.failed) console.error('[send-nc-email] sgi_publicado fallos:', result.failed);

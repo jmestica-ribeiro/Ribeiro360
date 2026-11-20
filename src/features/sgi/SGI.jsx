@@ -4,7 +4,7 @@ import {
   FileText, BookOpen, ClipboardList, Folder, ChevronRight, ChevronLeft,
   Plus, X, Download, History, CheckCircle, ShieldCheck, Search,
   AlertCircle, Edit2, Trash2, Save, Lock, Unlock, Tag, Clock, FolderPlus, Minus, Paperclip, Upload,
-  Link2, ExternalLink,
+  Link2, ExternalLink, BookOpenCheck,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -23,6 +23,7 @@ import {
   isSgiLinkExterno,
   fetchSgiVersionesPendientes,
   searchSgiDocumentos,
+  fetchLecturasPendientesSgi,
   fetchGerentes,
 } from '../../services/sgiService';
 import { notificarDocumentoPublicado, notificarCircuitoSGI } from '../../lib/notificaciones';
@@ -44,6 +45,7 @@ const EMPTY_DOC_FORM = {
   tipo_documento: 'Otro', acceso: 'No Confidencial',
   lugar_ubicacion: '', periodo_retencion: '', etiquetas: [],
   documento_controlado: false, aprobador_id: '',
+  lectura_obligatoria: false,
   numero_version: '0', fecha_emision: '', notas_cambios: '',
   _archivo: null,
   _fuente: 'archivo', // 'archivo' | 'link'
@@ -70,6 +72,13 @@ const SGI = () => {
 
   const [pendientesRaw, setPendientesRaw] = useState([]);
   const [gerentes, setGerentes] = useState([]);
+  const [lecturasPendientes, setLecturasPendientes] = useState([]);
+  const lecturaPendienteIds = new Set(lecturasPendientes.map(v => v.documento?.id));
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    fetchLecturasPendientesSgi(profile.id).then(({ data }) => setLecturasPendientes(data ?? []));
+  }, [profile?.id]);
 
   const [globalSearch, setGlobalSearch] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -197,6 +206,7 @@ const SGI = () => {
       periodo_retencion: doc.periodo_retencion || '', etiquetas: Array.isArray(doc.etiquetas) ? doc.etiquetas : [],
       documento_controlado: doc.documento_controlado || false,
       aprobador_id: doc.aprobador_id || '',
+      lectura_obligatoria: doc.lectura_obligatoria || false,
       _ver_id: refVersion?.id || null,
       numero_version: refVersion?.numero_version || '0',
       fecha_emision: refVersion?.fecha_emision || '',
@@ -222,6 +232,7 @@ const SGI = () => {
       periodo_retencion: docForm.periodo_retencion || null, etiquetas: docForm.etiquetas.length ? docForm.etiquetas : null,
       documento_controlado: docForm.documento_controlado ?? false,
       aprobador_id: docForm.documento_controlado && docForm.aprobador_id ? docForm.aprobador_id : null,
+      lectura_obligatoria: docForm.lectura_obligatoria ?? false,
       activo: true,
     };
 
@@ -254,6 +265,11 @@ const SGI = () => {
     if (saved?.publicadoVersionId) notificarDocumentoPublicado({ versionId: saved.publicadoVersionId });
     // Documento controlado (nuevo o rechazado y corregido) → avisar a los revisores
     if (saved?.enRevisionVersionId) notificarCircuitoSGI({ versionId: saved.enRevisionVersionId, evento: 'revision_pendiente' });
+    // Lectura obligatoria sobre una versión que ya estaba vigente → avisar (la Edge Function evita duplicados)
+    if (docPayload.lectura_obligatoria && !saved?.publicadoVersionId && saved?.documentoId) {
+      const { data: vig } = await fetchVersionVigente(saved.documentoId);
+      if (vig?.id) notificarDocumentoPublicado({ versionId: vig.id });
+    }
 
     setShowDocModal(false);
     setEditingDoc(null);
@@ -394,6 +410,40 @@ const SGI = () => {
             <p>Documentación oficial, procedimientos y registros vigentes del SGI</p>
           </div>
         </div>
+        {lecturasPendientes.length > 0 && (
+          <div className="sgi-pendientes-panel sgi-lecturas-panel">
+            <div className="sgi-pendientes-header">
+              <BookOpenCheck size={15} />
+              <span>Lectura obligatoria pendiente</span>
+              <span className="sgi-pendientes-count">{lecturasPendientes.length}</span>
+            </div>
+            <div className="sgi-pendientes-list">
+              {lecturasPendientes.map(ver => {
+                const IconComp = ICON_MAP[ver.documento?.categoria?.icono] || Folder;
+                return (
+                  <div
+                    key={ver.id}
+                    className="sgi-pendiente-row"
+                    onClick={() => navigate(`/sgi/documento/${ver.documento?.id}`)}
+                  >
+                    <div className="sgi-pendiente-cat-icon" style={{ color: ver.documento?.categoria?.color || 'var(--primary-color)' }}>
+                      <IconComp size={16} />
+                    </div>
+                    <div className="sgi-pendiente-info">
+                      <span className="sgi-pendiente-title">{ver.documento?.titulo || '—'}</span>
+                      <span className="sgi-pendiente-meta">
+                        {ver.documento?.codigo ? `${ver.documento.codigo} · ` : ''}Rev. {ver.numero_version} · {ver.documento?.categoria?.nombre || '—'}
+                      </span>
+                    </div>
+                    <span className="sgi-doc-badge lectura-pendiente">Leer y confirmar</span>
+                    <ChevronRight size={15} className="sgi-pendiente-arrow" />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {pendientes.length > 0 && (
           <div className="sgi-pendientes-panel">
             <div className="sgi-pendientes-header">
@@ -616,6 +666,11 @@ const SGI = () => {
                     <div className="sgi-doc-badges">
                       {doc.tipo_documento && <span className="sgi-doc-badge tipo">{doc.tipo_documento}</span>}
                       {doc.documento_controlado && <span className="sgi-doc-badge controlado">Controlado</span>}
+                      {doc.lectura_obligatoria && (
+                        lecturaPendienteIds.has(doc.id)
+                          ? <span className="sgi-doc-badge lectura-pendiente"><BookOpenCheck size={11} /> Lectura obligatoria · Pendiente</span>
+                          : <span className="sgi-doc-badge lectura">Lectura obligatoria</span>
+                      )}
                       {doc.versionPendiente && (
                         <span className={`sgi-doc-badge aprobacion-${doc.versionPendiente.estado_aprobacion}`}>
                           {doc.versionPendiente.estado_aprobacion === 'en_revision' ? 'En revisión' : 'Pend. aprobación'}
@@ -838,6 +893,33 @@ const SGI = () => {
                         </button>
                       </div>
                     </div>
+                    <div className="docm-field docm-span-12">
+                      <div className="docm-switch-row">
+                        <div>
+                          <span className="docm-switch-title" id="docm-lect-label">Lectura obligatoria</span>
+                          <span className="docm-switch-desc" id="docm-lect-desc">Todos los usuarios deben leerlo y confirmar su lectura. Se registra el avance por usuario.</span>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={docForm.lectura_obligatoria}
+                          aria-labelledby="docm-lect-label"
+                          aria-describedby="docm-lect-desc"
+                          className={`docm-switch${docForm.lectura_obligatoria ? ' on' : ''}`}
+                          onClick={() => setDocForm(f => ({ ...f, lectura_obligatoria: !f.lectura_obligatoria }))}
+                        >
+                          <span className="docm-switch-thumb" />
+                        </button>
+                      </div>
+                    </div>
+                    {docForm.lectura_obligatoria && (
+                      <div className="docm-span-12 docm-notice docm-notice--lectura">
+                        <BookOpenCheck size={16} strokeWidth={1.5} />
+                        <p>
+                          <strong>Lectura obligatoria para todos.</strong> Cuando el documento quede vigente, cada usuario lo verá como pendiente, recibirá un email y deberá confirmar la lectura. Cada nueva revisión pide confirmarla de nuevo.
+                        </p>
+                      </div>
+                    )}
                     {docForm.documento_controlado && (
                       <>
                         <div className="docm-field docm-span-12">

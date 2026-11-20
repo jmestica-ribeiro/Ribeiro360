@@ -68,6 +68,10 @@
 - `uploadSgiArchivo(documentoId, version, file)`
 - `saveSgiVersion(payload)`
 - `deleteSgiVersion(id)`
+- `fetchLecturasPendientesSgi(userId)`
+- `fetchMiLecturaSgi(versionId, userId)`
+- `registrarLecturaSgi({ versionId, documentoId, userId })`
+- `fetchAvanceLecturaSgi(versionId)`
 - `fetchSgiCategoriasActivas()`
 - `fetchSgiDocsCounts()`
 - `fetchSgiDocumentosByCategoria(categoriaId)`

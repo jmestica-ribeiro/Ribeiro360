@@ -11,7 +11,7 @@
 | avatar_url | string | | |
 | job_title | string | | Puesto |
 | department | string | | Departamento / Gerencia |
-| sucursal | string | | Sitio / Sede |
+| office_location | string | | Sitio / Sede |
 
 ### nav_config
 | Columna | Tipo | Formato | Info |
@@ -30,7 +30,7 @@
 |:---|:---|:---|:---|
 | key | string | text | PK — `sgi_documento_publicado` \| `sgi_circuito_aprobacion` |
 | enabled | boolean | | Interruptor general |
-| opciones | object | jsonb | Publicado: email, campana, nuevos, revisiones, excluir_confidenciales, mensaje_extra · Circuito: revisor_departamento, revisores_ids, alertas{…}, recordatorio_dias |
+| opciones | object | jsonb | Publicado: email, campana, nuevos, revisiones, excluir_confidenciales, email_obligatoria, mensaje_extra · Circuito: revisor_departamento, revisores_ids, alertas{…}, recordatorio_dias |
 | updated_by | string | uuid | Admin que lo modificó |
 
 ### sgi_categorias
@@ -50,6 +50,7 @@
 | nombre | string | | |
 | categoria_id | string | uuid | |
 | activo | boolean | | |
+| lectura_obligatoria | boolean | | Si true, todos deben leer y confirmar la versión vigente |
 
 ### sgi_versiones
 | Columna | Tipo | Formato | Info |
@@ -63,6 +64,15 @@
 | estado_aprobacion | string | | en_revision, pendiente_aprobacion, aprobado, rechazado |
 | estado_desde | string | timestamptz | Desde cuándo está en la etapa actual (trigger) |
 | recordatorio_at | string | timestamptz | Último recordatorio de pendiente enviado |
+| lectura_notificada_at | string | timestamptz | Cuándo se envió el email de lectura obligatoria |
+
+### sgi_lecturas
+| Columna | Tipo | Formato | Info |
+|:---|:---|:---|:---|
+| version_id | string | uuid | PK (con user_id) — FK sgi_versiones |
+| user_id | string | uuid | PK — FK profiles |
+| documento_id | string | uuid | FK sgi_documentos |
+| leido_at | string | timestamptz | Confirmación de lectura |
 
 ### nc_hallazgos
 | Columna | Tipo | Formato | Info |

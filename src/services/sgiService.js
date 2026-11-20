@@ -180,6 +180,85 @@ export async function softDeleteSgiDocumento(id) {
   return { error };
 }
 
+// ── Lectura obligatoria ───────────────────────────────────────────────────────
+// La lectura se registra por versión: una nueva revisión vigente pide confirmar de nuevo.
+
+const esVersionPublicada = (v) => v?.vigente && (!v.estado_aprobacion || v.estado_aprobacion === 'aprobado');
+
+/** Documentos de lectura obligatoria cuya versión vigente el usuario todavía no confirmó. */
+export async function fetchLecturasPendientesSgi(userId) {
+  if (!userId) return { data: [], error: null };
+  const { data: versiones, error } = await supabase
+    .from('sgi_versiones')
+    .select('id, numero_version, fecha_emision, vigente, estado_aprobacion, documento:sgi_documentos!inner(id, titulo, codigo, activo, lectura_obligatoria, categoria:sgi_categorias(nombre, color, icono))')
+    .eq('vigente', true)
+    .eq('documento.lectura_obligatoria', true)
+    .eq('documento.activo', true);
+  if (error) {
+    console.error('[sgiService] fetchLecturasPendientesSgi:', error.message);
+    return { data: [], error };
+  }
+  const publicadas = (versiones ?? []).filter(esVersionPublicada);
+  if (!publicadas.length) return { data: [], error: null };
+  const { data: leidas, error: lErr } = await supabase
+    .from('sgi_lecturas')
+    .select('version_id')
+    .eq('user_id', userId)
+    .in('version_id', publicadas.map(v => v.id));
+  if (lErr) console.error('[sgiService] fetchLecturasPendientesSgi (lecturas):', lErr.message);
+  const leidasSet = new Set((leidas ?? []).map(l => l.version_id));
+  return { data: publicadas.filter(v => !leidasSet.has(v.id)), error: lErr };
+}
+
+/** Lectura del usuario para una versión (null si no la confirmó). */
+export async function fetchMiLecturaSgi(versionId, userId) {
+  if (!versionId || !userId) return { data: null, error: null };
+  const { data, error } = await supabase
+    .from('sgi_lecturas')
+    .select('leido_at')
+    .eq('version_id', versionId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) console.error('[sgiService] fetchMiLecturaSgi:', error.message);
+  return { data, error };
+}
+
+/** El usuario confirma que leyó la versión. Idempotente. */
+export async function registrarLecturaSgi({ versionId, documentoId, userId }) {
+  const { error } = await supabase
+    .from('sgi_lecturas')
+    .upsert({ version_id: versionId, documento_id: documentoId, user_id: userId }, { onConflict: 'version_id,user_id', ignoreDuplicates: true });
+  if (error) {
+    console.error('[sgiService] registrarLecturaSgi:', error.message);
+    return { data: null, error };
+  }
+  return fetchMiLecturaSgi(versionId, userId);
+}
+
+/**
+ * Avance de lectura de una versión: todos los usuarios activos con su fecha de lectura (o null).
+ * Requiere ser admin o tener permiso de carga SGI (RLS de sgi_lecturas).
+ */
+export async function fetchAvanceLecturaSgi(versionId) {
+  const [usersRes, lectRes] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id, full_name, email, department, job_title, office_location, avatar_url')
+      .or('is_active.eq.true,is_active.is.null')
+      .not('full_name', 'is', null)
+      .order('full_name'),
+    supabase.from('sgi_lecturas').select('user_id, leido_at').eq('version_id', versionId),
+  ]);
+  const error = usersRes.error || lectRes.error || null;
+  if (error) {
+    console.error('[sgiService] fetchAvanceLecturaSgi:', error.message);
+    return { data: null, error };
+  }
+  const leidoPor = new Map((lectRes.data ?? []).map(l => [l.user_id, l.leido_at]));
+  const usuarios = (usersRes.data ?? []).map(u => ({ ...u, leido_at: leidoPor.get(u.id) ?? null }));
+  return { data: { usuarios, leidos: usuarios.filter(u => u.leido_at).length, total: usuarios.length }, error: null };
+}
+
 // ── Versiones ─────────────────────────────────────────────────────────────────
 
 /**
@@ -417,6 +496,14 @@ export async function getSgiSignedUrl(path, seconds = 60) {
     .from('sgi-documentos')
     .createSignedUrl(path, seconds);
   if (error) console.error('[sgiService] getSgiSignedUrl:', error.message);
+  return { data, error };
+}
+
+/** Descarga el archivo (bucket privado) como Blob para la vista previa in-app. */
+export async function fetchSgiArchivoBlob(path) {
+  if (!path || isSgiLinkExterno(path)) return { data: null, error: new Error('No es un archivo del repositorio') };
+  const { data, error } = await supabase.storage.from('sgi-documentos').download(path);
+  if (error) console.error('[sgiService] fetchSgiArchivoBlob:', error.message);
   return { data, error };
 }
 

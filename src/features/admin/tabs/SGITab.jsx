@@ -29,7 +29,7 @@ const initials = (name = '') =>
   name.trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('') || '?';
 
 const EMPTY_CAT = { nombre: '', icono: 'Folder', color: '#6366f1', descripcion: '', orden: 0, activo: true, parent_id: null, nivel_piramide: '' };
-const EMPTY_DOC = { titulo: '', codigo: '', descripcion: '', categoria_id: null, tipo_documento: 'Otro', acceso: 'No Confidencial', lugar_ubicacion: '', periodo_retencion: '', etiquetas: '', documento_controlado: false, activo: true, _ver_id: null, numero_version: '0', fecha_emision: '', notas_cambios: '' };
+const EMPTY_DOC = { titulo: '', codigo: '', descripcion: '', categoria_id: null, tipo_documento: 'Otro', acceso: 'No Confidencial', lugar_ubicacion: '', periodo_retencion: '', etiquetas: '', documento_controlado: false, lectura_obligatoria: false, activo: true, _ver_id: null, numero_version: '0', fecha_emision: '', notas_cambios: '' };
 
 // Siguiente código según los existentes de la carpeta: prefijo más frecuente + número siguiente (mismo padding)
 const sugerirCodigo = (docs) => {
@@ -157,6 +157,11 @@ const SGITab = () => {
     if (error) return showToast(error.message, 'error');
     if (saved?.publicadoVersionId) notificarDocumentoPublicado({ versionId: saved.publicadoVersionId });
     if (saved?.enRevisionVersionId) notificarCircuitoSGI({ versionId: saved.enRevisionVersionId, evento: 'revision_pendiente' });
+    // Lectura obligatoria sobre una versión que ya estaba vigente → avisar (la Edge Function evita duplicados)
+    if (docPayload.lectura_obligatoria && !saved?.publicadoVersionId && saved?.documentoId) {
+      const { data: vig } = await fetchVersionVigente(saved.documentoId);
+      if (vig?.id) notificarDocumentoPublicado({ versionId: vig.id });
+    }
     await loadSGI();
     closeEdit();
   };
@@ -615,6 +620,11 @@ const SGITab = () => {
               <label>Documento Controlado</label>
               <Select value={editingDoc.documento_controlado ? 'si' : 'no'} onChange={v => setEditingDoc(d => ({ ...d, documento_controlado: v === 'si' }))}
                 options={[{ value: 'no', label: 'No requiere aprobación' }, { value: 'si', label: 'Sí, requiere aprobación' }]} />
+            </div>
+            <div className="form-group">
+              <label>Lectura obligatoria</label>
+              <Select value={editingDoc.lectura_obligatoria ? 'si' : 'no'} onChange={v => setEditingDoc(d => ({ ...d, lectura_obligatoria: v === 'si' }))}
+                options={[{ value: 'no', label: 'No' }, { value: 'si', label: 'Sí, todos deben leerlo y confirmar' }]} />
             </div>
           </div>
           <div>

@@ -4,13 +4,17 @@ import { formatFecha } from '../../lib/fechas';
 import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import {
   ChevronLeft, Download, FileText, CheckCircle, ShieldCheck,
-  Clock, XCircle, AlertCircle,
+  Clock, XCircle, AlertCircle, BookOpenCheck, Eye,
 } from 'lucide-react';
 import {
   fetchSgiDocumentoById, fetchSgiVersionesByDocumento, getSgiSignedUrl,
   reviewSgiVersion, approveSgiVersion, rejectSgiVersion,
   updateSgiDocumentoAprobador, fetchGerentes,
+  fetchMiLecturaSgi, registrarLecturaSgi,
 } from '../../services/sgiService';
+import SgiLecturaAvance from './SgiLecturaAvance';
+import SgiDocViewer from './SgiDocViewer';
+import './SgiLecturaAvance.css';
 import { useAuth } from '../../contexts/AuthContext';
 import { notificarCircuitoSGI, notificarDocumentoPublicado } from '../../lib/notificaciones';
 import { useSgiCircuito } from './useSgiCircuito';
@@ -54,6 +58,11 @@ const SGIDocument = () => {
   const [gerentes, setGerentes] = useState([]);
   const [overrideAprobadorId, setOverrideAprobadorId] = useState('');
 
+  // Lectura obligatoria
+  const [miLectura, setMiLectura] = useState(null);      // { leido_at } | null
+  const [abrioDocumento, setAbrioDocumento] = useState(false);
+  const [confirmandoLectura, setConfirmandoLectura] = useState(false);
+
   async function fetchData() {
     setIsLoading(true);
     const { data: docData } = await fetchSgiDocumentoById(docId);
@@ -61,12 +70,37 @@ const SGIDocument = () => {
       setDocumento(docData);
       const { data: verData } = await fetchSgiVersionesByDocumento(docId);
       setVersiones(verData);
+      const vig = verData?.find(v => v.vigente);
+      if (docData.lectura_obligatoria && vig && profile?.id) {
+        const { data: lect } = await fetchMiLecturaSgi(vig.id, profile.id);
+        setMiLectura(lect ?? null);
+      } else {
+        setMiLectura(null);
+      }
     }
     setIsLoading(false);
   }
 
+  const [visorVersion, setVisorVersion] = useState(null);
+  const abrirVisor = (version) => {
+    if (version?.vigente) setAbrioDocumento(true);
+    setVisorVersion(version);
+  };
+
+  const abrirArchivo = async (path) => {
+    const { data } = await getSgiSignedUrl(path, 60);
+    if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+  };
+
+  const confirmarLectura = async (version) => {
+    setConfirmandoLectura(true);
+    const { data, error } = await registrarLecturaSgi({ versionId: version.id, documentoId: documento.id, userId: profile.id });
+    if (!error) setMiLectura(data ?? { leido_at: new Date().toISOString() });
+    setConfirmandoLectura(false);
+  };
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchData(); }, [docId]);
+  useEffect(() => { fetchData(); }, [docId, profile?.id]);
   useEffect(() => { fetchGerentes().then(({ data }) => setGerentes(data ?? [])); }, []);
 
   const handleAction = async () => {
@@ -133,6 +167,11 @@ const SGIDocument = () => {
     : (isGerente(profile) && !!creadorDept && profile?.department === creadorDept) || isTester;
   const showAprobacionCircuito = documento.documento_controlado && currentEstado;
 
+  const vigentePublicada = vigenteVersion && (!vigenteVersion.estado_aprobacion || vigenteVersion.estado_aprobacion === 'aprobado');
+  const lecturaActiva = documento.lectura_obligatoria && vigentePublicada;
+  const puedeVerLogLectura = isAdmin || profile?.can_upload_sgi === true;
+  const tieneArchivo = !!vigenteVersion?.archivo_url;
+
   return (
     <div className="sgi-doc-page">
       <div className="sgi-doc-header-nav">
@@ -161,6 +200,9 @@ const SGIDocument = () => {
               >
                 {documento.categoria?.nombre}
               </span>
+              {documento.lectura_obligatoria && (
+                <span className="sgi-doc-lectura-badge"><BookOpenCheck size={12} /> Lectura obligatoria</span>
+              )}
             </div>
             <h1 className="sgi-doc-hero-title">{documento.titulo}</h1>
             <p className="sgi-doc-hero-desc">{documento.descripcion || 'Sin descripción disponible para este documento.'}</p>
@@ -168,33 +210,31 @@ const SGIDocument = () => {
 
           <div className="sgi-doc-hero-right">
             {vigenteVersion?.archivo_url ? (
-              <button
-                className="sgi-download-box"
-                onClick={async () => {
-                  const { data } = await getSgiSignedUrl(vigenteVersion.archivo_url, 60);
-                  if (data?.signedUrl) window.open(data.signedUrl, '_blank');
-                }}
-              >
-                <div className="sgi-dl-icon"><Download size={24} /></div>
-                <div className="sgi-dl-info">
-                  <span className="sgi-dl-action">Descargar Documento</span>
-                  <span className="sgi-dl-meta">Rev. {vigenteVersion.numero_version} • Vigente</span>
-                </div>
-              </button>
+              <div className="sgi-hero-file-actions">
+                <button className="sgi-download-box" onClick={() => abrirVisor(vigenteVersion)}>
+                  <div className="sgi-dl-icon"><Eye size={24} /></div>
+                  <div className="sgi-dl-info">
+                    <span className="sgi-dl-action">Ver documento</span>
+                    <span className="sgi-dl-meta">Rev. {vigenteVersion.numero_version} • Vigente</span>
+                  </div>
+                </button>
+                <button type="button" className="sgi-hero-dl-link" onClick={() => { setAbrioDocumento(true); abrirArchivo(vigenteVersion.archivo_url); }}>
+                  <Download size={14} /> Descargar
+                </button>
+              </div>
             ) : pendienteVersion?.archivo_url ? (
-              <button
-                className="sgi-download-box sgi-download-box-preview"
-                onClick={async () => {
-                  const { data } = await getSgiSignedUrl(pendienteVersion.archivo_url, 60);
-                  if (data?.signedUrl) window.open(data.signedUrl, '_blank');
-                }}
-              >
-                <div className="sgi-dl-icon"><Download size={24} /></div>
-                <div className="sgi-dl-info">
-                  <span className="sgi-dl-action">Ver para revisión</span>
-                  <span className="sgi-dl-meta">Rev. {pendienteVersion.numero_version} • Pendiente aprobación</span>
-                </div>
-              </button>
+              <div className="sgi-hero-file-actions">
+                <button className="sgi-download-box sgi-download-box-preview" onClick={() => abrirVisor(pendienteVersion)}>
+                  <div className="sgi-dl-icon"><Eye size={24} /></div>
+                  <div className="sgi-dl-info">
+                    <span className="sgi-dl-action">Ver para revisión</span>
+                    <span className="sgi-dl-meta">Rev. {pendienteVersion.numero_version} • Pendiente aprobación</span>
+                  </div>
+                </button>
+                <button type="button" className="sgi-hero-dl-link" onClick={() => abrirArchivo(pendienteVersion.archivo_url)}>
+                  <Download size={14} /> Descargar
+                </button>
+              </div>
             ) : (
               <div className="sgi-no-file-box">
                 <FileText size={20} />
@@ -203,6 +243,55 @@ const SGIDocument = () => {
             )}
           </div>
         </div>
+
+        {/* ── Lectura obligatoria: confirmación del usuario ── */}
+        {lecturaActiva && (
+          miLectura?.leido_at ? (
+            <div className="sgi-lectura-banner done" role="status">
+              <CheckCircle size={22} />
+              <div className="sgi-lectura-banner-text">
+                <strong>Lectura confirmada</strong>
+                <span>Confirmaste la lectura de la Rev. {vigenteVersion.numero_version} el {new Date(miLectura.leido_at).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}.</span>
+              </div>
+            </div>
+          ) : (
+            <div className="sgi-lectura-banner" role="alert">
+              <BookOpenCheck size={22} />
+              <div className="sgi-lectura-banner-text">
+                <strong>Este documento es de lectura obligatoria</strong>
+                <span>
+                  {tieneArchivo && !abrioDocumento
+                    ? 'Leelo acá mismo con la vista previa y confirmá la lectura al terminar.'
+                    : 'Cuando termines de leerlo, confirmá la lectura. Tu confirmación queda registrada.'}
+                </span>
+              </div>
+              {tieneArchivo && !abrioDocumento ? (
+                <button type="button" className="sgi-lectura-confirm" onClick={() => abrirVisor(vigenteVersion)}>
+                  <Eye size={15} /> Leer ahora
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="sgi-lectura-confirm"
+                  disabled={confirmandoLectura}
+                  onClick={() => confirmarLectura(vigenteVersion)}
+                >
+                  <CheckCircle size={15} /> {confirmandoLectura ? 'Registrando…' : 'Confirmar lectura'}
+                </button>
+              )}
+            </div>
+          )
+        )}
+
+        {/* ── Log de lectura (admins / cargadores SGI) ── */}
+        {lecturaActiva && puedeVerLogLectura && (
+          <SgiLecturaAvance
+            key={vigenteVersion.id + (miLectura?.leido_at ?? '')}
+            versionId={vigenteVersion.id}
+            versionNumero={vigenteVersion.numero_version}
+            documento={documento}
+          />
+        )}
 
         {/* ── Circuito de Aprobación ── */}
         {showAprobacionCircuito && (
@@ -350,6 +439,7 @@ const SGIDocument = () => {
                 <tr><td className="sgi-td-label">Descripción</td><td>{documento.descripcion || '—'}</td></tr>
                 <tr><td className="sgi-td-label">Tipo de documento</td><td>{documento.tipo_documento || '—'}</td></tr>
                 <tr><td className="sgi-td-label">Acceso</td><td>{documento.acceso || '—'}</td></tr>
+                <tr><td className="sgi-td-label">Lectura obligatoria</td><td>{documento.lectura_obligatoria ? 'Sí — todos los usuarios' : 'No'}</td></tr>
                 <tr><td className="sgi-td-label">Lugar Ubicación</td><td>{documento.lugar_ubicacion || '—'}</td></tr>
                 <tr><td className="sgi-td-label">Período de Retención</td><td>{documento.periodo_retencion || '—'}</td></tr>
                 {documento.etiquetas?.length > 0 && (
@@ -442,16 +532,23 @@ const SGIDocument = () => {
                       </td>
                       <td style={{ width: '10%', textAlign: 'center' }}>
                         {ver.archivo_url && (ver.vigente || isAdmin) ? (
-                          <button
-                            className="sgi-download-btn-small"
-                            title={ver.vigente ? 'Descargar versión vigente' : 'Descargar versión antigua (Solo Admin)'}
-                            onClick={async () => {
-                              const { data } = await getSgiSignedUrl(ver.archivo_url, 60);
-                              if (data?.signedUrl) window.open(data.signedUrl, '_blank');
-                            }}
-                          >
-                            <Download size={16} />
-                          </button>
+                          <span className="sgi-file-btns">
+                            <button
+                              className="sgi-download-btn-small"
+                              title="Vista previa"
+                              aria-label={`Vista previa de la Rev. ${ver.numero_version}`}
+                              onClick={() => abrirVisor(ver)}
+                            >
+                              <Eye size={16} />
+                            </button>
+                            <button
+                              className="sgi-download-btn-small"
+                              title={ver.vigente ? 'Descargar versión vigente' : 'Descargar versión antigua (Solo Admin)'}
+                              onClick={() => abrirArchivo(ver.archivo_url)}
+                            >
+                              <Download size={16} />
+                            </button>
+                          </span>
                         ) : '—'}
                       </td>
                     </tr>
@@ -462,6 +559,21 @@ const SGIDocument = () => {
           </div>
         </div>
       </motion.div>
+
+      <SgiDocViewer
+        open={!!visorVersion}
+        onClose={() => setVisorVersion(null)}
+        documento={documento}
+        version={visorVersion}
+        onDescargar={() => abrirArchivo(visorVersion?.archivo_url)}
+        lectura={lecturaActiva && visorVersion?.id === vigenteVersion?.id ? {
+          activa: true,
+          confirmada: !!miLectura?.leido_at,
+          leidoAt: miLectura?.leido_at,
+          confirmando: confirmandoLectura,
+          onConfirmar: () => confirmarLectura(vigenteVersion),
+        } : null}
+      />
     </div>
   );
 };

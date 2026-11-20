@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { TIPOS_NC } from '../lib/notificaciones';
 import { visMatchesProfile, courseIsVisible } from '../lib/visibilidad';
 import { fetchNotifConfig, NOTIF_SGI_PUBLICADO, SGI_PUBLICADO_DEFAULTS } from '../services/notifConfigService';
+import { fetchLecturasPendientesSgi } from '../services/sgiService';
 
 // Aplica la config de Admin › SGI a las versiones SGI que aparecen en la campana
 function filtrarSgiPorConfig(versiones, cfg) {
@@ -33,8 +34,25 @@ export const useNotificaciones = (profile) => {
     }
   }, [profile?.id, profile?.notifications_last_seen_at]);
 
-  const buildItems = useCallback((eventosData, eventosVisData, cursosData, cursosVisData, cursosDestData, sgiData, ncData, currentLastSeen) => {
+  const buildItems = useCallback((eventosData, eventosVisData, cursosData, cursosVisData, cursosDestData, sgiData, ncData, currentLastSeen, lecturasData) => {
     const items = [];
+
+    // Lectura obligatoria pendiente: queda sin leer hasta que el usuario confirme la lectura del documento
+    const lecturaDocIds = new Set();
+    (lecturasData || []).forEach(ver => {
+      lecturaDocIds.add(ver.documento?.id);
+      items.push({
+        id: `lectura-${ver.id}`,
+        tipo: 'documento',
+        itemId: ver.documento?.id,
+        titulo: ver.documento?.titulo || `Versión ${ver.numero_version}`,
+        subtitulo: `Lectura obligatoria pendiente · Rev. ${ver.numero_version}`,
+        color: '#D97706',
+        created_at: ver.fecha_emision || new Date().toISOString(),
+        leida: false,
+        obligatoria: true,
+      });
+    });
 
     (ncData || []).forEach(n => {
       const config = TIPOS_NC[n.tipo];
@@ -87,7 +105,7 @@ export const useNotificaciones = (profile) => {
     const sgiDedup = (sgiData || []).filter(
       (ver, idx, arr) => arr.findIndex(v => v.documento_id === ver.documento_id) === idx
     );
-    sgiDedup.forEach(ver => {
+    sgiDedup.filter(ver => !lecturaDocIds.has(ver.documento_id)).forEach(ver => {
       // fecha_emision es YYYY-MM-DD — comparamos contra la fecha del lastSeen
       const createdAt = ver.fecha_emision;
       const lastSeenDate = currentLastSeen ? currentLastSeen.split('T')[0] : '';
@@ -122,7 +140,7 @@ export const useNotificaciones = (profile) => {
     since.setDate(since.getDate() - WINDOW_DAYS);
     const sinceISO = since.toISOString();
 
-    const [eventosRes, eventosVisRes, cursosRes, cursosVisRes, cursosDestRes, sgiRes, ncRes, sgiCfgRes] = await Promise.all([
+    const [eventosRes, eventosVisRes, cursosRes, cursosVisRes, cursosDestRes, sgiRes, ncRes, sgiCfgRes, lecturasRes] = await Promise.all([
       supabase
         .from('eventos')
         .select('id, titulo, fecha, created_at, categoria:eventos_categorias(nombre, color)')
@@ -153,6 +171,7 @@ export const useNotificaciones = (profile) => {
         .order('created_at', { ascending: false })
         .limit(20),
       fetchNotifConfig(NOTIF_SGI_PUBLICADO),
+      fetchLecturasPendientesSgi(profile.id),
     ]);
     const sgiVisibles = filtrarSgiPorConfig(sgiRes.data, sgiCfgRes.data);
 
@@ -169,13 +188,14 @@ export const useNotificaciones = (profile) => {
       cursosDest: cursosDestRes.data,
       sgi: sgiVisibles,
       nc: ncRes.data,
+      lecturas: lecturasRes.data,
     };
 
     const items = buildItems(
       eventosRes.data, eventosVisRes.data,
       cursosRes.data, cursosVisRes.data, cursosDestRes.data,
       sgiVisibles, ncRes.data,
-      currentLastSeen
+      currentLastSeen, lecturasRes.data
     );
 
     setNotificaciones(items);
@@ -223,15 +243,17 @@ export const useNotificaciones = (profile) => {
 
     // Recalcular leida con el nuevo timestamp usando datos ya cargados
     if (rawDataRef.current) {
-      const { eventos, eventosVis, cursos, cursosVis, cursosDest, sgi, nc } = rawDataRef.current;
+      const { eventos, eventosVis, cursos, cursosVis, cursosDest, sgi, nc, lecturas } = rawDataRef.current;
       const updatedNc = (nc || []).map(n => ({ ...n, leida: true }));
       rawDataRef.current.nc = updatedNc;
-      const items = buildItems(eventos, eventosVis, cursos, cursosVis, cursosDest, sgi, updatedNc, effectiveNow);
+      const items = buildItems(eventos, eventosVis, cursos, cursosVis, cursosDest, sgi, updatedNc, effectiveNow, lecturas);
       setNotificaciones(items);
+      setCount(items.filter(i => !i.leida).length); // las lecturas obligatorias siguen pendientes
+    } else {
+      setCount(0);
     }
 
     setLastSeen(effectiveNow);
-    setCount(0);
   }, [profile?.id, buildItems]);
 
   return { notificaciones, count, isLoading, markAsRead };

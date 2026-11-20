@@ -11,6 +11,7 @@ export const SGI_PUBLICADO_DEFAULTS = {
     nuevos: true,
     revisiones: true,
     excluir_confidenciales: true,
+    email_obligatoria: true,
     mensaje_extra: '',
   },
 };

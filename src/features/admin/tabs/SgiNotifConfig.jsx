@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Bell, Mail, Save, Send, CheckCircle, FileText, Users } from 'lucide-react';
+import { Bell, Mail, Save, Send, CheckCircle, FileText, Users, BookOpenCheck } from 'lucide-react';
 import { useAuth } from '../../../contexts/AuthContext';
 import { useToast, LoadingSpinner } from '../../../components/common';
 import {
@@ -50,7 +50,8 @@ const SgiNotifConfig = ({ ejemplo }) => {
   const [saving, setSaving] = useState(false);
 
   const [vista, setVista] = useState('email');    // 'email' | 'campana'
-  const [esNuevo, setEsNuevo] = useState(true);
+  const [tipo, setTipo] = useState('nuevo'); // 'nuevo' | 'revision' | 'obligatoria'
+  const esNuevo = tipo !== 'revision';
   const [preview, setPreview] = useState(null);   // { subject, html, recipients }
   const [previewError, setPreviewError] = useState(false);
   const [testState, setTestState] = useState('idle'); // idle | sending | sent
@@ -76,9 +77,10 @@ const SgiNotifConfig = ({ ejemplo }) => {
     versionNumero: esNuevo ? '0' : String((parseInt(ejemplo?.versionNumero, 10) || 0) + 1),
     documentoId: ejemplo?.documentoId,
     esNuevo,
+    obligatoria: tipo === 'obligatoria',
     mensajeExtra: op?.mensaje_extra || '',
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [ejemplo?.titulo, ejemplo?.codigo, ejemplo?.versionNumero, ejemplo?.documentoId, esNuevo, op?.mensaje_extra]);
+  }), [ejemplo?.titulo, ejemplo?.codigo, ejemplo?.versionNumero, ejemplo?.documentoId, tipo, op?.mensaje_extra]);
 
   // Vista previa del email: la genera la Edge Function con el mismo template del envío real
   const ready = !!form;
@@ -164,6 +166,15 @@ const SgiNotifConfig = ({ ejemplo }) => {
             <Switch small on={op.excluir_confidenciales} onChange={v => setOp('excluir_confidenciales', v)} label="Excluir documentos confidenciales o restringidos" />
           </Row>
 
+          <h4 className="sgin-label">Lectura obligatoria</h4>
+          <Row
+            icon={BookOpenCheck}
+            title="Email siempre para lectura obligatoria"
+            desc="Se envía a todos aunque el email general esté apagado y sin aplicar los filtros de arriba"
+          >
+            <Switch small on={op.email_obligatoria} onChange={v => setOp('email_obligatoria', v)} label="Enviar siempre email en documentos de lectura obligatoria" />
+          </Row>
+
           <div className="form-group sgin-msg">
             <label htmlFor="sgin-mensaje">Mensaje adicional en el email (opcional)</label>
             <textarea
@@ -202,8 +213,9 @@ const SgiNotifConfig = ({ ejemplo }) => {
               </button>
             </div>
             <div className="org-segmented" role="tablist" aria-label="Tipo de aviso">
-              <button type="button" role="tab" aria-selected={esNuevo} className={esNuevo ? 'active' : ''} onClick={() => setEsNuevo(true)}>Nuevo</button>
-              <button type="button" role="tab" aria-selected={!esNuevo} className={!esNuevo ? 'active' : ''} onClick={() => setEsNuevo(false)}>Revisión</button>
+              {[['nuevo', 'Nuevo'], ['revision', 'Revisión'], ['obligatoria', 'Obligatoria']].map(([k, l]) => (
+                <button key={k} type="button" role="tab" aria-selected={tipo === k} className={tipo === k ? 'active' : ''} onClick={() => setTipo(k)}>{l}</button>
+              ))}
             </div>
           </div>
 
@@ -221,7 +233,7 @@ const SgiNotifConfig = ({ ejemplo }) => {
               ) : (
                 <div className="sgin-mail-loading"><LoadingSpinner /></div>
               )}
-              {!op.email && <p className="sgin-note">El email está apagado: así se vería si lo activás.</p>}
+              {(tipo === 'obligatoria' ? !op.email_obligatoria : !op.email) && <p className="sgin-note">El email está apagado: así se vería si lo activás.</p>}
             </div>
           ) : (
             <div className="sgin-bell">

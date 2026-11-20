@@ -1642,3 +1642,13 @@
 .dark-theme .sgi-search-dropdown {
   box-shadow: 0 8px 32px rgba(0,0,0,0.4);
 }
+
+/* ── Lectura obligatoria ───────────────────────────────────────────────────── */
+.sgi-doc-badge.lectura { background: var(--info-bg); color: var(--info); }
+.sgi-doc-badge.lectura-pendiente {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--warning-bg); color: var(--warning);
+  border: 1px solid var(--warning-border);
+}
+.sgi-lecturas-panel { border-color: var(--warning-border); }
+.sgi-lecturas-panel .sgi-pendientes-header { color: var(--warning); }

@@ -595,3 +595,5 @@ body.dark-theme .docm-field input[type="date"] { color-scheme: dark; }
 @media (hover: hover) {
   .docm-suggest:hover { border-style: solid; }
 }
+
+.docm-notice--lectura { background: var(--warning-bg); color: var(--warning); }
