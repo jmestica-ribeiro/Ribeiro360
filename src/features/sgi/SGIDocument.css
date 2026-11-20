@@ -7,7 +7,28 @@
 
 .sgi-doc-header-nav {
   margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 }
+.sgi-doc-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--destructive-border);
+  background: var(--bg-card);
+  color: var(--destructive);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sgi-doc-delete-btn:hover:not(:disabled) { background: var(--destructive-bg); }
+.sgi-doc-delete-btn:disabled { opacity: 0.6; cursor: default; }
 
 .sgi-doc-content-wrapper {
   background: var(--bg-card);

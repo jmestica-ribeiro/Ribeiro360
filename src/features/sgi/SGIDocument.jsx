@@ -4,18 +4,20 @@ import { formatFecha } from '../../lib/fechas';
 import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import {
   ChevronLeft, Download, FileText, CheckCircle, ShieldCheck,
-  Clock, XCircle, AlertCircle, BookOpenCheck, Eye,
+  Clock, XCircle, AlertCircle, BookOpenCheck, Eye, Trash2,
 } from 'lucide-react';
 import {
   fetchSgiDocumentoById, fetchSgiVersionesByDocumento, getSgiSignedUrl,
   reviewSgiVersion, approveSgiVersion, rejectSgiVersion,
   updateSgiDocumentoAprobador, fetchGerentes,
-  fetchMiLecturaSgi, registrarLecturaSgi,
+  fetchMiLecturaSgi, registrarLecturaSgi, softDeleteSgiDocumento,
 } from '../../services/sgiService';
 import SgiLecturaAvance from './SgiLecturaAvance';
 import SgiDocViewer from './SgiDocViewer';
 import './SgiLecturaAvance.css';
 import { useAuth } from '../../contexts/AuthContext';
+import { useConfirm } from '../../contexts/ConfirmContext';
+import { useToast } from '../../contexts/ToastContext';
 import { notificarCircuitoSGI, notificarDocumentoPublicado } from '../../lib/notificaciones';
 import { useSgiCircuito } from './useSgiCircuito';
 import { isGerente, isRevisorSgi } from '../../lib/visibilidad';
@@ -80,6 +82,26 @@ const SGIDocument = () => {
     }
     setIsLoading(false);
   }
+
+  // Eliminar (mismo permiso y comportamiento que en el listado: baja lógica)
+  const confirm = useConfirm();
+  const { toast } = useToast();
+  const [eliminando, setEliminando] = useState(false);
+  const puedeEliminar = isAdmin || profile?.can_upload_sgi === true;
+  const volverACarpeta = () => navigate(documento?.categoria ? `/sgi/${getCatSlug(documento.categoria.nombre)}` : '/sgi');
+  const handleEliminar = async () => {
+    const ok = await confirm({
+      message: `¿Eliminar "${documento.titulo}" y todas sus versiones? Dejará de verse en el SGI.`,
+      destructive: true,
+    });
+    if (!ok) return;
+    setEliminando(true);
+    const { error } = await softDeleteSgiDocumento(documento.id);
+    setEliminando(false);
+    if (error) return toast.error('No se pudo eliminar el documento', { description: error.message });
+    toast.success(`Documento "${documento.titulo}" eliminado`);
+    volverACarpeta();
+  };
 
   const [visorVersion, setVisorVersion] = useState(null);
   const abrirVisor = (version) => {
@@ -181,6 +203,11 @@ const SGIDocument = () => {
         >
           <ChevronLeft size={18} /> Volver a {documento.categoria?.nombre || 'SGI'}
         </button>
+        {puedeEliminar && (
+          <button type="button" className="sgi-doc-delete-btn" onClick={handleEliminar} disabled={eliminando}>
+            <Trash2 size={15} /> {eliminando ? 'Eliminando…' : 'Eliminar documento'}
+          </button>
+        )}
       </div>
 
       <motion.div
