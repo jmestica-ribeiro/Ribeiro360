@@ -21,8 +21,9 @@ import { EmptyState, useToast, SubmitButton, FieldError } from '../../../compone
 import { fetchSgiUploaders, updateCanUploadSgi } from '../../../services/usuariosService';
 import { useConfirm } from '../../../contexts/ConfirmContext';
 import { Select } from '../../../components/common';
-import { notificarDocumentoPublicado } from '../../../lib/notificaciones';
+import { notificarDocumentoPublicado, notificarCircuitoSGI } from '../../../lib/notificaciones';
 import SgiNotifConfig from './SgiNotifConfig';
+import SgiCircuitoConfig from './SgiCircuitoConfig';
 
 const initials = (name = '') =>
   name.trim().split(/\s+/).slice(0, 2).map(w => w[0]?.toUpperCase() ?? '').join('') || '?';
@@ -155,6 +156,7 @@ const SGITab = () => {
     const { data: saved, error } = await saveSgiDocumento(docPayload, { _ver_id, numero_version, fecha_emision, notas_cambios });
     if (error) return showToast(error.message, 'error');
     if (saved?.publicadoVersionId) notificarDocumentoPublicado({ versionId: saved.publicadoVersionId });
+    if (saved?.enRevisionVersionId) notificarCircuitoSGI({ versionId: saved.enRevisionVersionId, evento: 'revision_pendiente' });
     await loadSGI();
     closeEdit();
   };
@@ -680,6 +682,7 @@ const SGITab = () => {
 
   return (
     <div className="admin-list-panel adm-panel">
+      <SgiCircuitoConfig ejemplo={ejemploNotif} />
       <SgiNotifConfig ejemplo={ejemploNotif} />
 
       <section className="adm-section">

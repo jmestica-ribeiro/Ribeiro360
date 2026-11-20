@@ -8,6 +8,19 @@ export function isGerente(profile) {
 }
 
 /**
+ * Devuelve true si el perfil puede revisar documentos SGI (paso 2 del circuito),
+ * según la config de Admin › SGI: área revisora completa + revisores adicionales.
+ * @param {object|null} profile
+ * @param {{ revisor_departamento?: string, revisores_ids?: string[] }|null} circuito - opciones del circuito
+ */
+export function isRevisorSgi(profile, circuito) {
+  if (!profile || profile.is_active === false) return false;
+  const area = (circuito?.revisor_departamento ?? 'CMASS').trim().toLowerCase();
+  if (area && (profile.department ?? '').trim().toLowerCase() === area) return true;
+  return (circuito?.revisores_ids ?? []).includes(profile.id);
+}
+
+/**
  * Devuelve true si el perfil del usuario satisface TODAS las reglas de visibilidad.
  * Un array vacío de reglas significa visible para todos.
  *

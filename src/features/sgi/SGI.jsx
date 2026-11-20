@@ -25,13 +25,14 @@ import {
   searchSgiDocumentos,
   fetchGerentes,
 } from '../../services/sgiService';
-import { notificarDocumentoPublicado } from '../../lib/notificaciones';
+import { notificarDocumentoPublicado, notificarCircuitoSGI } from '../../lib/notificaciones';
+import { useSgiCircuito } from './useSgiCircuito';
 import './SGI.css';
 import './SGIDocModal.css';
 import { Select, SubmitButton, FieldError } from '../../components/common';
 import { useRequiredFields } from '../../hooks/useRequiredFields';
 import { hoyISO } from '../../lib/fechas';
-import { isGerente } from '../../lib/visibilidad';
+import { isGerente, isRevisorSgi } from '../../lib/visibilidad';
 
 const ICON_MAP = { FileText, BookOpen, ClipboardList, Folder, ShieldCheck };
 
@@ -54,6 +55,8 @@ const SGI = () => {
   const { categoria: categoriaSlug } = useParams();
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const circuito = useSgiCircuito();
+  const areaRevisora = circuito.revisor_departamento || 'el área revisora';
   const confirm = useConfirm();
   const { toast } = useToast();
   const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
@@ -182,7 +185,8 @@ const SGI = () => {
 
   const openEditDoc = async (doc) => {
     const { data: vigente } = await fetchVersionVigente(doc.id);
-    const refVersion = vigente || doc.versiones?.find(v =>
+    // Una versión rechazada tiene prioridad: editarla y guardarla la reenvía a revisión.
+    const refVersion = doc.versiones?.find(v => v.estado_aprobacion === 'rechazado') || vigente || doc.versiones?.find(v =>
       v.estado_aprobacion === 'en_revision' || v.estado_aprobacion === 'pendiente_aprobacion'
     ) || doc.versiones?.[0] || null;
     setEditingDoc(doc);
@@ -248,6 +252,8 @@ const SGI = () => {
     const { data: saved } = await saveSgiDocumento(fullDocPayload, versionData);
     // Documento no controlado → queda vigente al instante: avisar a todos
     if (saved?.publicadoVersionId) notificarDocumentoPublicado({ versionId: saved.publicadoVersionId });
+    // Documento controlado (nuevo o rechazado y corregido) → avisar a los revisores
+    if (saved?.enRevisionVersionId) notificarCircuitoSGI({ versionId: saved.enRevisionVersionId, evento: 'revision_pendiente' });
 
     setShowDocModal(false);
     setEditingDoc(null);
@@ -263,7 +269,7 @@ const SGI = () => {
   };
 
   const isTester = profile?.email === 'juan.mestica@ribeirosrl.com.ar';
-  const isRevisorCmass = profile?.department === 'CMASS' || isTester;
+  const isRevisorCmass = isRevisorSgi(profile, circuito) || isTester;
   const pendientes = pendientesRaw.filter(ver => {
     if (isTester) return true;
     if (ver.estado_aprobacion === 'en_revision' && isRevisorCmass) return true;
@@ -414,7 +420,7 @@ const SGI = () => {
                       </span>
                     </div>
                     <span className={`sgi-doc-badge aprobacion-${ver.estado_aprobacion}`}>
-                      {ver.estado_aprobacion === 'en_revision' ? 'Revisión CMASS' : 'Aprobar Gerencia'}
+                      {ver.estado_aprobacion === 'en_revision' ? `Revisión ${circuito.revisor_departamento || ''}`.trim() : 'Aprobar Gerencia'}
                     </span>
                     <ChevronRight size={15} className="sgi-pendiente-arrow" />
                   </div>
@@ -856,7 +862,7 @@ const SGI = () => {
                         <div className="docm-span-12 docm-notice">
                           <CheckCircle size={16} strokeWidth={1.5} />
                           <p>
-                            <strong>Este documento pasará a revisión.</strong> Al guardar, quedará <em>en revisión</em> hasta que CMASS lo revise y lo derive al gerente seleccionado para su aprobación.
+                            <strong>Este documento pasará a revisión.</strong> Al guardar, quedará <em>en revisión</em> hasta que {areaRevisora} lo revise y lo derive al gerente seleccionado para su aprobación.
                           </p>
                         </div>
                       </>

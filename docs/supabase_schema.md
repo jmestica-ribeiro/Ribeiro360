@@ -28,9 +28,9 @@
 ### notif_config
 | Columna | Tipo | Formato | Info |
 |:---|:---|:---|:---|
-| key | string | text | PK — tipo de aviso (ej: `sgi_documento_publicado`) |
+| key | string | text | PK — `sgi_documento_publicado` \| `sgi_circuito_aprobacion` |
 | enabled | boolean | | Interruptor general |
-| opciones | object | jsonb | SGI: email, campana, nuevos, revisiones, excluir_confidenciales, mensaje_extra |
+| opciones | object | jsonb | Publicado: email, campana, nuevos, revisiones, excluir_confidenciales, mensaje_extra · Circuito: revisor_departamento, revisores_ids, alertas{…}, recordatorio_dias |
 | updated_by | string | uuid | Admin que lo modificó |
 
 ### sgi_categorias
@@ -60,6 +60,9 @@
 | vigente | boolean | | Solo una activa |
 | archivo_url | string | | Path en Storage |
 | notificado_at | string | timestamptz | Cuándo se envió el email masivo de publicación (evita duplicados) |
+| estado_aprobacion | string | | en_revision, pendiente_aprobacion, aprobado, rechazado |
+| estado_desde | string | timestamptz | Desde cuándo está en la etapa actual (trigger) |
+| recordatorio_at | string | timestamptz | Último recordatorio de pendiente enviado |
 
 ### nc_hallazgos
 | Columna | Tipo | Formato | Info |

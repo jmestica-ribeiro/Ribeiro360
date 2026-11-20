@@ -1,0 +1,131 @@
+/* Admin › SGI › Circuito de aprobación (reusa .sgin-* de SgiNotifConfig.css) */
+
+/* Diagrama de pasos */
+.sgic-flow {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  margin: var(--space-4, 16px) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.sgic-step {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 14px 14px 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.sgic-step strong { font-size: 14px; color: var(--ink); }
+.sgic-step.warn { border-color: var(--warning); background: var(--warning-bg); }
+.sgic-step-num {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-faint);
+}
+.sgic-step-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-bottom: 4px;
+  border-radius: 9px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.sgic-step--vigente .sgic-step-icon { background: var(--success-bg); color: var(--success); }
+.sgic-step-desc { font-size: 12px; line-height: 1.4; color: var(--ink-muted); }
+.sgic-arrow { display: grid; place-items: center; color: var(--ink-faint); flex-shrink: 0; }
+
+/* Chips de alertas en cada paso */
+.sgic-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.sgic-chips:empty { display: none; }
+.sgic-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: var(--surface-subtle);
+  color: var(--ink-faint);
+  font-size: 11px;
+  font-weight: 500;
+  text-decoration: line-through;
+  cursor: pointer;
+}
+.sgic-chip.on { border-color: var(--accent-border); background: var(--accent-soft); color: var(--accent-ink); text-decoration: none; }
+.sgic-chip.selected { box-shadow: 0 0 0 2px var(--accent-ring, var(--accent)); }
+
+/* Rama de rechazo */
+.sgic-reject {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px 14px;
+  border: 1px dashed var(--border-soft);
+  border-radius: 12px;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.sgic-reject > svg { color: var(--destructive); flex-shrink: 0; }
+.sgic-reject .sgic-chips { margin-top: 0; margin-left: auto; }
+
+/* Configuración */
+.sgic-help { display: block; margin-top: 4px; font-size: 12px; color: var(--ink-muted); }
+.sgic-footnote { margin: var(--space-3, 12px) 0 0; }
+.sgic-revisores {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-subtle);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.sgic-revisores.warn { background: var(--warning-bg); color: var(--warning); }
+.sgic-avatars { display: flex; margin-left: auto; }
+.sgic-avatar {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  margin-left: -6px;
+  border: 2px solid var(--surface-subtle);
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 10px;
+  font-weight: 700;
+}
+.sgic-avatar.more { background: var(--field-bg); color: var(--ink-muted); }
+
+.sgic-alert-row { gap: var(--space-2, 8px); padding-left: 8px; padding-right: 4px; border-radius: 8px; }
+.sgic-alert-row.selected { background: var(--accent-soft); }
+.sgic-recordatorio { width: 150px; flex-shrink: 0; }
+
+.sgin-grid.is-off-alerts .sgic-alert-row,
+.sgin-grid.is-off-alerts .sgin-preview { opacity: 0.55; }
+
+/* Vista previa */
+.sgic-preview-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 8px; font-size: 14px; color: var(--ink); }
+.sgic-preview-label { display: block; margin: 0 0 2px; }
+
+@media (max-width: 900px) {
+  .sgic-flow { flex-direction: column; }
+  .sgic-arrow { transform: rotate(90deg); }
+  .sgic-reject .sgic-chips { margin-left: 0; }
+}

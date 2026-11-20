@@ -102,6 +102,24 @@ export function notificarDocumentoSGI({ userId, documentoTitulo, versionNumero, 
     .catch(err => console.warn('[notif] sgi invoke failed:', err?.message));
 }
 
+// ── notificarCircuitoSGI ───────────────────────────────────────────────────────
+
+/**
+ * Avisa a quien corresponda según el paso del circuito de aprobación SGI.
+ * La Edge Function resuelve destinatarios con la config de Admin › SGI y verifica
+ * que el evento coincida con el estado real de la versión.
+ * @param {'revision_pendiente'|'pendiente_aprobacion'|'aprobado'|'rechazado'} evento
+ */
+export function notificarCircuitoSGI({ versionId, evento }) {
+  if (!versionId || !evento) return;
+  supabase.functions
+    .invoke('send-nc-email', { body: { notifType: 'sgi_circuito', versionId, evento } })
+    .then(({ error: fnErr }) => {
+      if (fnErr) console.warn('[notif] sgi circuito email error:', fnErr.message);
+    })
+    .catch(err => console.warn('[notif] sgi circuito invoke failed:', err?.message));
+}
+
 // ── notificarDocumentoPublicado ────────────────────────────────────────────────
 
 /**

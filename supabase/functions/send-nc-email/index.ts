@@ -1,10 +1,12 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { handleCors, getCorsHeaders } from '../_shared/cors.ts';
 import { getAuthenticatedUser, getAdminClient, requireAdminRole } from '../_shared/auth.ts';
-
-const APP_URL = 'https://intranet.ribeiro.ar';
-
-const LOGO_B64 = 'data:image/png;base64,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';
+import { APP_URL, emailLayout, escapeHtml } from '../_shared/emailLayout.ts';
+import {
+  loadCircuitoConfig, resolveRevisores, resolveAprobadores, getPersona,
+  circuitoSubject, buildCircuitoHtml,
+  type EventoCircuito, type Rol, type DocEmail, type Persona,
+} from '../_shared/sgiCircuito.ts';
 
 // ── Tipos NC ──────────────────────────────────────────────────────────────────
 
@@ -17,88 +19,6 @@ const TIPOS_NC: Record<string, { label: string; subtitulo: (n: string) => string
   responsable_verif:     { label: 'Verificación de Eficacia',         subtitulo: (n) => `Se te asignó para verificar la eficacia de ${n}` },
   responsable_accion:    { label: 'Responsable de Acción Correctiva', subtitulo: (n) => `Se te asignó una acción correctiva en ${n}` },
 };
-
-// ── Email layout compartido ───────────────────────────────────────────────────
-
-function emailLayout(params: {
-  primerNombre: string;
-  subtitulo: string;
-  mensaje: string;
-  badgeLabel: string;
-  badgeValue: string;
-  badgeLabel2?: string;
-  badgeValue2?: string;
-  link: string;
-  linkLabel: string;
-  footer?: string;
-  extraHtml?: string;
-}): string {
-  const { primerNombre, subtitulo, mensaje, badgeLabel, badgeValue, badgeLabel2, badgeValue2, link, linkLabel, footer, extraHtml } = params;
-
-  const badge2Html = badgeLabel2 ? `
-                  <td style="padding:16px 20px;border-left:1px solid #e5e7eb;">
-                    <p style="margin:0 0 4px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;">${badgeLabel2}</p>
-                    <p style="margin:0;font-size:14px;color:#374151;">${badgeValue2}</p>
-                  </td>` : '';
-
-  return `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Ribeiro 360</title>
-</head>
-<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:32px 16px;">
-    <tr>
-      <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-          <tr>
-            <td style="background-color:#1a1a1a;padding:20px 32px;">
-              <table cellpadding="0" cellspacing="0" style="width:100%;">
-                <tr>
-                  <td style="vertical-align:middle;">
-                    <img src="${LOGO_B64}" alt="Ribeiro" height="36" style="display:block;height:36px;width:auto;" />
-                  </td>
-                  <td style="vertical-align:middle;text-align:right;">
-                    <span style="color:#999;font-size:12px;">${subtitulo}</span>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:32px;">
-              <p style="margin:0 0 8px;font-size:15px;color:#6b7280;">Hola, <strong style="color:#111827;">${primerNombre}</strong></p>
-              <h2 style="margin:0 0 20px;font-size:22px;font-weight:700;color:#111827;line-height:1.3;">${mensaje}</h2>
-              ${extraHtml ?? ''}
-              <table width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:28px;">
-                <tr>
-                  <td style="padding:16px 20px;">
-                    <p style="margin:0 0 4px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;">${badgeLabel}</p>
-                    <p style="margin:0;font-size:16px;font-weight:700;color:#111827;">${badgeValue}</p>
-                  </td>${badge2Html}
-                </tr>
-              </table>
-              <a href="${link}" style="display:inline-block;background-color:#f5c518;color:#1a1a1a;text-decoration:none;font-weight:700;font-size:15px;padding:14px 28px;border-radius:8px;">
-                ${linkLabel}
-              </a>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:16px 32px 28px;border-top:1px solid #f3f4f6;">
-              <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.6;">
-                ${footer ?? 'Este email fue generado automáticamente por Ribeiro 360.<br />Si creés que fue un error, contactá al área de Calidad.'}
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
-}
 
 // ── Builders por tipo ─────────────────────────────────────────────────────────
 
@@ -142,10 +62,6 @@ function buildSgiHtml(fullName: string, documentoTitulo: string, versionNumero: 
   });
 }
 
-function escapeHtml(s: string): string {
-  const map: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-  return String(s ?? '').replace(/[&<>"']/g, c => map[c]);
-}
 
 type SgiPublicado = { documentoId: string; titulo: string; codigo?: string | null; versionNumero?: string | null; esNuevo: boolean; mensajeExtra?: string | null };
 
@@ -228,7 +144,7 @@ function buildPublicacionHtml(fullName: string, titulo: string, tipo: string): s
           <!-- Logo -->
           <tr>
             <td style="padding-bottom:20px;text-align:center;">
-              <img src="https://i.ibb.co/4R17J0h1/logo3.png" alt="Ribeiro" height="32" style="display:inline-block;height:32px;width:auto;" />
+              <img src="https://i.ibb.co/k2twLzyj/logo3.png" alt="Ribeiro" height="32" style="display:inline-block;height:32px;width:auto;" />
             </td>
           </tr>
 
@@ -419,6 +335,87 @@ serve(async (req: Request) => {
     const notifType: string = body.notifType ?? 'nc';
     const json = (obj: unknown, status = 200) =>
       new Response(JSON.stringify(obj), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
+    // ── SGI circuito de aprobación ────────────────────────────────────────
+    // mode 'send'    → { versionId, evento }. Destinatarios y datos se resuelven en el servidor,
+    //                  según la config de Admin › SGI. El evento debe coincidir con el estado real.
+    // mode 'preview' → (admin) { evento, rol, ...muestra } → asunto + HTML, sin enviar.
+    // mode 'test'    → (admin) envía la muestra solo al admin que lo pide.
+    if (notifType === 'sgi_circuito') {
+      const mode: string = body.mode ?? 'send';
+      const cfg = await loadCircuitoConfig(adminClient);
+
+      if (mode === 'preview' || mode === 'test') {
+        await requireAdminRole(adminClient, authUser.id);
+        const evento = body.evento as EventoCircuito;
+        const rol = (body.rol ?? 'revisor') as Rol;
+        const sample: DocEmail = {
+          documentoId: body.documentoId ?? 'preview',
+          titulo: String(body.titulo || 'Procedimiento de ejemplo'),
+          codigo: body.codigo ?? null,
+          versionNumero: body.versionNumero ?? null,
+          comentario: body.comentario ?? 'Falta actualizar el punto 4 según la norma vigente.',
+          dias: Number(body.dias ?? cfg.recordatorio_dias) || 3,
+          area: body.area ?? cfg.revisor_departamento,
+        };
+        const { data: me } = await adminClient.from('profiles').select('full_name, email').eq('id', authUser.id).single();
+        const subject = circuitoSubject(evento, rol, sample);
+        const html = buildCircuitoHtml(me?.full_name ?? 'Nombre', evento, rol, sample);
+        if (mode === 'preview') return json({ ok: true, subject, html });
+        const to = me?.email ?? authUser.email;
+        if (!to) return json({ error: 'Tu usuario no tiene email' }, 400);
+        await sendEmail(resendKey, to, `[PRUEBA] ${subject}`, html);
+        return json({ ok: true, sent: 1, to });
+      }
+
+      const { versionId, evento } = body as { versionId?: string; evento?: EventoCircuito };
+      const ESTADO_ESPERADO: Record<string, string> = {
+        revision_pendiente: 'en_revision',
+        pendiente_aprobacion: 'pendiente_aprobacion',
+        aprobado: 'aprobado',
+        rechazado: 'rechazado',
+      };
+      if (!versionId || !evento || !ESTADO_ESPERADO[evento]) return json({ error: 'Faltan parámetros SGI_CIRCUITO' }, 400);
+      if (!cfg.enabled) return json({ ok: true, sent: 0, skipped: 'deshabilitado' });
+
+      const { data: ver, error: vErr } = await adminClient
+        .from('sgi_versiones')
+        .select('id, numero_version, estado_aprobacion, revisor_id, comentario_revision, documento:sgi_documentos(id, titulo, codigo, activo, created_by, aprobador_id)')
+        .eq('id', versionId)
+        .single();
+      if (vErr || !ver) return json({ error: 'Versión no encontrada' }, 404);
+      const doc = ver.documento as unknown as { id: string; titulo: string; codigo: string | null; activo: boolean; created_by: string | null; aprobador_id: string | null } | null;
+      if (!doc || doc.activo === false) return json({ ok: true, sent: 0, skipped: 'inactivo' });
+      if (ver.estado_aprobacion !== ESTADO_ESPERADO[evento]) return json({ ok: true, sent: 0, skipped: 'estado_no_coincide' });
+
+      const a = cfg.alertas;
+      const destinatarios: { persona: Persona; rol: Rol }[] = [];
+      const push = (personas: (Persona | null)[], rol: Rol) =>
+        personas.forEach(p => { if (p && !destinatarios.some(d => d.persona.id === p.id)) destinatarios.push({ persona: p, rol }); });
+
+      if (evento === 'revision_pendiente' && a.revision_pendiente) push(await resolveRevisores(adminClient, cfg), 'revisor');
+      if (evento === 'pendiente_aprobacion' && a.pendiente_aprobacion) push(await resolveAprobadores(adminClient, doc), 'aprobador');
+      if (evento === 'aprobado' || evento === 'rechazado') {
+        // El autor primero: si además fue el revisor, recibe el mensaje dirigido al autor.
+        if (evento === 'aprobado' ? a.aprobado_autor : a.rechazado_autor) push([await getPersona(adminClient, doc.created_by)], 'autor');
+        if (evento === 'aprobado' ? a.aprobado_revisor : a.rechazado_revisor) push([await getPersona(adminClient, ver.revisor_id)], 'revisor');
+      }
+
+      // Quien hizo la acción no se notifica a sí mismo.
+      const finales = destinatarios.filter(d => d.persona.id !== authUser.id);
+      if (finales.length === 0) return json({ ok: true, sent: 0, skipped: 'sin_destinatarios' });
+
+      const datos: DocEmail = {
+        documentoId: doc.id, titulo: doc.titulo, codigo: doc.codigo, versionNumero: ver.numero_version,
+        comentario: ver.comentario_revision, area: cfg.revisor_departamento,
+      };
+      const result = await sendBatch(resendKey, finales.map(({ persona, rol }) => ({
+        to: persona.email,
+        subject: circuitoSubject(evento, rol, datos),
+        html: buildCircuitoHtml(persona.full_name, evento, rol, datos),
+      })));
+      return json({ ok: true, ...result });
+    }
 
     // ── SGI documento publicado: todos los usuarios ───────────────────────
     // mode 'send'    → envío real. Los datos se leen de la DB (no se confía en el cliente),

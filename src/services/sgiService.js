@@ -118,17 +118,28 @@ export async function saveSgiDocumento(docPayload, versionData) {
     savedDocId = data?.[0]?.id;
   }
 
-  // publicadoVersionId: id de la versión que quedó vigente en este guardado (para notificar)
+  // publicadoVersionId:  versión que quedó vigente en este guardado (aviso a todos)
+  // enRevisionVersionId: versión que entró al circuito de aprobación (aviso a revisores)
   let publicadoVersionId = null;
+  let enRevisionVersionId = null;
   if (savedDocId && versionData?.numero_version) {
     const isControlado = docFields.documento_controlado ?? false;
     if (versionData._ver_id) {
-      await supabase.from('sgi_versiones').update({
+      // Si la versión editada había sido rechazada, al guardarla corregida vuelve a revisión.
+      const { data: actual } = await supabase.from('sgi_versiones').select('estado_aprobacion').eq('id', versionData._ver_id).maybeSingle();
+      const reenviar = isControlado && actual?.estado_aprobacion === 'rechazado';
+      const { error: updError } = await supabase.from('sgi_versiones').update({
         numero_version: versionData.numero_version,
         fecha_emision: versionData.fecha_emision || null,
         notas_cambios: versionData.notas_cambios || null,
         ...(versionData.archivo_url && { archivo_url: versionData.archivo_url }),
+        ...(reenviar && {
+          estado_aprobacion: 'en_revision',
+          revisor_id: null, revisor: null, fecha_revision: null, comentario_revision: null,
+        }),
       }).eq('id', versionData._ver_id);
+      if (updError) console.error('[sgiService] saveSgiDocumento (update version):', updError.message);
+      else if (reenviar) enRevisionVersionId = versionData._ver_id;
     } else {
       // Insertamos siempre con vigente:false y luego, si corresponde, usamos el RPC
       // sgi_set_version_vigente para marcarla vigente y desmarcar el resto en una
@@ -156,10 +167,11 @@ export async function saveSgiDocumento(docPayload, versionData) {
         if (rpcError) console.error('[sgiService] saveSgiDocumento (set vigente):', rpcError.message);
         else publicadoVersionId = nuevaVersion.id;
       }
+      if (isControlado && nuevaVersion?.id) enRevisionVersionId = nuevaVersion.id;
     }
   }
 
-  return { data: { documentoId: savedDocId, publicadoVersionId }, error: null };
+  return { data: { documentoId: savedDocId, publicadoVersionId, enRevisionVersionId }, error: null };
 }
 
 export async function softDeleteSgiDocumento(id) {

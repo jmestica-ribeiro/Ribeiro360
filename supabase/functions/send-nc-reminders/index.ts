@@ -1,9 +1,14 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { getAdminClient } from '../_shared/auth.ts';
+import {
+  loadCircuitoConfig, resolveRevisores, resolveAprobadores,
+  circuitoSubject, buildCircuitoHtml, sendResendEmail, type Persona,
+} from '../_shared/sgiCircuito.ts';
 
 const APP_URL = 'https://intranet.ribeiro.ar';
 
-const LOGO_B64 = 'data:image/png;base64,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';
+// Imagen hosteada: los clientes de correo (Gmail, Outlook) bloquean los logos embebidos en base64.
+const LOGO_URL = 'https://i.ibb.co/k2twLzyj/logo3.png';
 const DIAS_AVISO = 3; // enviar aviso cuando quedan ≤ 3 días para el vencimiento
 
 // ── HTML de recordatorio ───────────────────────────────────────────────────────
@@ -42,7 +47,7 @@ function buildReminderHtml(
               <table cellpadding="0" cellspacing="0" style="width:100%;">
                 <tr>
                   <td style="vertical-align:middle;">
-                    <img src="${LOGO_B64}" alt="Ribeiro" height="36" style="display:block;height:36px;width:auto;" />
+                    <img src="${LOGO_URL}" alt="Ribeiro" height="36" style="display:block;height:36px;width:auto;" />
                   </td>
                   <td style="vertical-align:middle;text-align:right;">
                     <span style="color:#999;font-size:12px;">SGI Hallazgos</span>
@@ -107,6 +112,76 @@ serve(async () => {
     const resendKey = Deno.env.get('RESEND_API_KEY');
     if (!resendKey) throw new Error('RESEND_API_KEY no configurado');
 
+    // Independientes: si falla una, la otra se ejecuta igual.
+    const [nc, sgi] = await Promise.allSettled([
+      runNcReminders(admin, resendKey),
+      runSgiReminders(admin, resendKey),
+    ]);
+    if (nc.status === 'rejected') console.error('[reminders] NC:', nc.reason);
+    if (sgi.status === 'rejected') console.error('[reminders] SGI:', sgi.reason);
+
+    return new Response(JSON.stringify({
+      nc: nc.status === 'fulfilled' ? nc.value : { error: String(nc.reason) },
+      sgi: sgi.status === 'fulfilled' ? sgi.value : { error: String(sgi.reason) },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  } catch (err) {
+    console.error('[reminders] error fatal:', err);
+    return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
+  }
+});
+
+// ── SGI: versiones trabadas en revisión / aprobación ──────────────────────────
+// Recuerda a quien tiene el pendiente cada `recordatorio_dias` días (config de Admin › SGI).
+async function runSgiReminders(admin: ReturnType<typeof getAdminClient>, resendKey: string) {
+  const cfg = await loadCircuitoConfig(admin);
+  const dias = cfg.recordatorio_dias;
+  if (!cfg.enabled || dias <= 0) return { enviados: 0, skipped: 'deshabilitado' };
+
+  const { data: versiones, error } = await admin
+    .from('sgi_versiones')
+    .select('id, numero_version, estado_aprobacion, estado_desde, recordatorio_at, documento:sgi_documentos(id, titulo, codigo, activo, created_by, aprobador_id)')
+    .in('estado_aprobacion', ['en_revision', 'pendiente_aprobacion']);
+  if (error) throw error;
+
+  const DIA = 86_400_000;
+  const ahora = Date.now();
+  let revisores: Persona[] | null = null; // se resuelven una sola vez
+  let enviados = 0, errores = 0;
+
+  for (const v of versiones ?? []) {
+    const doc = v.documento as unknown as { id: string; titulo: string; codigo: string | null; activo: boolean; created_by: string | null; aprobador_id: string | null } | null;
+    if (!doc || doc.activo === false || !v.estado_desde) continue;
+
+    const desde = new Date(v.estado_desde).getTime();
+    const ultimo = v.recordatorio_at ? new Date(v.recordatorio_at).getTime() : desde;
+    if (ahora - ultimo < dias * DIA) continue;
+
+    const enRevision = v.estado_aprobacion === 'en_revision';
+    const evento = enRevision ? 'recordatorio_revision' : 'recordatorio_aprobacion';
+    const rol = enRevision ? 'revisor' : 'aprobador';
+    if (enRevision && !revisores) revisores = await resolveRevisores(admin, cfg);
+    const personas = enRevision ? (revisores ?? []) : await resolveAprobadores(admin, doc);
+    if (personas.length === 0) continue;
+
+    const datos = {
+      documentoId: doc.id, titulo: doc.titulo, codigo: doc.codigo, versionNumero: v.numero_version,
+      dias: Math.floor((ahora - desde) / DIA), area: cfg.revisor_departamento,
+    };
+    let algunoOk = false;
+    for (const p of personas) {
+      const ok = await sendResendEmail(resendKey, p.email, circuitoSubject(evento, rol, datos), buildCircuitoHtml(p.full_name, evento, rol, datos));
+      if (ok) { enviados++; algunoOk = true; } else errores++;
+      await new Promise(r => setTimeout(r, 550)); // rate limit de Resend (~2 req/s)
+    }
+    // Marca aunque falle alguno, para no reintentar en bucle el mismo día.
+    if (algunoOk) await admin.from('sgi_versiones').update({ recordatorio_at: new Date().toISOString() }).eq('id', v.id);
+  }
+  return { enviados, errores };
+}
+
+// ── NC: acciones vencidas o por vencer ────────────────────────────────────────
+async function runNcReminders(admin: ReturnType<typeof getAdminClient>, resendKey: string) {
+  {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
 
@@ -133,7 +208,7 @@ serve(async () => {
 
     if (error) throw error;
     if (!acciones || acciones.length === 0) {
-      return new Response(JSON.stringify({ enviados: 0 }), { status: 200 });
+      return { enviados: 0 };
     }
 
     // Filtrar acciones ya avisadas esta semana (dedup anti-reintento)
@@ -149,7 +224,7 @@ serve(async () => {
     const accionesPendientes = acciones.filter(a => !yaAvisadasSet.has(a.id));
 
     if (accionesPendientes.length === 0) {
-      return new Response(JSON.stringify({ enviados: 0, omitidos: acciones.length }), { status: 200 });
+      return { enviados: 0, omitidos: acciones.length };
     }
 
     // Obtener perfiles únicos de responsables
@@ -214,12 +289,6 @@ serve(async () => {
       }
     }
 
-    return new Response(
-      JSON.stringify({ enviados, errores, total: acciones.length }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } },
-    );
-  } catch (err) {
-    console.error('[reminders] error fatal:', err);
-    return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
+    return { enviados, errores, total: acciones.length };
   }
-});
+}

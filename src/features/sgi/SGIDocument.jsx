@@ -12,8 +12,9 @@ import {
   updateSgiDocumentoAprobador, fetchGerentes,
 } from '../../services/sgiService';
 import { useAuth } from '../../contexts/AuthContext';
-import { notificarDocumentoSGI, notificarDocumentoPublicado } from '../../lib/notificaciones';
-import { isGerente } from '../../lib/visibilidad';
+import { notificarCircuitoSGI, notificarDocumentoPublicado } from '../../lib/notificaciones';
+import { useSgiCircuito } from './useSgiCircuito';
+import { isGerente, isRevisorSgi } from '../../lib/visibilidad';
 import './SGI.css';
 import './SGIDocument.css';
 import { Select } from '../../components/common';
@@ -23,13 +24,13 @@ const getCatSlug = (nombre) =>
 
 const APROBACION_STEPS = [
   { key: 'creacion', label: 'Creación' },
-  { key: 'en_revision', label: 'Revisión CMASS' },
+  { key: 'en_revision', label: 'Revisión {area}' },
   { key: 'pendiente_aprobacion', label: 'Aprobación Gerencia' },
   { key: 'aprobado', label: 'Vigente' },
 ];
 const STEP_INDEX = { creacion: 0, en_revision: 1, pendiente_aprobacion: 2, aprobado: 3 };
 const ESTADO_LABELS = {
-  en_revision: 'En revisión CMASS',
+  en_revision: 'En revisión {area}',
   pendiente_aprobacion: 'Pendiente aprobación',
   aprobado: 'Aprobado',
   rechazado: 'Rechazado',
@@ -39,6 +40,9 @@ const SGIDocument = () => {
   const { docId } = useParams();
   const navigate = useNavigate();
   const { profile } = useAuth();
+  const circuito = useSgiCircuito();
+  const areaRevisora = circuito.revisor_departamento || 'Área revisora';
+  const conArea = (s) => (s ?? '').replace('{area}', areaRevisora);
   const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
   const [documento, setDocumento] = useState(null);
   const [versiones, setVersiones] = useState([]);
@@ -69,26 +73,23 @@ const SGIDocument = () => {
     if (!pendienteVersion || !actionMode) return;
     setIsActioning(true);
 
-    const aprobadorId = overrideAprobadorId || documento.aprobador_id || documento.aprobador_perfil?.id;
-    const docParams = { documentoTitulo: documento.titulo, versionNumero: pendienteVersion.numero_version, documentoId: documento.id };
-
+    // Los destinatarios de cada aviso los resuelve la Edge Function según Admin › SGI › Circuito.
+    const versionId = pendienteVersion.id;
     if (actionMode === 'review') {
       if (overrideAprobadorId && overrideAprobadorId !== documento.aprobador_id) {
         await updateSgiDocumentoAprobador(documento.id, overrideAprobadorId);
       }
-      await reviewSgiVersion(pendienteVersion.id, profile, actionComment || null);
-      // Notificar al aprobador que hay una versión esperando su aprobación
-      if (aprobadorId) notificarDocumentoSGI({ userId: aprobadorId, ...docParams, evento: 'pendiente_aprobacion' });
+      const { error } = await reviewSgiVersion(versionId, profile, actionComment || null);
+      if (!error) notificarCircuitoSGI({ versionId, evento: 'pendiente_aprobacion' });
     } else if (actionMode === 'approve') {
-      const { error: approveErr } = await approveSgiVersion(pendienteVersion.id, documento.id, profile, actionComment || null);
-      // Notificar al revisor que su versión fue aprobada
-      if (pendienteVersion.revisor_id) notificarDocumentoSGI({ userId: pendienteVersion.revisor_id, ...docParams, evento: 'aprobado' });
-      // La versión quedó vigente → aviso general a todos los usuarios (según config de Admin › SGI)
-      if (!approveErr) notificarDocumentoPublicado({ versionId: pendienteVersion.id });
+      const { error } = await approveSgiVersion(versionId, documento.id, profile, actionComment || null);
+      if (!error) {
+        notificarCircuitoSGI({ versionId, evento: 'aprobado' });   // autor + revisor
+        notificarDocumentoPublicado({ versionId });                 // aviso general (Admin › SGI › Publicados)
+      }
     } else if (actionMode === 'reject') {
-      await rejectSgiVersion(pendienteVersion.id, actionComment || null);
-      // Notificar al revisor que su versión fue rechazada
-      if (pendienteVersion.revisor_id) notificarDocumentoSGI({ userId: pendienteVersion.revisor_id, ...docParams, evento: 'rechazado' });
+      const { error } = await rejectSgiVersion(versionId, actionComment || null);
+      if (!error) notificarCircuitoSGI({ versionId, evento: 'rechazado' }); // autor + revisor, con el motivo
     }
 
     setActionMode(null);
@@ -125,7 +126,7 @@ const SGIDocument = () => {
 
   const isTester = profile?.email === 'juan.mestica@ribeirosrl.com.ar';
   const creadorDept = documento.creador?.department;
-  const isRevisorCmass = profile?.department === 'CMASS' || isTester;
+  const isRevisorCmass = isRevisorSgi(profile, circuito) || isTester;
   const aprobadorEspecifico = documento.aprobador_id || documento.aprobador_perfil?.id;
   const isAprobadorGerente = aprobadorEspecifico
     ? profile?.id === aprobadorEspecifico || isTester
@@ -211,7 +212,7 @@ const SGIDocument = () => {
               <span>Circuito de Aprobación</span>
               {pendienteVersion && (
                 <span className={`sgi-aprobacion-badge estado-${pendienteVersion.estado_aprobacion}`}>
-                  {ESTADO_LABELS[pendienteVersion.estado_aprobacion]}
+                  {conArea(ESTADO_LABELS[pendienteVersion.estado_aprobacion])}
                 </span>
               )}
             </div>
@@ -227,7 +228,7 @@ const SGIDocument = () => {
                       <div className="sgi-aprobacion-step-dot">
                         {isDone ? <CheckCircle size={18} /> : isCurrent ? <Clock size={18} /> : isRejected ? <XCircle size={18} /> : <span className="sgi-aprobacion-step-num">{i + 1}</span>}
                       </div>
-                      <span className="sgi-aprobacion-step-label">{step.label}</span>
+                      <span className="sgi-aprobacion-step-label">{conArea(step.label)}</span>
                       {step.key === 'en_revision' && (pendienteVersion?.revisor || vigenteVersion?.revisor) && (
                         <span className="sgi-aprobacion-step-meta">{pendienteVersion?.revisor || vigenteVersion?.revisor}</span>
                       )}
@@ -259,23 +260,23 @@ const SGIDocument = () => {
               </div>
             )}
 
-            {/* Info: revisado por CMASS, esperando gerente */}
+            {/* Info: revisado por el área revisora, esperando gerente */}
             {currentEstado === 'pendiente_aprobacion' && (
               <div className="sgi-aprobacion-alert info">
                 <CheckCircle size={14} />
                 <span>
-                  {pendienteVersion?.revisor && <>Revisado por <strong>{pendienteVersion.revisor}</strong> (CMASS){pendienteVersion.comentario_revision ? ` — "${pendienteVersion.comentario_revision}"` : ''}. </>}
+                  {pendienteVersion?.revisor && <>Revisado por <strong>{pendienteVersion.revisor}</strong> ({areaRevisora}){pendienteVersion.comentario_revision ? ` — "${pendienteVersion.comentario_revision}"` : ''}. </>}
                   Pendiente de aprobación por <strong>{documento.aprobador_perfil?.full_name || (creadorDept ? `el Gerente de ${creadorDept}` : 'el Gerente del área')}</strong>.
                 </span>
               </div>
             )}
 
-            {/* Acción CMASS */}
+            {/* Acción del área revisora */}
             {currentEstado === 'en_revision' && isRevisorCmass && (
               <div className="sgi-aprobacion-action-area">
                 {!actionMode ? (
                   <>
-                    <p className="sgi-aprobacion-prompt">Esta versión está pendiente de revisión por CMASS. Podés validarla y derivarla al gerente aprobador.</p>
+                    <p className="sgi-aprobacion-prompt">Esta versión está pendiente de revisión por {areaRevisora}. Podés validarla y derivarla al gerente aprobador.</p>
                     <div style={{ marginBottom: 12 }}>
                       <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
                         Gerente aprobador
@@ -380,7 +381,7 @@ const SGIDocument = () => {
             <table>
               <thead>
                 <tr>
-                  <th>Revisado por (CMASS)</th>
+                  <th>Revisado por ({areaRevisora})</th>
                   <th>Aprobado por (Gerencia)</th>
                   <th>Fecha aprobación</th>
                   <th>Revisión</th>
@@ -432,7 +433,7 @@ const SGIDocument = () => {
                         {ver.vigente && <span className="sgi-vigente-tag">Vigente</span>}
                         {ver.estado_aprobacion && ver.estado_aprobacion !== 'aprobado' && (
                           <span className={`sgi-aprobacion-inline-badge estado-${ver.estado_aprobacion}`}>
-                            {ESTADO_LABELS[ver.estado_aprobacion]}
+                            {conArea(ESTADO_LABELS[ver.estado_aprobacion])}
                           </span>
                         )}
                       </td>
