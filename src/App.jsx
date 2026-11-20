@@ -17,7 +17,6 @@ const Dashboard       = lazy(() => import('./features/dashboard/Dashboard'));
 const Explorar        = lazy(() => import('./features/capacitaciones/Explorar'));
 const Onboarding      = lazy(() => import('./features/onboarding/Onboarding'));
 const AdminPanel      = lazy(() => import('./features/admin/AdminPanel'));
-const Organigrama     = lazy(() => import('./features/organigrama/Organigrama'));
 const Directorio      = lazy(() => import('./features/directorio/Directorio'));
 const MisCursos       = lazy(() => import('./features/capacitaciones/MisCursos'));
 const Eventos         = lazy(() => import('./features/eventos/Eventos'));
@@ -73,7 +72,6 @@ function AnimatedRoutes() {
       <Route path="/"                      element={<W><Dashboard /></W>} />
       <Route path="/explorar"              element={<W><Explorar /></W>} />
       <Route path="/onboarding"            element={<W><Onboarding /></W>} />
-      <Route path="/organigrama"           element={<W><Organigrama /></W>} />
       <Route path="/directorio"            element={<W><Directorio /></W>} />
       <Route path="/cursos"                element={<W><MisCursos /></W>} />
       <Route path="/cursos/:id"            element={<W><MisCursos /></W>} />

@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { GraduationCap, Calendar, CalendarDays, Rocket, MessageCircle, LayoutGrid, ShieldCheck, Users, Compass, PanelLeft, Rss, Wrench, ClipboardCheck, ClipboardList, Truck, Tag } from 'lucide-react';
+import { GraduationCap, Calendar, CalendarDays, Rocket, MessageCircle, ShieldCheck, Users, Compass, PanelLeft, Rss, Wrench, ClipboardCheck, ClipboardList, Truck, Tag } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import CapacitacionesTab from './tabs/CapacitacionesTab';
 import PAFTab from './tabs/PAFTab';
 import OnboardingTab from './tabs/OnboardingTab';
 import EventosTab from './tabs/EventosTab';
 import FAQTab from './tabs/FAQTab';
-import OrganigramaTab from './tabs/OrganigramaTab';
 import SGITab from './tabs/SGITab';
 import CertEquiposTab from './tabs/CertEquiposTab';
 import ChecklistItemsTab from './tabs/ChecklistItemsTab';
@@ -20,7 +19,7 @@ import HerramientasTab from './tabs/HerramientasTab';
 import './AdminPanel.css';
 import './AdminRedesign.css';
 
-const ALL_TABS = ['capacitaciones', 'paf', 'onboarding', 'eventos', 'faq', 'organigrama', 'sgi', 'cert-equipos', 'checklist-items', 'vehiculos', 'familias', 'social', 'herramientas'];
+const ALL_TABS = ['capacitaciones', 'paf', 'onboarding', 'eventos', 'faq', 'sgi', 'cert-equipos', 'checklist-items', 'vehiculos', 'familias', 'social', 'herramientas'];
 
 const ICON = { size: 18, strokeWidth: 1.5 };
 
@@ -30,7 +29,6 @@ const TAB_CONFIG = [
   { key: 'onboarding',     label: 'Onboarding',        group: 'Contenido',    icon: <Rocket {...ICON} /> },
   { key: 'eventos',        label: 'Eventos',           group: 'Contenido',    icon: <CalendarDays {...ICON} /> },
   { key: 'faq',            label: 'FAQ',               group: 'Contenido',    icon: <MessageCircle {...ICON} /> },
-  { key: 'organigrama',    label: 'Organigrama',       group: 'Organización', icon: <LayoutGrid {...ICON} /> },
   { key: 'sgi',            label: 'SGI',               group: 'Organización', icon: <ShieldCheck {...ICON} /> },
   { key: 'cert-equipos',   label: 'Cert. Equipos',     group: 'Equipos',      icon: <ClipboardCheck {...ICON} /> },
   { key: 'checklist-items',label: 'Checklists Equipo', group: 'Equipos',      icon: <ClipboardList {...ICON} /> },
@@ -96,7 +94,6 @@ const AdminPanel = () => {
           {activeTab === 'onboarding'     && allowedTabs.includes('onboarding')     && <OnboardingTab />}
           {activeTab === 'eventos'        && allowedTabs.includes('eventos')        && <EventosTab />}
           {activeTab === 'faq'            && allowedTabs.includes('faq')            && <FAQTab />}
-          {activeTab === 'organigrama'    && allowedTabs.includes('organigrama')    && <OrganigramaTab />}
           {activeTab === 'sgi'            && allowedTabs.includes('sgi')            && <SGITab />}
           {activeTab === 'cert-equipos'     && allowedTabs.includes('cert-equipos')     && <CertEquiposTab />}
           {activeTab === 'checklist-items' && allowedTabs.includes('checklist-items') && <ChecklistItemsTab />}

@@ -17,7 +17,6 @@ const SECTIONS = {
   onboarding: ['Onboarding'],
   directorio: ['Comunidad', 'Agenda'],
   eventos: ['Comunidad', 'Eventos'],
-  organigrama: ['Comunidad', 'Organigrama'],
   faq: ['Comunidad', 'Preguntas Frecuentes'],
   social: ['Comunidad', 'Social'],
   multimedia: ['Comunidad', 'Multimedia'],

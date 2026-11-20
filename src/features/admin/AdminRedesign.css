@@ -119,7 +119,7 @@
   .btn-add-admin:hover { background: var(--accent-hover); }
 }
 
-/* ── Organigrama ── */
+/* ── Toolbar compartida (búsqueda / segmented) ── */
 .org-toolbar {
   display: flex;
   align-items: center;

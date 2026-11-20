@@ -13,7 +13,6 @@ const NAV_ITEMS_CONFIG = [
   { section: 'Comunidad', items: [
     { key: 'directorio',  label: 'Agenda / Directorio' },
     { key: 'eventos',     label: 'Eventos' },
-    { key: 'organigrama', label: 'Organigrama' },
     { key: 'faq',         label: 'Preguntas Frecuentes' },
     { key: 'multimedia',  label: 'Contenido Multimedia' },
   ]},

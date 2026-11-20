@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../contexts/AuthContext';
 import {
-  Home, Compass, BookOpen, Users, Calendar, Settings, Briefcase, LayoutGrid, MessageCircle,
+  Home, Compass, BookOpen, Users, Calendar, Settings, Briefcase, MessageCircle,
   ShieldCheck, ChevronDown, ChevronsUpDown, X, Rss, Wrench, PanelLeftClose, PanelLeftOpen, User, LogOut,
 } from 'lucide-react';
 import Logo from '../../assets/Logo.png';
@@ -23,7 +23,6 @@ const NAV_ITEMS = {
   comunidad: [
     { key: 'directorio',  label: 'Agenda',               to: '/directorio',  icon: Users },
     { key: 'eventos',     label: 'Eventos',              to: '/eventos',     icon: Calendar },
-    { key: 'organigrama', label: 'Organigrama',          to: '/organigrama', icon: LayoutGrid },
     { key: 'faq',         label: 'Preguntas Frecuentes', to: '/faq',         icon: MessageCircle },
     { key: 'social',        label: 'Social',               to: '/social',        icon: Rss },
     { key: 'herramientas', label: 'Herramientas por Sector', to: '/herramientas', icon: Wrench },

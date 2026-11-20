@@ -52,11 +52,6 @@
 - `reorderOnboardingSteps(stepsOrdenados)`
 - `fetchOnboardingContenido()`
 
-## [organigramaService.js](../../src/services/organigramaService.js)
-- `fetchOrgNodos()`
-- `saveOrgNodo(payload)`
-- `deleteOrgNodo(id)`
-
 ## [pafService.js](../../src/services/pafService.js)
 - `fetchPAF()`
 - `createPafPlan(anio)`

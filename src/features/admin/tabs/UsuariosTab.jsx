@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { GraduationCap, Calendar, Rocket, MessageCircle, LayoutGrid, ShieldCheck, RefreshCw, ImageIcon, CheckCircle, AlertCircle, Search, Trash2, ChevronLeft, ChevronRight, ClipboardCheck, Truck, Tag, Rss, Wrench } from 'lucide-react';
+import { GraduationCap, Calendar, Rocket, MessageCircle, ShieldCheck, RefreshCw, ImageIcon, CheckCircle, AlertCircle, Search, Trash2, ChevronLeft, ChevronRight, ClipboardCheck, Truck, Tag, Rss, Wrench } from 'lucide-react';
 import { fetchAllUsers, updateUserRoleAndTabs, syncMsUsers, syncMsPhotos, deleteUser } from '../../../services/usuariosService';
 import { useAuth } from '../../../contexts/AuthContext';
 import { AdminListPanel, LoadingSpinner, Select } from '../../../components/common';
 
-const ALL_TABS = ['capacitaciones', 'paf', 'onboarding', 'eventos', 'faq', 'organigrama', 'sgi', 'cert-equipos', 'checklist-items', 'vehiculos', 'familias', 'social', 'herramientas'];
+const ALL_TABS = ['capacitaciones', 'paf', 'onboarding', 'eventos', 'faq', 'sgi', 'cert-equipos', 'checklist-items', 'vehiculos', 'familias', 'social', 'herramientas'];
 
 const TAB_ICONS = {
   capacitaciones: <GraduationCap size={14} strokeWidth={1.5} />,
@@ -12,7 +12,6 @@ const TAB_ICONS = {
   onboarding:     <Rocket size={14} strokeWidth={1.5} />,
   eventos:        <Calendar size={14} strokeWidth={1.5} />,
   faq:            <MessageCircle size={14} strokeWidth={1.5} />,
-  organigrama:    <LayoutGrid size={14} strokeWidth={1.5} />,
   sgi:            <ShieldCheck size={14} strokeWidth={1.5} />,
   'cert-equipos':    <ClipboardCheck size={14} strokeWidth={1.5} />,
   'checklist-items': <ClipboardCheck size={14} strokeWidth={1.5} />,
@@ -28,7 +27,6 @@ const TAB_LABELS = {
   onboarding:     'Onboarding',
   eventos:        'Eventos',
   faq:            'FAQ',
-  organigrama:    'Organigrama',
   sgi:            'SGI',
   'cert-equipos':    'Cert. Equipos',
   'checklist-items': 'Checklists Equipo',

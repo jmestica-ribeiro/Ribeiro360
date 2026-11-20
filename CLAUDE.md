@@ -16,7 +16,7 @@ Es el ecosistema educacional y de inducción de la empresa (`src/features/capaci
 - Toda la orquestación de escritura y lectura de esta matriz de datos recae en `src/services/cursosService.js`.
 
 ### 1.2 Directorio, Novedades y Dashboard
-- **Directorio y Organigrama:** Visualización de la estructura y árbol jerárquico de la empresa.
+- **Directorio:** Agenda de contactos de la empresa.
 - **Noticias e Inicio:** Tablero dinámico o lobby con atajos operacionales y banners generados por roles.
 
 ### 1.3 Módulo SGI (Sistema de Gestión Integral) - *Alta Complejidad*

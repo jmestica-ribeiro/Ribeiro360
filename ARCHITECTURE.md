@@ -43,7 +43,6 @@ src/
 │   ├── faqService.js
 │   ├── novedadesService.js
 │   ├── onboardingService.js
-│   ├── organigramaService.js
 │   ├── pafService.js
 │   ├── sgiService.js
 │   └── usuariosService.js
@@ -73,7 +72,6 @@ src/
 │   │   │   ├── OnboardingTab.jsx
 │   │   │   ├── EventosTab.jsx
 │   │   │   ├── FAQTab.jsx
-│   │   │   ├── OrganigramaTab.jsx
 │   │   │   ├── SGITab.jsx
 │   │   │   ├── NovedadesTab.jsx
 │   │   │   └── UsuariosTab.jsx
@@ -109,7 +107,6 @@ src/
 │   ├── eventos/       → Eventos.jsx / .css
 │   ├── faq/           → FAQ.jsx / .css
 │   ├── onboarding/    → Onboarding.jsx / .css
-│   ├── organigrama/   → Organigrama.jsx / .css
 │   └── perfil/        → Perfil.jsx / .css
 │
 └── pages/
@@ -147,7 +144,6 @@ export async function fetchEventos() {
 | `faqService.js` | `faq_preguntas`, `faq_sectores` |
 | `novedadesService.js` | `novedades`, storage bucket `novedades` |
 | `onboardingService.js` | `onboarding_steps`, `onboarding_bloques` |
-| `organigramaService.js` | `organigrama_nodos` |
 | `pafService.js` | `paf_planes`, `paf_items` |
 | `sgiService.js` | `sgi_categorias`, `sgi_documentos`, `sgi_versiones`, storage bucket `sgi-documentos` |
 | `usuariosService.js` | `profiles` (RPC `admin_update_user_role`) |
