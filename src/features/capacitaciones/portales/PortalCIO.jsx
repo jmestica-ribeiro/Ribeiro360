@@ -1,5 +1,5 @@
-import React from 'react';
-import { ExternalLink, KeyRound } from 'lucide-react';
+import React, { useState } from 'react';
+import { ExternalLink, KeyRound, Copy, Check } from 'lucide-react';
 import '../Explorar.css';
 
 const PLATAFORMAS = [
@@ -56,11 +56,11 @@ const PLATAFORMAS = [
   {
     label: 'Cámaras',
     desc: 'Visualización de cámaras.',
-    url: 'https://landscape-headquarters-trend-directed.trycloudflare.com/',
+    url: 'https://socks-donation-bidder-teeth.trycloudflare.com',
     gradient: 'linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%)',
     emoji: '📹',
     tag: 'Seguridad',
-    aviso: 'Solicitá tu código de acceso',
+    codigo: 'QSP4-E39E',
   },
 ];
 
@@ -89,25 +89,59 @@ const SECCIONES = [
   { titulo: 'Tableros Pymo', items: TABLEROS_PYMO },
 ];
 
-function PlatformCard({ label, desc, url, gradient, emoji, tag, aviso }) {
+// Código de acceso visible con botón para copiarlo (fuera del <a> para no abrir el link al copiar)
+function CodigoAcceso({ codigo }) {
+  const [copiado, setCopiado] = useState(false);
+  const copiar = async () => {
+    try {
+      await navigator.clipboard.writeText(codigo);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch { /* sin permiso de portapapeles: el código queda visible para copiar a mano */ }
+  };
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      style={{ textDecoration: 'none', display: 'block' }}
+    <div role="note" style={{
+      margin: '0 28px 26px', display: 'flex', alignItems: 'center', gap: '10px',
+      padding: '8px 8px 8px 12px', borderRadius: '10px',
+      background: 'var(--info-bg)', color: 'var(--info)', fontSize: '13px', fontWeight: '600',
+    }}>
+      <KeyRound size={14} aria-hidden="true" />
+      <span>Código de acceso:</span>
+      <code style={{ fontSize: '15px', fontWeight: '800', letterSpacing: '1px', color: 'var(--text-main)', userSelect: 'all' }}>{codigo}</code>
+      <button
+        type="button"
+        onClick={copiar}
+        aria-label={`Copiar código ${codigo}`}
+        style={{
+          marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: '6px',
+          padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--border-color)',
+          background: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '12px', fontWeight: '600', cursor: 'pointer',
+        }}
+      >
+        {copiado ? <><Check size={13} aria-hidden="true" /> Copiado</> : <><Copy size={13} aria-hidden="true" /> Copiar</>}
+      </button>
+    </div>
+  );
+}
+
+function PlatformCard({ label, desc, url, gradient, emoji, tag, aviso, codigo }) {
+  return (
+    <div style={{
+      background: 'var(--bg-secondary)',
+      border: '1px solid var(--border-color)',
+      borderRadius: '16px',
+      overflow: 'hidden',
+      boxShadow: 'var(--shadow-sm)',
+      transition: 'transform 0.15s, box-shadow 0.15s',
+    }}
+      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
+      onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
     >
-      <div style={{
-        background: 'var(--bg-secondary)',
-        border: '1px solid var(--border-color)',
-        borderRadius: '16px',
-        overflow: 'hidden',
-        boxShadow: 'var(--shadow-sm)',
-        cursor: 'pointer',
-        transition: 'transform 0.15s, box-shadow 0.15s',
-      }}
-        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
-        onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ textDecoration: 'none', display: 'block', cursor: 'pointer' }}
       >
         {/* Banner de color */}
         <div style={{ background: gradient, height: '150px', position: 'relative', display: 'flex', alignItems: 'flex-end', padding: '0 28px 18px' }}>
@@ -138,8 +172,9 @@ function PlatformCard({ label, desc, url, gradient, emoji, tag, aviso }) {
             </div>
           )}
         </div>
-      </div>
-    </a>
+      </a>
+      {codigo && <CodigoAcceso codigo={codigo} />}
+    </div>
   );
 }
 
