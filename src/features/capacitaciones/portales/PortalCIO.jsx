@@ -47,11 +47,11 @@ const PLATAFORMAS = [
   {
     label: 'Análisis de Flota + Combustible',
     desc: 'Análisis de la flota y consumo de combustible.',
-    url: 'https://studied-nelson-relatively-following.trycloudflare.com/',
+    url: 'https://semi-peak-highest-ira.trycloudflare.com/',
     gradient: 'linear-gradient(135deg, #7f1d1d 0%, #dc2626 100%)',
     emoji: '⛽',
     tag: 'Flota',
-    aviso: 'Solicitá tu código de acceso',
+    codigo: '6ZS4-RV3E',
   },
   {
     label: 'Cámaras',
