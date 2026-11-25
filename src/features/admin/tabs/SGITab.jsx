@@ -683,7 +683,15 @@ const SGITab = () => {
   const ejemploVer = versiones[0];
   const ejemploDoc = ejemploVer && documentos.find(d => d.id === ejemploVer.documento_id);
   const ejemploNotif = ejemploDoc
-    ? { titulo: ejemploDoc.titulo, codigo: ejemploDoc.codigo, versionNumero: ejemploVer.numero_version, documentoId: ejemploDoc.id }
+    ? {
+      titulo: ejemploDoc.titulo, codigo: ejemploDoc.codigo, versionNumero: ejemploVer.numero_version, documentoId: ejemploDoc.id,
+      carpeta: (() => {
+        const partes = [];
+        let c = categorias.find(x => x.id === ejemploDoc.categoria_id);
+        while (c && partes.length < 10) { partes.unshift(c.nombre); c = categorias.find(x => x.id === c.parent_id); }
+        return partes.join(' › ') || null;
+      })(),
+    }
     : null;
 
   const filteredUploaders = uploaders.filter(u =>

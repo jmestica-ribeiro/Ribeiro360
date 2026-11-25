@@ -446,42 +446,31 @@ export async function reviewSgiVersion(versionId, reviewerProfile, comentario = 
     })
     .eq('id', versionId)
     .select();
-  if (error) console.error('[sgiService] reviewSgiVersion:', error.message);
-  return { data, error };
+  if (error) { console.error('[sgiService] reviewSgiVersion:', error.message); return { data, error }; }
+  // Sin permiso de UPDATE (RLS) Supabase no devuelve error: actualiza 0 filas.
+  if (!data?.length) return { data, error: new Error('No tenés permiso para revisar este documento') };
+  return { data, error: null };
 }
 
-export async function approveSgiVersion(versionId, documentoId, approverProfile, comentario = null) {
-  const { data, error } = await supabase
-    .from('sgi_versiones')
-    .update({
-      estado_aprobacion: 'aprobado',
-      aprobador_id: approverProfile.id,
-      aprobador: approverProfile.full_name,
-      fecha_aprobacion: new Date().toISOString(),
-      comentario_aprobacion: comentario || null,
-      vigente: true,
-    })
-    .eq('id', versionId)
-    .select();
-  if (error) { console.error('[sgiService] approveSgiVersion:', error.message); return { data, error }; }
-  // RPC atómica: desmarca el resto de versiones del documento en una sola transacción.
-  const { error: rpcError } = await supabase.rpc('sgi_set_version_vigente', {
-    p_documento_id: documentoId,
+/**
+ * Gerencia aprueba la versión: la base (RPC sgi_aprobar_version) valida que sea el gerente
+ * asignado o el del área del autor, y la marca vigente de forma atómica.
+ * Un UPDATE directo lo bloqueaba RLS en silencio para gerentes que no son admin.
+ */
+export async function approveSgiVersion(versionId, _documentoId, _approverProfile, comentario = null) {
+  const { data, error } = await supabase.rpc('sgi_aprobar_version', {
     p_version_id: versionId,
+    p_comentario: comentario || null,
   });
-  if (rpcError) console.error('[sgiService] approveSgiVersion (set vigente):', rpcError.message);
+  if (error) console.error('[sgiService] approveSgiVersion:', error.message);
   return { data, error };
 }
 
 export async function rejectSgiVersion(versionId, comentario = null) {
-  const { data, error } = await supabase
-    .from('sgi_versiones')
-    .update({
-      estado_aprobacion: 'rechazado',
-      comentario_revision: comentario || null,
-    })
-    .eq('id', versionId)
-    .select();
+  const { data, error } = await supabase.rpc('sgi_rechazar_version', {
+    p_version_id: versionId,
+    p_comentario: comentario || null,
+  });
   if (error) console.error('[sgiService] rejectSgiVersion:', error.message);
   return { data, error };
 }

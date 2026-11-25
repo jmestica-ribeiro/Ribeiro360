@@ -24,8 +24,18 @@ export function emailLayout(params: {
   linkLabel: string;
   footer?: string;
   extraHtml?: string;
+  // Filas extra a lo ancho debajo del recuadro principal (ej. Carpeta). El valor ya debe venir escapado.
+  detalles?: { label: string; value: string }[];
 }): string {
-  const { primerNombre, subtitulo, mensaje, badgeLabel, badgeValue, badgeLabel2, badgeValue2, link, linkLabel, footer, extraHtml } = params;
+  const { primerNombre, subtitulo, mensaje, badgeLabel, badgeValue, badgeLabel2, badgeValue2, link, linkLabel, footer, extraHtml, detalles } = params;
+  const colspan = badgeLabel2 ? 2 : 1;
+  const detallesHtml = (detalles ?? []).filter(d => d.value).map(d => `
+                <tr>
+                  <td colspan="${colspan}" style="padding:12px 20px;border-top:1px solid #e5e7eb;">
+                    <p style="margin:0 0 4px;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:#6b7280;">${d.label}</p>
+                    <p style="margin:0;font-size:14px;color:#374151;">${d.value}</p>
+                  </td>
+                </tr>`).join('');
 
   const badge2Html = badgeLabel2 ? `
                   <td style="padding:16px 20px;border-left:1px solid #e5e7eb;">
@@ -71,6 +81,7 @@ export function emailLayout(params: {
                     <p style="margin:0;font-size:16px;font-weight:700;color:#111827;">${badgeValue}</p>
                   </td>${badge2Html}
                 </tr>
+${detallesHtml}
               </table>
               <a href="${link}" style="display:inline-block;background-color:#f5c518;color:#1a1a1a;text-decoration:none;font-weight:700;font-size:15px;padding:14px 28px;border-radius:8px;">
                 ${linkLabel}

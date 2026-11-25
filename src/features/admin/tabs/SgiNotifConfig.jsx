@@ -78,9 +78,10 @@ const SgiNotifConfig = ({ ejemplo }) => {
     documentoId: ejemplo?.documentoId,
     esNuevo,
     obligatoria: tipo === 'obligatoria',
+    carpeta: ejemplo?.carpeta || null,
     mensajeExtra: op?.mensaje_extra || '',
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [ejemplo?.titulo, ejemplo?.codigo, ejemplo?.versionNumero, ejemplo?.documentoId, tipo, op?.mensaje_extra]);
+  }), [ejemplo?.titulo, ejemplo?.codigo, ejemplo?.versionNumero, ejemplo?.documentoId, ejemplo?.carpeta, tipo, op?.mensaje_extra]);
 
   // Vista previa del email: la genera la Edge Function con el mismo template del envío real
   const ready = !!form;

@@ -63,7 +63,21 @@ function buildSgiHtml(fullName: string, documentoTitulo: string, versionNumero: 
 }
 
 
-type SgiPublicado = { documentoId: string; titulo: string; codigo?: string | null; versionNumero?: string | null; esNuevo: boolean; mensajeExtra?: string | null; obligatoria?: boolean };
+type SgiPublicado = { documentoId: string; titulo: string; codigo?: string | null; versionNumero?: string | null; esNuevo: boolean; mensajeExtra?: string | null; obligatoria?: boolean; carpeta?: string | null };
+
+// Ruta completa de la carpeta SGI (ej. "Procedimientos › Calidad").
+async function rutaCarpetaSgi(admin: ReturnType<typeof getAdminClient>, categoriaId: string | null): Promise<string | null> {
+  if (!categoriaId) return null;
+  const { data: cats } = await admin.from('sgi_categorias').select('id, nombre, parent_id');
+  const porId = new Map((cats ?? []).map((c: { id: string; nombre: string; parent_id: string | null }) => [c.id, c]));
+  const partes: string[] = [];
+  let actual = porId.get(categoriaId);
+  while (actual && partes.length < 10) {
+    partes.unshift(actual.nombre);
+    actual = actual.parent_id ? porId.get(actual.parent_id) : undefined;
+  }
+  return partes.length ? partes.join(' › ') : null;
+}
 
 function sgiPublicadoSubject(d: SgiPublicado): string {
   if (d.obligatoria) return `Lectura obligatoria: ${d.titulo} · Ribeiro 360`;
@@ -97,6 +111,7 @@ function buildSgiPublicadoHtml(fullName: string, d: SgiPublicado): string {
     badgeValue: d.codigo ? `${escapeHtml(d.codigo)} · ${titulo}` : titulo,
     badgeLabel2: d.obligatoria ? 'Acción requerida' : 'Revisión',
     badgeValue2: d.obligatoria ? `Confirmar lectura · ${revision}` : revision,
+    detalles: [{ label: 'Ubicación', value: d.carpeta ? escapeHtml(d.carpeta) : '' }],
     link: `${APP_URL}/sgi/documento/${encodeURIComponent(d.documentoId)}`,
     linkLabel: d.obligatoria ? 'Leer y confirmar →' : 'Ver documento →',
     footer: 'Este email fue generado automáticamente por Ribeiro 360 al publicarse un documento del SGI.',
@@ -445,6 +460,7 @@ serve(async (req: Request) => {
           esNuevo: body.esNuevo !== false,
           mensajeExtra: body.mensajeExtra ?? null,
           obligatoria: body.obligatoria === true,
+          carpeta: body.carpeta ? String(body.carpeta) : 'Procedimientos › Calidad',
         };
         const { data: me } = await adminClient.from('profiles').select('full_name, email').eq('id', authUser.id).single();
         if (mode === 'preview') {
@@ -465,17 +481,18 @@ serve(async (req: Request) => {
 
       const { data: ver, error: vErr } = await adminClient
         .from('sgi_versiones')
-        .select('id, documento_id, numero_version, vigente, estado_aprobacion, notificado_at, lectura_notificada_at, documento:sgi_documentos(id, titulo, codigo, acceso, activo, lectura_obligatoria)')
+        .select('id, documento_id, numero_version, vigente, estado_aprobacion, notificado_at, lectura_notificada_at, documento:sgi_documentos(id, titulo, codigo, acceso, activo, lectura_obligatoria, categoria_id)')
         .eq('id', versionId)
         .single();
       if (vErr || !ver) return json({ error: 'Versión no encontrada' }, 404);
-      const doc = ver.documento as unknown as { id: string; titulo: string; codigo: string | null; acceso: string | null; activo: boolean; lectura_obligatoria: boolean } | null;
+      const doc = ver.documento as unknown as { id: string; titulo: string; codigo: string | null; acceso: string | null; activo: boolean; lectura_obligatoria: boolean; categoria_id: string | null } | null;
 
       if (!ver.vigente || !doc || doc.activo === false) return json({ ok: true, sent: 0, skipped: 'no_vigente' });
       if (['en_revision', 'pendiente_aprobacion', 'rechazado'].includes(ver.estado_aprobacion)) return json({ ok: true, sent: 0, skipped: 'no_aprobado' });
 
       // Lectura obligatoria: se avisa siempre a todos (independiente del aviso general y sus filtros),
       // salvo que se desactive explícitamente en Admin › SGI. Tiene su propia marca anti-duplicados.
+      const carpeta = await rutaCarpetaSgi(adminClient, doc.categoria_id);
       const obligatoria = doc.lectura_obligatoria === true && op.email_obligatoria !== false;
       const { data: activos, error: pErr } = await adminClient
         .from('profiles')
@@ -496,7 +513,7 @@ serve(async (req: Request) => {
         if (!claimedLect?.length) return json({ ok: true, sent: 0, skipped: 'ya_notificado' });
         const dataOb: SgiPublicado = {
           documentoId: doc.id, titulo: doc.titulo, codigo: doc.codigo, versionNumero: ver.numero_version,
-          esNuevo: true, mensajeExtra: (op.mensaje_extra as string) || null, obligatoria: true,
+          esNuevo: true, mensajeExtra: (op.mensaje_extra as string) || null, obligatoria: true, carpeta,
         };
         const subjectOb = sgiPublicadoSubject(dataOb);
         const resOb = await sendBatch(resendKey, (activos ?? []).map((p: { full_name: string; email: string }) => ({
@@ -532,7 +549,7 @@ serve(async (req: Request) => {
 
       const data: SgiPublicado = {
         documentoId: doc.id, titulo: doc.titulo, codigo: doc.codigo, versionNumero: ver.numero_version,
-        esNuevo, mensajeExtra: (op.mensaje_extra as string) || null,
+        esNuevo, mensajeExtra: (op.mensaje_extra as string) || null, carpeta,
       };
       const subject = sgiPublicadoSubject(data);
       const result = await sendBatch(resendKey, (activos ?? []).map((p: { full_name: string; email: string }) => ({

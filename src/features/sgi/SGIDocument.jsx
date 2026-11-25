@@ -131,22 +131,34 @@ const SGIDocument = () => {
 
     // Los destinatarios de cada aviso los resuelve la Edge Function según Admin › SGI › Circuito.
     const versionId = pendienteVersion.id;
+    let error = null;
     if (actionMode === 'review') {
       if (overrideAprobadorId && overrideAprobadorId !== documento.aprobador_id) {
         await updateSgiDocumentoAprobador(documento.id, overrideAprobadorId);
       }
-      const { error } = await reviewSgiVersion(versionId, profile, actionComment || null);
+      ({ error } = await reviewSgiVersion(versionId, profile, actionComment || null));
       if (!error) notificarCircuitoSGI({ versionId, evento: 'pendiente_aprobacion' });
     } else if (actionMode === 'approve') {
-      const { error } = await approveSgiVersion(versionId, documento.id, profile, actionComment || null);
+      ({ error } = await approveSgiVersion(versionId, documento.id, profile, actionComment || null));
       if (!error) {
         notificarCircuitoSGI({ versionId, evento: 'aprobado' });   // autor + revisor
         notificarDocumentoPublicado({ versionId });                 // aviso general (Admin › SGI › Publicados)
       }
     } else if (actionMode === 'reject') {
-      const { error } = await rejectSgiVersion(versionId, actionComment || null);
+      ({ error } = await rejectSgiVersion(versionId, actionComment || null));
       if (!error) notificarCircuitoSGI({ versionId, evento: 'rechazado' }); // autor + revisor, con el motivo
     }
+
+    if (error) {
+      setIsActioning(false);
+      toast.error('No se pudo completar la acción', { description: error.message });
+      return; // se mantiene el formulario abierto con el comentario cargado
+    }
+    toast.success(
+      actionMode === 'approve' ? 'Documento aprobado: ya está vigente'
+        : actionMode === 'reject' ? 'Versión rechazada'
+          : 'Revisión registrada: derivado a Gerencia'
+    );
 
     setActionMode(null);
     setActionComment('');
