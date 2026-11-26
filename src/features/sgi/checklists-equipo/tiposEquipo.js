@@ -5,6 +5,7 @@ export const TIPOS_EQUIPO = [
   { key: 'excavadora',                label: 'Excavadora' },
   { key: 'motoniveladora',            label: 'Motoniveladora' },
   { key: 'vibro_compactador',         label: 'Vibro Compactador' },
+  { key: 'perforadora_rotativa',      label: 'Perforadora Rotativa' },
   { key: 'camioneta',                 label: 'Camioneta' },
   { key: 'camion',                    label: 'Camión' },
   { key: 'control_equipo_enganchado', label: 'Control de Equipo Enganchado' },

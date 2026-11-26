@@ -128,6 +128,15 @@
 /* Ítems */
 .cheq-items-list { display: flex; flex-direction: column; gap: 10px; }
 
+/* Título de sección (solo aparece si los ítems del tipo tienen `seccion`) */
+.cheq-seccion-titulo {
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text-main);
+  padding-bottom: 6px; margin-top: 14px;
+  border-bottom: 2px solid var(--primary-color);
+}
+.cheq-seccion-titulo:first-child { margin-top: 0; }
+
 .cheq-item-row {
   display: flex; align-items: flex-start; gap: 12px;
   padding: 12px 14px; border-radius: 8px;

@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { X, Download } from 'lucide-react';
-import { TIPOS_EQUIPO } from './tiposEquipo';
+import { agruparPorSeccion } from './agruparPorSeccion';
 import Logo from '../../../assets/Logo.png';
 import './ChecklistPDF.css';
 
@@ -83,6 +83,11 @@ body { font-family: Arial, sans-serif; font-size: 11px; color: #1a1a1a; backgrou
 .doc-table td { padding: 7px 10px; vertical-align: top; color: #222; }
 .doc-table td:first-child { text-align: center; font-weight: 700; color: #999; font-size: 9px; }
 .doc-table td.col-obs { font-size: 10px; color: #666; font-style: italic; }
+.doc-table tbody tr.doc-table-seccion { background: #f5f0d6; }
+.doc-table tr.doc-table-seccion td {
+  text-align: left; color: #111; font-size: 9px; font-weight: 800;
+  letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 10px;
+}
 
 /* ── Badge estado ── */
 .badge {
@@ -266,17 +271,26 @@ const ChecklistPDF = ({ detalle, tipoLabel, onClose }) => {
                       </tr>
                     </thead>
                     <tbody>
-                      {respOrdenadas.map((r, idx) => (
-                        <tr key={r.id}>
-                          <td>{idx + 1}</td>
-                          <td>{r.item?.nombre ?? '—'}</td>
-                          <td style={{ textAlign: 'center' }}>
-                            <span className={`badge badge-${r.estado}`}>
-                              {ESTADO_LABELS[r.estado] ?? r.estado}
-                            </span>
-                          </td>
-                          <td className="col-obs">{r.observacion || ''}</td>
-                        </tr>
+                      {agruparPorSeccion(respOrdenadas, r => r.item?.seccion).map(({ seccion, elementos }) => (
+                        <React.Fragment key={seccion ?? '__sin_seccion'}>
+                          {seccion && (
+                            <tr className="doc-table-seccion">
+                              <td colSpan={4}>{seccion}</td>
+                            </tr>
+                          )}
+                          {elementos.map(({ elemento: r, num }) => (
+                            <tr key={r.id}>
+                              <td>{num}</td>
+                              <td>{r.item?.nombre ?? '—'}</td>
+                              <td style={{ textAlign: 'center' }}>
+                                <span className={`badge badge-${r.estado}`}>
+                                  {ESTADO_LABELS[r.estado] ?? r.estado}
+                                </span>
+                              </td>
+                              <td className="col-obs">{r.observacion || ''}</td>
+                            </tr>
+                          ))}
+                        </React.Fragment>
                       ))}
                     </tbody>
                   </table>

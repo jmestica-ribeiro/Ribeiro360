@@ -854,7 +854,7 @@ export async function fetchCheqChecklists({ tipoEquipo, dominio, internoNro, pag
 export async function fetchCheqDetalle(id) {
   const { data, error } = await supabase
     .from('cheq_checklists')
-    .select('*, operador:profiles!operador_id(full_name), respuestas:cheq_respuestas(*, item:cheq_items(nombre, orden))')
+    .select('*, operador:profiles!operador_id(full_name), respuestas:cheq_respuestas(*, item:cheq_items(nombre, orden, seccion))')
     .eq('id', id)
     .single();
   if (error) console.error('[sgiService] fetchCheqDetalle:', error.message);

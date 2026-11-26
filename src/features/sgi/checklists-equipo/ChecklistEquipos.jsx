@@ -17,6 +17,7 @@ import ChecklistPDF from './ChecklistPDF';
 import VehiculoPicker from './VehiculoPicker';
 import QRStickerModal from './QRStickerModal';
 import { TIPOS_EQUIPO } from './tiposEquipo';
+import { agruparPorSeccion } from './agruparPorSeccion';
 import './ChecklistEquipos.css';
 
 const ESTADO_CONFIG = {
@@ -169,40 +170,45 @@ function ChecklistForm({ tipo, vehiculoInicial, onBack, onSaved }) {
         <div className="cheq-card">
           <div className="cheq-card-title"><ClipboardList size={14} /> Verificaciones</div>
           <div className="cheq-items-list">
-            {items.map((item, idx) => {
-              const r = respuestas[item.id] || { estado: '', observacion: '' };
-              return (
-                <div key={item.id} className={`cheq-item-row${r.estado ? ` estado-${r.estado}` : ''}`}>
-                  <div className="cheq-item-num">{idx + 1}</div>
-                  <div className="cheq-item-body">
-                    <div className="cheq-item-nombre">{item.nombre}</div>
-                    <div className="cheq-item-controles">
-                      {Object.entries(ESTADO_CONFIG).map(([key, cfg]) => {
-                        const Icon = cfg.icon;
-                        return (
-                          <button
-                            key={key}
-                            className={`cheq-estado-btn${r.estado === key ? ' active' : ''}`}
-                            style={r.estado === key ? { background: cfg.bg, color: cfg.color, borderColor: cfg.color } : {}}
-                            onClick={() => setEstado(item.id, key)}
-                          >
-                            <Icon size={13} /> {cfg.label}
-                          </button>
-                        );
-                      })}
+            {agruparPorSeccion(items, i => i.seccion).map(({ seccion, elementos }) => (
+              <React.Fragment key={seccion ?? '__sin_seccion'}>
+                {seccion && <div className="cheq-seccion-titulo">{seccion}</div>}
+                {elementos.map(({ elemento: item, num }) => {
+                  const r = respuestas[item.id] || { estado: '', observacion: '' };
+                  return (
+                    <div key={item.id} className={`cheq-item-row${r.estado ? ` estado-${r.estado}` : ''}`}>
+                      <div className="cheq-item-num">{num}</div>
+                      <div className="cheq-item-body">
+                        <div className="cheq-item-nombre">{item.nombre}</div>
+                        <div className="cheq-item-controles">
+                          {Object.entries(ESTADO_CONFIG).map(([key, cfg]) => {
+                            const Icon = cfg.icon;
+                            return (
+                              <button
+                                key={key}
+                                className={`cheq-estado-btn${r.estado === key ? ' active' : ''}`}
+                                style={r.estado === key ? { background: cfg.bg, color: cfg.color, borderColor: cfg.color } : {}}
+                                onClick={() => setEstado(item.id, key)}
+                              >
+                                <Icon size={13} /> {cfg.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {(item.requiere_texto || r.estado === 'regular' || r.estado === 'mal') && (
+                          <input
+                            className="cheq-obs-input"
+                            placeholder={item.requiere_texto ? 'Especificá... (obligatorio)' : 'Observación (recomendado)'}
+                            value={r.observacion}
+                            onChange={e => setObs(item.id, e.target.value)}
+                          />
+                        )}
+                      </div>
                     </div>
-                    {(item.requiere_texto || r.estado === 'regular' || r.estado === 'mal') && (
-                      <input
-                        className="cheq-obs-input"
-                        placeholder={item.requiere_texto ? 'Especificá... (obligatorio)' : 'Observación (recomendado)'}
-                        value={r.observacion}
-                        onChange={e => setObs(item.id, e.target.value)}
-                      />
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })}
+              </React.Fragment>
+            ))}
           </div>
         </div>
       )}
@@ -412,25 +418,30 @@ function ChecklistDetalle({ checklistId, onBack }) {
       <div className="cheq-card">
         <div className="cheq-card-title"><ClipboardList size={14} /> Verificaciones</div>
         <div className="cheq-items-list readonly">
-          {respOrdenadas.map((r, idx) => {
-            const cfg = ESTADO_CONFIG[r.estado];
-            const Icon = cfg?.icon ?? Minus;
-            return (
-              <div key={r.id} className={`cheq-item-row estado-${r.estado}`}>
-                <div className="cheq-item-num">{idx + 1}</div>
-                <div className="cheq-item-body">
-                  <div className="cheq-item-nombre">{r.item?.nombre ?? '—'}</div>
-                  {r.observacion && <div className="cheq-obs-readonly">{r.observacion}</div>}
-                </div>
-                <span
-                  className="cheq-estado-badge"
-                  style={{ background: cfg?.bg, color: cfg?.color }}
-                >
-                  <Icon size={12} /> {cfg?.label}
-                </span>
-              </div>
-            );
-          })}
+          {agruparPorSeccion(respOrdenadas, r => r.item?.seccion).map(({ seccion, elementos }) => (
+            <React.Fragment key={seccion ?? '__sin_seccion'}>
+              {seccion && <div className="cheq-seccion-titulo">{seccion}</div>}
+              {elementos.map(({ elemento: r, num }) => {
+                const cfg = ESTADO_CONFIG[r.estado];
+                const Icon = cfg?.icon ?? Minus;
+                return (
+                  <div key={r.id} className={`cheq-item-row estado-${r.estado}`}>
+                    <div className="cheq-item-num">{num}</div>
+                    <div className="cheq-item-body">
+                      <div className="cheq-item-nombre">{r.item?.nombre ?? '—'}</div>
+                      {r.observacion && <div className="cheq-obs-readonly">{r.observacion}</div>}
+                    </div>
+                    <span
+                      className="cheq-estado-badge"
+                      style={{ background: cfg?.bg, color: cfg?.color }}
+                    >
+                      <Icon size={12} /> {cfg?.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </React.Fragment>
+          ))}
         </div>
       </div>
 

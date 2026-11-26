@@ -116,11 +116,12 @@
 | Columna | Tipo | Formato | Info |
 |:---|:---|:---|:---|
 | id | string | uuid | PK |
-| tipo_equipo | string | text | topadora, cargadora, retropala, excavadora, motoniveladora, vibro_compactador, camioneta, camion, control_equipo_enganchado |
+| tipo_equipo | string | text | topadora, cargadora, retropala, excavadora, motoniveladora, vibro_compactador, perforadora_rotativa, camioneta, camion, control_equipo_enganchado |
 | nombre | string | text | Descripción del ítem de verificación |
 | orden | integer | | Orden de aparición en el formulario |
 | activo | boolean | | Si false, no aparece en nuevos checklists |
 | requiere_texto | boolean | | Si true, el formulario exige un texto libre (columna `observacion` de `cheq_respuestas`) para completar el ítem |
+| seccion | string | text | Opcional. Título de sección para agrupar ítems en formulario, detalle y PDF (null = sin sección) |
 
 ### cheq_checklists
 | Columna | Tipo | Formato | Info |
